@@ -1,0 +1,11 @@
+# Ignore all .tar.gz files
+*.tar.gz
+
+# Ignore the .devenv directory
+.devenv
+
+# Ignore all .yaml files in the data directory
+data/*.yaml
+
+# Do not ignore default.yaml in the data directory
+!data/default.yaml

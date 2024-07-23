@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Timeline App</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h2>Configuration</h2>
+            <textarea id="config" spellcheck="false"></textarea>
+            <div class="button-group">
+                <input type="file" id="fileInput" accept=".yaml,.yml">
+                <button id="saveButton">Save YAML</button>
+                <button id="updateButton">Update Timeline</button>
+            </div>
+        </div>
+        <div class="right-panel">
+            <h2>Timeline</h2>
+            <div id="timeline"></div>
+            <div id="legend"></div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

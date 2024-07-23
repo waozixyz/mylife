@@ -1,0 +1,56 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+}
+.container {
+    display: flex;
+    height: 100%;
+}
+.left-panel, .right-panel {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+.left-panel {
+    background-color: #f0f0f0;
+}
+#config {
+    width: 100%;
+    height: 400px;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(48, 1fr);
+    gap: 1px;
+    width: 100%;
+    max-width: 960px; /* Adjust this value to control overall grid width */
+    margin: 0 auto;
+}
+.cell {
+    width: 100%;
+    padding-bottom: 100%;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+.legend {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.legend-color {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+.button-group {
+    margin-top: 10px;
+}
+.button-group button, .button-group select {
+    margin-right: 10px;
+}
+#timeline {
+    width: 100%;
+    overflow-x: auto;
+}
