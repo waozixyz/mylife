@@ -26,6 +26,7 @@ body, html {
     flex: 2; /* This makes the right panel twice as wide as the left panel */
     overflow-y: auto;
     background-color: #f5e5c0;
+    padding: 10px;
 }
 
 h2 {
@@ -164,4 +165,27 @@ h2 {
 
 .life-period .remove-period:hover {
     background-color: #cc0000;
+}
+
+.file-input-label {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #8b4513;
+    color: #f5e5c0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-align: center;
+    line-height: 1.2;
+    max-width: 150px; /* Adjust as needed */
+    word-wrap: break-word;
+}
+
+.file-input-label:hover {
+    background-color: #a0522d;
+}
+
+.file-input-label input[type="file"] {
+    display: none;
 }
