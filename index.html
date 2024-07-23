@@ -34,13 +34,26 @@
 <body>
     <div class="container">
         <div class="left-panel">
-            <h2>Configuration</h2>
-            <textarea id="config" spellcheck="false"></textarea>
-            <div class="button-group">
-                <input type="file" id="fileInput" accept=".yaml,.yml">
-                <button id="saveButton">Save YAML</button>
-                <button id="updateButton">Update Timeline</button>
-            </div>
+            <h2>Life Timeline Configuration</h2>
+            <form id="configForm">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required>
+            
+                <label for="dateOfBirth">Date of Birth:</label>
+                <input type="month" id="dateOfBirth" required>
+            
+                <h3>Life Periods</h3>
+                <div id="lifePeriods"></div>
+                <button type="button" id="addPeriod">Add Life Period</button>
+            
+                <div class="button-group">
+                    <input type="file" id="fileInput" accept=".yaml,.yml">
+                    <button type="button" id="saveButton">Save YAML</button>
+                </div>
+            </form>
+            
+            <textarea id="config" readonly></textarea>
+            
         </div>
         <div class="right-panel">
             <h2>Timeline</h2>
@@ -48,6 +61,7 @@
             <div id="legend"></div>
         </div>
     </div>
+    <script src="js-yaml.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
