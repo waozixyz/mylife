@@ -6,30 +6,25 @@ body, html {
     background-color: #f5e5c0;
     color: #333;
 }
-
 .container {
     display: flex;
     height: 100%;
-    max-width: 1200px;
+    width: 100%; /* Change from max-width to width */
     margin: 0 auto;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
-#config {
-    display: none;
-}
 
-.left-panel, .right-panel {
+.left-panel {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
-}
-
-.left-panel {
     background-color: #d3b88c;
     border-right: 2px solid #8b4513;
 }
 
 .right-panel {
+    flex: 2; /* This makes the right panel twice as wide as the left panel */
+    overflow-y: auto;
     background-color: #f5e5c0;
 }
 
@@ -50,28 +45,26 @@ h2 {
     padding: 10px;
     font-size: 14px;
     color: #333;
+    display: none;
 }
-
 .grid {
     display: grid;
-    grid-template-columns: repeat(48, 1fr);
+    grid-template-columns: repeat(48, 1fr); /* Keep 48 columns (4 years per row) */
     gap: 1px;
-    width: 100%;
-    max-width: 960px;
-    margin: 0 auto;
+    width: calc(100% - 15px);
+    margin: auto;
     background-color: #d3b88c;
-    padding: 10px;
+    padding: 5px;
     border: 2px solid #8b4513;
     box-shadow: 3px 3px 0 #8b4513;
 }
 
 .cell {
     width: 100%;
-    padding-bottom: 100%;
+    padding-bottom: 75%; /* Reduced from 100% to 75% */
     border: 1px solid #8b4513;
     box-sizing: border-box;
 }
-
 .legend {
     display: flex;
     align-items: center;
@@ -110,9 +103,8 @@ h2 {
     width: 100%;
     overflow-x: auto;
     background-color: #f5e5c0;
-    border: 2px solid #8b4513;
-    padding: 10px;
     box-shadow: 3px 3px 0 #8b4513;
+    padding-bottom: 10px;
 }
 
 /* Retro scrollbar styles */
