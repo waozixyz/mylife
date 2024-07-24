@@ -264,3 +264,10 @@ h2 {
 #openConfig:hover {
     background-color: #a0522d;
 }
+
+/* For smaller screens */
+@media screen and (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(24, 1fr); /* 24 columns for smaller screens */
+    }
+}

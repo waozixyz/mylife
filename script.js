@@ -86,6 +86,7 @@ function updateConfigAndTimeline() {
     updateConfig();
     updateTimeline();
 }
+
 const updateTimeline = () => {
     const timeline = document.getElementById('timeline');
     const legend = document.getElementById('legend');
