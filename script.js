@@ -1,5 +1,6 @@
 const defaultConfig = `name: John Doe
 date_of_birth: "2000-01"
+life_expectancy: 80
 life_periods:
   - name: Childhood
     start: "2000-01"
@@ -15,6 +16,10 @@ life_periods:
     color: "#FFFF66"  # Dark Yellow`;
 
 let config = jsyaml.load(defaultConfig);
+
+if (!config.life_expectancy) {
+    config.life_expectancy = 80;
+}
 
 function createLifePeriodElement(period = { name: '', start: '', color: '#000000' }) {
     const div = document.createElement('div');
@@ -40,11 +45,13 @@ function createLifePeriodElement(period = { name: '', start: '', color: '#000000
 function populateForm() {
     const nameInput = document.getElementById('name');
     const dateOfBirthInput = document.getElementById('dateOfBirth');
+    const lifeExpectancyInput = document.getElementById('lifeExpectancy')
     const configTextarea = document.getElementById('config');
-    
+
     if (nameInput) nameInput.value = config.name;
     if (dateOfBirthInput) dateOfBirthInput.value = config.date_of_birth;
-    
+    if (lifeExpectancyInput) lifeExpectancyInput.value = config.life_expectancy;
+
     const periodsContainer = document.getElementById('lifePeriods');
     if (periodsContainer) {
         periodsContainer.innerHTML = '';
@@ -59,11 +66,13 @@ function populateForm() {
 function updateConfig() {
     const nameInput = document.getElementById('name');
     const dateOfBirthInput = document.getElementById('dateOfBirth');
+    const lifeExpectancyInput = document.getElementById('lifeExpectancy');
     const configTextarea = document.getElementById('config');
     
     if (nameInput) config.name = nameInput.value;
     if (dateOfBirthInput) config.date_of_birth = dateOfBirthInput.value;
-    
+    if (lifeExpectancyInput) config.life_expectancy = parseInt(lifeExpectancyInput.value, 10);
+
     config.life_periods = Array.from(document.querySelectorAll('.life-period')).map(el => ({
         name: el.querySelector('.period-name')?.value || '',
         start: el.querySelector('.period-start')?.value || '',
@@ -77,7 +86,6 @@ function updateConfigAndTimeline() {
     updateConfig();
     updateTimeline();
 }
-
 const updateTimeline = () => {
     const timeline = document.getElementById('timeline');
     const legend = document.getElementById('legend');
@@ -91,7 +99,9 @@ const updateTimeline = () => {
     const grid = document.createElement('div');
     grid.className = 'grid';
 
-    for (let i = 0; i < 25 * 48; i++) {
+    const maxMonths = config.life_expectancy * 12; // Calculate the total number of months based on life expectancy
+
+    for (let i = 0; i < maxMonths; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
         const currentDate = new Date(dob.getFullYear(), dob.getMonth() + i, 1);
@@ -149,6 +159,10 @@ function attachEventListeners() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 config = jsyaml.load(e.target.result);
+
+                if (!config.life_expectancy) {
+                    config.life_expectancy = 80;
+                }
                 populateForm();
                 updateTimeline();
             };
@@ -170,6 +184,7 @@ function attachEventListeners() {
 
     document.getElementById('name').addEventListener('change', updateConfigAndTimeline);
     document.getElementById('dateOfBirth').addEventListener('change', updateConfigAndTimeline);
+    document.getElementById('lifeExpectancy').addEventListener('change', updateConfigAndTimeline); 
 }
 
 const configPanel = document.getElementById('configPanel');

@@ -1,5 +1,6 @@
 name: John Doe
 date_of_birth: "2000-01"
+life_expectancy: 80
 life_periods:
   - name: Childhood
     start: "2000-01"

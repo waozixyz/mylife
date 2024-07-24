@@ -41,7 +41,10 @@
             
                 <label for="dateOfBirth">Date of Birth:</label>
                 <input type="month" id="dateOfBirth" required>
-            
+                
+                <label for="lifeExpectancy">Life lifeExpectancy</label>
+                <input type="number" id="lifeExpectancy" value="80" min="1" max="300" required>
+
                 <h3>Life Periods</h3>
                 <div id="lifePeriods"></div>
                 <button type="button" id="addPeriod">Add Life Period</button>
@@ -71,7 +74,7 @@
             <div id="modalContent"></div>
         </div>
     </div>
-    
+
     <script src="js-yaml.min.js"></script>
     <script src="script.js"></script>
 </body>
