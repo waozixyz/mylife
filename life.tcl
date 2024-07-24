@@ -6,7 +6,13 @@ proc read_config {filename} {
     set fh [open $filename r]
     set data [read $fh]
     close $fh
-    return [::yaml::yaml2dict $data]
+    set config [::yaml::yaml2dict $data]
+
+    # Set default life_expectancy if missing
+    if {![dict exists $config life_expectancy]} {
+        dict set config life_expectancy 80
+    }
+    return $config
 }
 
 # Function to get list of YAML files in data folder
@@ -81,13 +87,12 @@ frame .frame
 pack .frame -fill both -expand 1
 
 # Parse command line arguments
-set years 100
 set yaml_file ""
+set config {}
+set years 80
 
 foreach arg $argv {
-    if {[string is integer $arg]} {
-        set years $arg
-    } elseif {[string match *.yaml $arg] || [string match *.yml $arg]} {
+    if {[string match *.yaml $arg] || [string match *.yml $arg]} {
         set yaml_file $arg
     } else {
         set yaml_file "$arg.yaml"
@@ -97,6 +102,7 @@ foreach arg $argv {
 if {$yaml_file ne ""} {
     if {[file exists "data/$yaml_file"]} {
         set config [read_config "data/$yaml_file"]
+        set years [dict get $config life_expectancy]
         update_timeline $config $years
     } else {
         puts "Error: File 'data/$yaml_file' not found."
@@ -110,9 +116,30 @@ if {$yaml_file ne ""} {
     bind .selector <<ComboboxSelected>> {
         set selected_file [.selector get]
         set config [read_config "data/$selected_file"]
+        set years [dict get $config life_expectancy]
         update_timeline $config $years
     }
 }
+
+# Life expectancy entry
+frame .life_exp_frame
+pack .life_exp_frame -pady 10
+
+label .life_exp_frame.label -text "Life Expectancy (years):"
+entry .life_exp_frame.entry -width 5 -textvariable years
+button .life_exp_frame.update_button -text "Update" -command {
+    if {$yaml_file ne "" && [file exists "data/$yaml_file"]} {
+        update_timeline $config $years
+    } elseif {![string equal [.selector get] ""]} {
+        set selected_file [.selector get]
+        set config [read_config "data/$selected_file"]
+        update_timeline $config $years
+    }
+}
+
+pack .life_exp_frame.label -side left
+pack .life_exp_frame.entry -side left -padx 5
+pack .life_exp_frame.update_button -side left
 
 # Start the event loop
 tkwait window .
