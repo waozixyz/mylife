@@ -40,7 +40,6 @@ void ReadConfig(const char* filename) {
         TraceLog(LOG_ERROR, "Failed to open file: %s (Error: %s)", filename, strerror(errno));
         return;
     }
-    TraceLog(LOG_INFO, "File opened successfully: %s", filename);
 
     yaml_parser_t parser;
     yaml_event_t event;
@@ -50,7 +49,6 @@ void ReadConfig(const char* filename) {
         fclose(file);
         return;
     }
-    TraceLog(LOG_INFO, "YAML parser initialized");
 
     yaml_parser_set_input_file(&parser, file);
 
@@ -58,18 +56,19 @@ void ReadConfig(const char* filename) {
     char current_key[100] = "";
     bool in_life_periods = false;
 
-    do {
+    while (1) {
         if (!yaml_parser_parse(&parser, &event)) {
             TraceLog(LOG_ERROR, "Parser error: %s", parser.problem);
+            break;
+        }
+
+        if (event.type == YAML_STREAM_END_EVENT) {
             yaml_event_delete(&event);
             break;
         }
 
-        TraceLog(LOG_INFO, "YAML event type: %d", event.type);
-
         switch (event.type) {
             case YAML_SCALAR_EVENT:
-                TraceLog(LOG_INFO, "YAML scalar value: %s", (char*)event.data.scalar.value);
                 if (strcmp((char*)event.data.scalar.value, "life_periods") == 0) {
                     in_life_periods = true;
                 } else if (in_life_periods) {
@@ -78,7 +77,6 @@ void ReadConfig(const char* filename) {
                     } else if (strcmp(current_key, "start") == 0) {
                         strncpy(config.life_periods[period_index].start, (char*)event.data.scalar.value, sizeof(config.life_periods[period_index].start) - 1);
                     } else if (strcmp(current_key, "color") == 0) {
-                        // Convert hex color to Color struct
                         unsigned int color;
                         sscanf((char*)event.data.scalar.value, "#%x", &color);
                         config.life_periods[period_index].color = (Color){
@@ -114,7 +112,7 @@ void ReadConfig(const char* filename) {
         }
 
         yaml_event_delete(&event);
-    } while (event.type != YAML_STREAM_END_EVENT);
+    }
 
     yaml_parser_delete(&parser);
     fclose(file);
@@ -150,12 +148,21 @@ char** GetYamlFiles(int* count) {
     *count = file_count;
     return files;
 }
+void DrawLegend(void) {
+    float legendHeight = 30; // Height for each legend item
+    float legendY = GetScreenHeight() - 50 - (config.period_count * legendHeight);
+
+    for (int i = 0; i < config.period_count; i++) {
+        DrawRectangle(0, legendY + (i * legendHeight), GetScreenWidth(), legendHeight, config.life_periods[i].color);
+        DrawText(TextFormat("%s (from %s)", config.life_periods[i].name, config.life_periods[i].start),
+                 10, legendY + (i * legendHeight) + 5, 20, BLACK);
+    }
+}
 
 
 void DrawTimeline(int years) {
     int rows = (years + 3) / 4;
-    float cellWidth = GetScreenWidth() / 48.0f;
-    float cellHeight = (GetScreenHeight() - 100) / (rows + config.period_count);
+    float cellSize = GetScreenWidth() / 48.0f;
 
     struct tm dob_tm = {0};
     sscanf(config.date_of_birth, "%d-%d-%d", &dob_tm.tm_year, &dob_tm.tm_mon, &dob_tm.tm_mday);
@@ -177,7 +184,7 @@ void DrawTimeline(int years) {
 
                 time_t period_end = (k == config.period_count - 1) ? time(NULL) : mktime(&period_tm);
                 if (k < config.period_count - 1) {
-                    sscanf(config.life_periods[k+1].start, "%d-%d-%d", &period_tm.tm_year, &period_tm.tm_mon, &period_tm.tm_mday);
+                    sscanf(config.life_periods[k + 1].start, "%d-%d-%d", &period_tm.tm_year, &period_tm.tm_mon, &period_tm.tm_mday);
                     period_tm.tm_year -= 1900;
                     period_tm.tm_mon -= 1;
                     period_end = mktime(&period_tm);
@@ -189,14 +196,9 @@ void DrawTimeline(int years) {
                 }
             }
 
-            DrawRectangle(j * cellWidth, i * cellHeight, cellWidth, cellHeight, cellColor);
+            DrawRectangle(j * cellSize, i * cellSize, cellSize, cellSize, cellColor);
+            DrawRectangleLines(j * cellSize, i * cellSize, cellSize, cellSize, BLACK); // Drawing the border
         }
-    }
-
-    for (int i = 0; i < config.period_count; i++) {
-        DrawRectangle(0, (rows + i) * cellHeight, GetScreenWidth(), cellHeight, config.life_periods[i].color);
-        DrawText(TextFormat("%s (from %s)", config.life_periods[i].name, config.life_periods[i].start),
-                 10, (rows + i) * cellHeight + 5, 20, BLACK);
     }
 }
 
@@ -214,13 +216,16 @@ void DrawUI(void) {
         }
     }
 
+    DrawLegend();
+    
     DrawText("Life Expectancy:", 10, GetScreenHeight() - 40, 20, BLACK);
-    DrawRectangle(160, GetScreenHeight() - 45, 50, 30, LIGHTGRAY);
-    DrawText(lifeExpectancyInput, 165, GetScreenHeight() - 40, 20, BLACK);
+    DrawRectangle(190, GetScreenHeight() - 45, 50, 30, LIGHTGRAY);
+    DrawText(lifeExpectancyInput, 200, GetScreenHeight() - 40, 20, BLACK);
 
-    DrawRectangleRec(updateButton, GRAY);
-    DrawText("Update", updateButton.x + 10, updateButton.y + 5, 20, BLACK);
+    //DrawRectangleRec(updateButton, GRAY);
+    //DrawText("Update", updateButton.x + 10, updateButton.y + 5, 20, BLACK);
 }
+
 
 void UpdateLifeExpectancy(void) {
     int years = atoi(lifeExpectancyInput);
@@ -263,7 +268,6 @@ int main(void) {
                     if (CheckCollisionPointRec(mousePoint, itemRect)) {
                         selectedFileIndex = i;
                         dropdownActive = false;
-                        TraceLog(LOG_INFO, "Attempting to read config from: %s", yamlFiles[selectedFileIndex]);
                         ReadConfig(yamlFiles[selectedFileIndex]);
                         break;
                     }
