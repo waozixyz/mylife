@@ -20,7 +20,7 @@ proc get_yaml_files {} {
 }
 
 # Function to update the timeline
-proc update_timeline {config} {
+proc update_timeline {config years} {
     set name [dict get $config name]
     set dob [dict get $config date_of_birth]
     set dob_seconds [clock scan "${dob}-01" -format "%Y-%m-%d"]
@@ -34,8 +34,11 @@ proc update_timeline {config} {
         destroy $widget
     }
 
-    # Create a grid of 100 years, 12 months per year, 4 years per row
-    for {set i 0} {$i < 25} {incr i} {
+    # Calculate rows based on years parameter
+    set rows [expr {($years + 3) / 4}]
+
+    # Create a grid of specified years, 12 months per year, 4 years per row
+    for {set i 0} {$i < $rows} {incr i} {
         for {set j 0} {$j < 48} {incr j} {
             set current_date [clock add $dob_seconds [expr {$i * 48 + $j}] months]
             set year [clock format $current_date -format "%Y"]
@@ -61,7 +64,7 @@ proc update_timeline {config} {
     }
 
     # Create a legend
-    set row 25
+    set row $rows
     foreach period $life_periods {
         set name [dict get $period name]
         set color [dict get $period color]
@@ -77,14 +80,38 @@ proc update_timeline {config} {
 frame .frame
 pack .frame -fill both -expand 1
 
-# Create selector for YAML files
-set yaml_files [get_yaml_files]
-ttk::combobox .selector -values $yaml_files -state readonly
-pack .selector -pady 10
-bind .selector <<ComboboxSelected>> {
-    set selected_file [.selector get]
-    set config [read_config "data/$selected_file"]
-    update_timeline $config
+# Parse command line arguments
+set years 100
+set yaml_file ""
+
+foreach arg $argv {
+    if {[string is integer $arg]} {
+        set years $arg
+    } elseif {[string match *.yaml $arg] || [string match *.yml $arg]} {
+        set yaml_file $arg
+    } else {
+        set yaml_file "$arg.yaml"
+    }
+}
+
+if {$yaml_file ne ""} {
+    if {[file exists "data/$yaml_file"]} {
+        set config [read_config "data/$yaml_file"]
+        update_timeline $config $years
+    } else {
+        puts "Error: File 'data/$yaml_file' not found."
+        exit 1
+    }
+} else {
+    # Create selector for YAML files
+    set yaml_files [get_yaml_files]
+    ttk::combobox .selector -values $yaml_files -state readonly
+    pack .selector -pady 10
+    bind .selector <<ComboboxSelected>> {
+        set selected_file [.selector get]
+        set config [read_config "data/$selected_file"]
+        update_timeline $config $years
+    }
 }
 
 # Start the event loop
