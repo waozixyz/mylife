@@ -1,37 +1,35 @@
 # My Life Timeline
 
-A simple application for visualizing life events on a timeline. Available in two versions: Tcl/Tk (desktop) and JavaScript (web).
+A tool for visualizing life events on a timeline, available in Tcl/Tk (desktop) and JavaScript (web) versions.
 
 ## Features
 
-- Visualize life periods on a timeline
+- Display life periods on a timeline
 - Customize period names, start dates, and colors
-- YAML configuration file support
+- Support for YAML configuration
 - Dynamic updates based on configuration changes
 
-## Tcl/Tk Version
+## Development Setup
 
-### Requirements
+This project uses `devenv` to manage dependencies. The following packages are included:
 
-- Tcl/Tk
-- `yaml` package
+- `tcl`, `tk`, `tcllib`
+- `libyaml`
+- `gcc`
+- `raylib` (version `3.7.0`)
+- `cmake`, `pkg-config`
+- `python3`
 
-A `shell.nix` file is provided for easy setup using Nix.
+### Setup Instructions
 
-### Usage
-```
-tclsh life.tcl [years] [yaml_file]
-```
-- `years`: (Optional) Number of years to display (default: 100)
-- `yaml_file`: (Optional) Name of the YAML file in the `data` directory to load
+1. Install [devenv](https://devenv.sh/).
+2. Run `devenv shell` to enter the development environment.
 
-## JavaScript Version
+### Commands
 
-### Usage
-
-1. Open the HTML file in a web browser
-2. Modify the configuration using the form
-3. Load/Save configurations using the provided buttons
+- `build-run-c`: Build and run the C version.
+- `run-tcl`: Run the Tcl version.
+- `serve-web`: Serve the web version (accessible at http://localhost:8000).
 
 ## Configuration Format
 
@@ -47,13 +45,40 @@ life_periods:
     color: "#BAFFC9"
 ```
 
-Place YAML files in the data directory for the Tcl/Tk version.
+## Tcl/Tk Version
 
-## Installation
-Tcl/Tk Version
+### Requirements
 
-1. Use the provided shell.nix file with Nix, or
-2. Install Tcl/Tk and the yaml package manually
+- Tcl/Tk
+- `yaml` package
+
+### Usage
+
+```
+tclsh life.tcl [years] [yaml_file]
+```
+
+- `years`: (Optional) Number of years to display (default: 100)
+- `yaml_file`: (Optional) Name of the YAML file in the `data` directory to load
 
 ## JavaScript Version
-Ensure all files (HTML, JS, CSS, js-yaml.min.js) are in the same directory and open the HTML file in a browser.
+
+### Usage
+
+1. Open the HTML file in a web browser
+2. Modify the configuration using the form
+3. Load/Save configurations using the provided buttons
+
+## Raylib Version
+### Usage
+This project uses raylib for graphical rendering. Ensure consistency by using the specified version in the devenv.nix file.
+
+Use the command to provided in the devenv file to build and run the project.
+
+```
+build-run-c
+```
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
