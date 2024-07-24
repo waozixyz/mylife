@@ -241,3 +241,45 @@ window.addEventListener('resize', checkScreenSize);
 populateForm();
 updateTimeline();
 attachEventListeners();
+
+
+
+// Function to get the current configuration and serialize it
+function getConfig() {
+    updateConfig();
+    return config;
+}
+
+// Function to serialize configuration and share it via URL
+function shareConfigURL() {
+    const config = getConfig(); // Get the current config object
+    const configString = encodeURIComponent(JSON.stringify(config));
+    const url = `${window.location.origin}${window.location.pathname}?config=${configString}`;
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Config URL copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy URL: ', err);
+    });
+}
+
+// Function to load the configuration from the URL parameter
+function loadConfigFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('config')) {
+        const configString = decodeURIComponent(params.get('config'));
+        config = JSON.parse(configString);
+        populateForm();
+        updateTimeline();
+    }
+}
+
+// Attach the shareConfigURL function to the share button
+document.getElementById('shareButton').addEventListener('click', shareConfigURL);
+
+// Call this function on page load to load config from URL if present
+document.addEventListener('DOMContentLoaded', () => {
+    loadConfigFromURL();
+    populateForm();
+    updateTimeline();
+    attachEventListeners();
+});
