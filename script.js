@@ -225,14 +225,19 @@ window.onclick = function(event) {
         toggleModal(false);
     }
 }
+let previousWindowSize = null;
 
 function checkScreenSize() {
-    if (window.innerWidth <= 768) {
-        moveConfigPanel(true);
-        toggleModal(true);
-    } else {
-        moveConfigPanel(false);
-        toggleModal(false);
+    const currentWindowSize = window.innerWidth;
+    if (previousWindowSize !== currentWindowSize) {
+        if (currentWindowSize <= 768) {
+            moveConfigPanel(true);
+            toggleModal(true);
+        } else {
+            moveConfigPanel(false);
+            toggleModal(false);
+        }
+        previousWindowSize = currentWindowSize;
     }
 }
 
