@@ -9,3 +9,58 @@ data/*.yaml
 
 # Do not ignore default.yaml in the data directory
 !data/default.yaml
+
+# C related
+*.o
+*.out
+*.exe
+life_c
+
+# Tcl related
+*.tcl.tmp
+
+# Web related
+*.log
+*.sqlite
+
+# Node.js (if you're using it for web development)
+node_modules/
+npm-debug.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build directories
+build/
+dist/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Nix related
+result
+result-*
+
+# Python related (for the web server)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Misc
+*.log
+.env
