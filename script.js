@@ -3,16 +3,16 @@ date_of_birth: "2000-01"
 life_periods:
   - name: Childhood
     start: "2000-01"
-    color: "#FFB3BA"
+    color: "#FF6666"  # Dark Red
   - name: Teenage Years
     start: "2013-01"
-    color: "#BAFFC9"
+    color: "#66FF66"  # Dark Green
   - name: Early Adulthood
     start: "2018-01"
-    color: "#BAE1FF"
+    color: "#6666FF"  # Dark Blue
   - name: Career Growth
     start: "2023-01"
-    color: "#FFFFBA"`;
+    color: "#FFFF66"  # Dark Yellow`;
 
 let config = jsyaml.load(defaultConfig);
 
@@ -30,7 +30,6 @@ function createLifePeriodElement(period = { name: '', start: '', color: '#000000
         updateConfigAndTimeline();
     });
     
-    // Add event listeners to update on change
     div.querySelectorAll('input').forEach(input => {
         input.addEventListener('change', updateConfigAndTimeline);
     });
@@ -74,7 +73,6 @@ function updateConfig() {
     if (configTextarea) configTextarea.value = jsyaml.dump(config);
 }
 
-
 function updateConfigAndTimeline() {
     updateConfig();
     updateTimeline();
@@ -87,8 +85,6 @@ const updateTimeline = () => {
 
     timeline.innerHTML = '';
     legend.innerHTML = '';
-
-
 
     const dob = new Date(config.date_of_birth);
     const today = new Date();
@@ -135,46 +131,98 @@ const updateTimeline = () => {
     });
 };
 
-document.getElementById('configForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    updateTimeline();
-});
+function attachEventListeners() {
+    document.getElementById('configForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        updateTimeline();
+    });
 
-document.getElementById('addPeriod').addEventListener('click', () => {
-    const newPeriod = createLifePeriodElement();
-    document.getElementById('lifePeriods').appendChild(newPeriod);
-    updateConfigAndTimeline();
-});
+    document.getElementById('addPeriod').addEventListener('click', () => {
+        const newPeriod = createLifePeriodElement();
+        document.getElementById('lifePeriods').appendChild(newPeriod);
+        updateConfigAndTimeline();
+    });
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            config = jsyaml.load(e.target.result);
-            populateForm();
-            updateTimeline();
-        };
-        reader.readAsText(file);
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                config = jsyaml.load(e.target.result);
+                populateForm();
+                updateTimeline();
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    document.getElementById('saveButton').addEventListener('click', () => {
+        updateConfig();
+        const yamlString = jsyaml.dump(config);
+        const blob = new Blob([yamlString], { type: 'text/yaml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'life_timeline_config.yaml';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('name').addEventListener('change', updateConfigAndTimeline);
+    document.getElementById('dateOfBirth').addEventListener('change', updateConfigAndTimeline);
+}
+
+const configPanel = document.getElementById('configPanel');
+const modal = document.getElementById("modal");
+const openConfigBtn = document.getElementById("openConfig");
+const closeBtn = document.getElementsByClassName("close")[0];
+const modalContent = document.getElementById("modalContent");
+const container = document.querySelector(".container");
+
+function moveConfigPanel(toModal) {
+    if (toModal) {
+        modalContent.appendChild(configPanel);
+    } else {
+        container.insertBefore(configPanel, container.firstChild);
     }
-});
+}
 
-document.getElementById('saveButton').addEventListener('click', () => {
-    updateConfig();
-    const yamlString = jsyaml.dump(config);
-    const blob = new Blob([yamlString], { type: 'text/yaml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'life_timeline_config.yaml';
-    link.click();
-    URL.revokeObjectURL(url);
-});
+function toggleModal(show) {
+    modal.style.display = show ? "block" : "none";
+}
 
-// Add event listeners to name and date of birth inputs
-document.getElementById('name').addEventListener('change', updateConfigAndTimeline);
-document.getElementById('dateOfBirth').addEventListener('change', updateConfigAndTimeline);
+openConfigBtn.onclick = function() {
+    moveConfigPanel(true);
+    toggleModal(true);
+}
 
-// Initial setup
+if (closeBtn) {
+    closeBtn.onclick = function() {
+        toggleModal(false);
+    }
+} else {
+    console.error("Close button not found. Make sure an element with class 'close' exists in the modal.");
+}
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        toggleModal(false);
+    }
+}
+
+function checkScreenSize() {
+    if (window.innerWidth <= 768) {
+        moveConfigPanel(true);
+        toggleModal(true);
+    } else {
+        moveConfigPanel(false);
+        toggleModal(false);
+    }
+}
+
+checkScreenSize();
+window.addEventListener('resize', checkScreenSize);
+
 populateForm();
 updateTimeline();
+attachEventListeners();

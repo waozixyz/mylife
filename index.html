@@ -33,7 +33,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="left-panel">
+        <div id="configPanel">
             <h2>Life Timeline Configuration</h2>
             <form id="configForm">
                 <label for="name">Name:</label>
@@ -56,15 +56,22 @@
             </form>
             
             <textarea id="config" readonly></textarea>
-            
         </div>
         <div class="right-panel">
             <h2>Timeline</h2>
+            <button id="openConfig" class="mobile-only">Open Configuration</button>
             <div id="timeline"></div>
             <br/>
             <div id="legend"></div>
         </div>
     </div>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+    
     <script src="js-yaml.min.js"></script>
     <script src="script.js"></script>
 </body>
