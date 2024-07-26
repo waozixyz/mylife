@@ -18,10 +18,10 @@ c: $(APP_NAME)_c
 
 install: tcl c
 
-$(WRAPPER_PATH): $(SHELL_NIX) life.tcl config.yaml
+$(WRAPPER_PATH): $(SHELL_NIX) main.tcl config.yaml
 	mkdir -p $(WRAPPER_DIR)
 	echo "#!/bin/sh" > $(WRAPPER_PATH)
-	echo "$(NIX_SHELL) $(SHELL_NIX) --run 'tclsh life.tcl'" >> $(WRAPPER_PATH)
+	echo "$(NIX_SHELL) $(SHELL_NIX) --run 'tclsh main.tcl'" >> $(WRAPPER_PATH)
 	chmod +x $(WRAPPER_PATH)
 	@echo "Tcl wrapper script installed at $(WRAPPER_PATH)"
 
