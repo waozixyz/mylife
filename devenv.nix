@@ -17,7 +17,7 @@
     build-run-c.exec = ''
       cc -o life_c life.c $(pkg-config --cflags --libs yaml-0.1 raylib) -lm -lpthread -ldl -lrt && ./life_c
     '';
-    run-tcl.exec = "tclsh life.tcl";
+    run-tcl.exec = "tclsh main.tcl";
     serve-web.exec = "cd html && python -m http.server 8000";
   };
 
