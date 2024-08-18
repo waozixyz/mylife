@@ -5,6 +5,8 @@
 # Cargo.lock for binary projects (uncomment if this is a library)
 # Cargo.lock
 
+.cargo
+
 # IDE and editor files
 .idea/
 .vscode/
@@ -62,3 +64,5 @@ devenv.local.nix
 # Direnv files (if you're using direnv)
 .direnv
 .envrc
+
+.venv

@@ -1,12 +1,48 @@
 [package]
-name = "my_egui_project"
+name = "mylife"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.76"
+
 
 [dependencies]
-egui = "0.22.0"
-eframe = { version = "0.22.0", features = ["wgpu"] }
+egui = "0.28"
+eframe = { version = "0.28", default-features = false, features = [
+    "default_fonts", # Embed the default egui fonts.
+    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+    "persistence",   # Enable restoring app state when restarting the app.
+] }
+log = "0.4"
 env_logger = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 chrono = "0.4"
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+
+# native:
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.10"
+
+# web:
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1.7"
+
+# to access the DOM (to hide the loading text)
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3.4"
+
+[profile.release]
+opt-level = 2 # fast and small wasm
+
+# Optimize all dependencies even in debug builds:
+[profile.dev.package."*"]
+opt-level = 2
+
+
+[patch.crates-io]
+

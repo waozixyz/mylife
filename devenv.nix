@@ -17,6 +17,12 @@
     vulkan-tools
     vulkan-headers
     libglvnd
+    llvmPackages.bintools
+    # WASM and Trunk-specific tools
+    rustup
+    trunk
+    wasm-bindgen-cli
+    lld
   ];
 
   env = {
@@ -29,9 +35,25 @@
     ];
     RUST_BACKTRACE = "1";
   };
+  
 
   enterShell = ''
-    echo "egui development environment for Wayland ready!"
-    echo "You can now use 'cargo' to build and run your project."
+    echo "Rust WASM development environment with Trunk ready!"
+    echo "You can now use 'cargo' to build and 'trunk' to serve your project."
+    echo "For WASM development, use 'rustup target add wasm32-unknown-unknown' to add the WASM target."
+    echo "Then use 'trunk serve' to build and serve your WASM project."
+
+    # Ensure lld is in the PATH
+    export PATH="${pkgs.lld}/bin:$PATH"
+
+    # Set up cargo config
+    mkdir -p .cargo
+    cat << EOF > .cargo/config.toml
+    [target.wasm32-unknown-unknown]
+    rustflags = ["-C", "linker=wasm-ld"]
+    EOF
+
+    # Verify WASM target is installed
+    rustup target list --installed | grep wasm32-unknown-unknown || rustup target add wasm32-unknown-unknown
   '';
 }
