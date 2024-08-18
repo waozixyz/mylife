@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
+
 #[derive(Serialize, Deserialize)]
 struct Config {
     name: String,
@@ -13,6 +14,7 @@ struct Config {
     life_periods: Vec<LifePeriod>,
     yearly_events: HashMap<i32, Vec<YearlyEvent>>,
 }
+
 
 #[derive(Serialize, Deserialize)]
 struct LifePeriod {
@@ -74,7 +76,15 @@ impl eframe::App for MyApp {
                         ui.selectable_value(&mut self.view, "Yearly".to_string(), "Yearly");
                     });
                 
-                if self.view == "Yearly" {
+                if self.view == "Lifetime" {
+                    egui::ComboBox::from_label("Life Expectancy")
+                        .selected_text(self.config.life_expectancy.to_string())
+                        .show_ui(ui, |ui| {
+                            for year in 60..=120 {
+                                ui.selectable_value(&mut self.config.life_expectancy, year, year.to_string());
+                            }
+                        });
+                } else if self.view == "Yearly" {
                     egui::ComboBox::from_label("Year")
                         .selected_text(self.selected_year.to_string())
                         .show_ui(ui, |ui| {
@@ -90,7 +100,7 @@ impl eframe::App for MyApp {
             let available_size = ui.available_size();
             let grid_size = Vec2::new(
                 available_size.x.min(800.0),
-                available_size.y - 120.0, // Reserve space for legend
+                (available_size.y - 150.0).min(600.0), // Reserve space for legend and controls
             );
 
             egui::Frame::none()
@@ -103,10 +113,13 @@ impl eframe::App for MyApp {
                     }
                 });
 
+            ui.add_space(20.0);
             self.draw_legend(ui);
         });
     }
 }
+
+
 
 impl MyApp {
     fn draw_lifetime_view(&self, ui: &mut egui::Ui, grid_size: Vec2) {
@@ -117,25 +130,27 @@ impl MyApp {
         let rows = (years + 3) / 4;
         let cols = 48;
 
-        let cell_size = Vec2::new(
-            grid_size.x / cols as f32,
-            grid_size.y / rows as f32,
+        let cell_size = (grid_size.x.min(grid_size.y * cols as f32 / rows as f32) / cols as f32).floor();
+        let grid_width = cell_size * cols as f32;
+        let grid_height = cell_size * rows as f32;
+
+        let offset = Vec2::new(
+            (grid_size.x - grid_width) / 2.0,
+            (grid_size.y - grid_height) / 2.0
         );
 
-        egui::Grid::new("lifetime_grid")
-            .spacing([0.0, 0.0])
-            .show(ui, |ui| {
-                for i in 0..rows {
-                    for j in 0..cols {
-                        let current_date = dob + chrono::Duration::days(((i * cols + j) * 30) as i64);
-                        let color = self.get_color_for_date(&current_date);
-                        ui.add(egui::Label::new(" ").sense(egui::Sense::hover())
-                            .background_color(color)
-                            .min_size(cell_size));
-                    }
-                    ui.end_row();
-                }
-            });
+        for i in 0..rows {
+            for j in 0..cols {
+                let current_date = dob + chrono::Duration::days(((i * cols + j) * 30) as i64);
+                let color = self.get_color_for_date(&current_date);
+                let rect = egui::Rect::from_min_size(
+                    ui.min_rect().min + offset + Vec2::new(j as f32 * cell_size, i as f32 * cell_size),
+                    Vec2::new(cell_size, cell_size),
+                );
+                ui.painter().rect_filled(rect, 0.0, color);
+                ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+            }
+        }
     }
     
     fn draw_yearly_view(&self, ui: &mut egui::Ui, grid_size: Vec2) {
@@ -143,63 +158,80 @@ impl MyApp {
             let rows = 13;
             let cols = 28;
 
-            let cell_size = Vec2::new(
-                grid_size.x / cols as f32,
-                grid_size.y / rows as f32,
+            let cell_size = (grid_size.x.min(grid_size.y * cols as f32 / rows as f32) / cols as f32).floor();
+            let grid_width = cell_size * cols as f32;
+            let grid_height = cell_size * rows as f32;
+
+            let offset = Vec2::new(
+                (grid_size.x - grid_width) / 2.0,
+                (grid_size.y - grid_height) / 2.0
             );
 
-            egui::Grid::new("yearly_grid")
-                .spacing([0.0, 0.0])
+            for row in 0..rows {
+                for col in 0..cols {
+                    let day = row * cols + col + 1;
+                    let color = if day <= 365 {
+                        let date = NaiveDate::from_ymd_opt(self.selected_year, 1, 1).unwrap() + chrono::Duration::days(day as i64 - 1);
+                        self.get_color_for_yearly_event(&date, events)
+                    } else {
+                        egui::Color32::GRAY
+                    };
+                    let rect = egui::Rect::from_min_size(
+                        ui.min_rect().min + offset + Vec2::new(col as f32 * cell_size, row as f32 * cell_size),
+                        Vec2::new(cell_size, cell_size),
+                    );
+                    ui.painter().rect_filled(rect, 0.0, color);
+                    ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                }
+            }
+        }
+    }
+
+    fn draw_legend(&self, ui: &mut egui::Ui) {
+        ui.label("Legend:");
+        ui.add_space(5.0);
+
+        let items_per_row = 3;
+        let item_width = ui.available_width() / items_per_row as f32;
+
+        if self.view == "Lifetime" {
+            egui::Grid::new("legend_grid")
+                .spacing([10.0, 5.0])
                 .show(ui, |ui| {
-                    for row in 0..rows {
-                        for col in 0..cols {
-                            let day = row * cols + col + 1;
-                            if day <= 365 {
-                                let date = NaiveDate::from_ymd_opt(self.selected_year, 1, 1).unwrap() + chrono::Duration::days(day as i64 - 1);
-                                let color = self.get_color_for_yearly_event(&date, events);
-                                ui.add(egui::Label::new(" ").sense(egui::Sense::hover())
-                                    .background_color(color)
-                                    .min_size(cell_size));
-                            } else {
-                                ui.add(egui::Label::new(" ").sense(egui::Sense::hover())
-                                    .background_color(egui::Color32::GRAY)
-                                    .min_size(cell_size));
-                            }
+                    for (index, period) in self.config.life_periods.iter().enumerate() {
+                        let color = hex_to_color32(&period.color);
+                        ui.horizontal(|ui| {
+                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                            ui.painter().rect_filled(rect, 0.0, color);
+                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                            ui.label(format!("{} (from {})", period.name, period.start));
+                        });
+                        if (index + 1) % items_per_row == 0 {
+                            ui.end_row();
                         }
-                        ui.end_row();
+                    }
+                });
+        } else if let Some(events) = self.config.yearly_events.get(&self.selected_year) {
+            egui::Grid::new("legend_grid")
+                .spacing([10.0, 5.0])
+                .show(ui, |ui| {
+                    for (index, event) in events.iter().enumerate() {
+                        let color = hex_to_color32(&event.color);
+                        ui.horizontal(|ui| {
+                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                            ui.painter().rect_filled(rect, 0.0, color);
+                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                            ui.label(format!("{} (from {})", event.name, event.start));
+                        });
+                        if (index + 1) % items_per_row == 0 {
+                            ui.end_row();
+                        }
                     }
                 });
         }
     }
-    
-    fn draw_legend(&self, ui: &mut egui::Ui) {
-        ui.add_space(10.0);
-        ui.label("Legend:");
-        ui.add_space(5.0);
 
-        if self.view == "Lifetime" {
-            for period in &self.config.life_periods {
-                let color = hex_to_color32(&period.color);
-                ui.horizontal(|ui| {
-                    ui.add(egui::Label::new(" ").sense(egui::Sense::hover())
-                        .background_color(color)
-                        .min_size(Vec2::new(20.0, 20.0)));
-                    ui.label(format!("{} (from {})", period.name, period.start));
-                });
-            }
-        } else if let Some(events) = self.config.yearly_events.get(&self.selected_year) {
-            for event in events {
-                let color = hex_to_color32(&event.color);
-                ui.horizontal(|ui| {
-                    ui.add(egui::Label::new(" ").sense(egui::Sense::hover())
-                        .background_color(color)
-                        .min_size(Vec2::new(20.0, 20.0)));
-                    ui.label(format!("{} (from {})", event.name, event.start));
-                });
-            }
-        }
-    }
-    
+
     fn get_color_for_date(&self, date: &NaiveDate) -> egui::Color32 {
         for period in self.config.life_periods.iter().rev() {
             let start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
@@ -210,7 +242,7 @@ impl MyApp {
         }
         egui::Color32::WHITE
     }
-    
+
     fn get_color_for_yearly_event(&self, date: &NaiveDate, events: &[YearlyEvent]) -> egui::Color32 {
         for event in events.iter().rev() {
             let start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d")
@@ -221,8 +253,9 @@ impl MyApp {
         }
         egui::Color32::WHITE
     }
-}
 
+
+}
 fn hex_to_color32(hex: &str) -> egui::Color32 {
     let hex = hex.trim_start_matches('#');
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);

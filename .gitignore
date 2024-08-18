@@ -1,35 +1,13 @@
-# Ignore all .tar.gz files
-*.tar.gz
+# Rust build artifacts
+/target/
+**/*.rs.bk
 
-# Ignore the .devenv directory
-.devenv
+# Cargo.lock for binary projects (uncomment if this is a library)
+# Cargo.lock
 
-# Ignore all .yaml files in the data directory
-data/*.yaml
-
-# Do not ignore default.yaml in the data directory
-!data/default.yaml
-
-# C related
-*.o
-*.out
-*.exe
-life_c
-
-# Tcl related
-*.tcl.tmp
-
-# Web related
-*.log
-*.sqlite
-
-# Node.js (if you're using it for web development)
-node_modules/
-npm-debug.log
-
-# IDEs and editors
-.vscode/
+# IDE and editor files
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
@@ -43,25 +21,44 @@ npm-debug.log
 ehthumbs.db
 Thumbs.db
 
-# Build directories
-build/
-dist/
+# Rust profiling and debugging
+flamegraph.svg
+perf.data
+perf.data.old
 
-# Temporary files
-*.tmp
-*.bak
-*.backup
+# Dependency directories (if you're using any)
+/vendor/
 
-# Nix related
-result
-result-*
+# Build output directories
+/build/
+/dist/
 
-# Python related (for the web server)
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Misc
-*.log
+# Environment files
 .env
-.venv
+.env.local
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+
+# If you're using any asset processing tools, ignore their cache
+.cache/
+
+# If you're using any documentation generation tools
+/doc/
+
+# Ignore any local configuration files
+config.local.toml
+
+# Ignore any files generated during testing
+/tests/tmp/
+
+# Devenv files
+.devenv*
+devenv.local.nix
+
+# Direnv files (if you're using direnv)
+.direnv
+.envrc

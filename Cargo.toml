@@ -1,0 +1,12 @@
+[package]
+name = "my_egui_project"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui = "0.22.0"
+eframe = { version = "0.22.0", features = ["wgpu"] }
+env_logger = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+chrono = "0.4"
