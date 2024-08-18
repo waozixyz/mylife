@@ -69,51 +69,49 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &Config, sel
     }
 }
 
+
 pub fn draw_legend(ui: &mut egui::Ui, config: &Config, view: &str, selected_year: i32) {
     ui.label("Legend:");
     ui.add_space(5.0);
 
-    let items_per_row = 3;
-    let _item_width = ui.available_width() / items_per_row as f32;
+    let legend_height = 20.0;
 
     if view == "Lifetime" {
-        egui::Grid::new("legend_grid")
-            .spacing([10.0, 5.0])
-            .show(ui, |ui| {
-                for (index, period) in config.life_periods.iter().enumerate() {
-                    if let Some(color) = config.categories.get(&period.category) {
-                        let color = hex_to_color32(color);
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, 0.0, color);
-                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-                            ui.label(format!("{} (from {})", period.name, period.start));
-                        });
-                        if (index + 1) % items_per_row == 0 {
-                            ui.end_row();
-                        }
-                    }
-                }
-            });
+        let mut sorted_periods = config.life_periods.clone();
+        sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
+
+        for period in sorted_periods {
+            if let Some(color_str) = config.categories.get(&period.category) {
+                let color = hex_to_color32(color_str);
+                let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), legend_height), egui::Sense::hover());
+                ui.painter().rect_filled(rect, 0.0, color);
+                ui.painter().text(
+                    rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    format!("{} (from {})", period.name, period.start),
+                    egui::TextStyle::Body.resolve(ui.style()),
+                    egui::Color32::BLACK,
+                );
+            }
+        }
     } else if let Some(events) = config.yearly_events.get(&selected_year) {
-        egui::Grid::new("legend_grid")
-            .spacing([10.0, 5.0])
-            .show(ui, |ui| {
-                for (index, event) in events.iter().enumerate() {
-                    if let Some(color) = config.categories.get(&event.category) {
-                        let color = hex_to_color32(color);
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, 0.0, color);
-                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-                            ui.label(format!("{} (from {})", event.category, event.start));
-                        });
-                        if (index + 1) % items_per_row == 0 {
-                            ui.end_row();
-                        }
-                    }
-                }
-            });
+        let mut sorted_events = events.clone();
+        sorted_events.sort_by(|a, b| a.start.cmp(&b.start));
+
+        for event in sorted_events {
+            if let Some(color_str) = config.categories.get(&event.category) {
+                let color = hex_to_color32(color_str);
+                let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), legend_height), egui::Sense::hover());
+                ui.painter().rect_filled(rect, 0.0, color);
+                ui.painter().text(
+                    rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    format!("{} (from {})", event.category, event.start),
+                    egui::TextStyle::Body.resolve(ui.style()),
+                    egui::Color32::BLACK,
+                );
+            }
+        }
     }
 }
 

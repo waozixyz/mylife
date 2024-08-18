@@ -1,4 +1,4 @@
-use eframe::{egui, epaint::Vec2};
+use eframe::egui;
 use crate::config::Config;
 use crate::ui::{draw_lifetime_view, draw_yearly_view, draw_legend};
 use crate::utils::{load_config, get_yaml_files_in_data_folder};
@@ -64,7 +64,12 @@ impl eframe::App for MyLifeApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+        let screen_rect = ctx.screen_rect();
+        let top_height = screen_rect.height() * 0.1;
+        let bottom_height = screen_rect.height() * 0.2;
+        let central_height = screen_rect.height() * 0.8;
+
+        egui::TopBottomPanel::top("top_panel").exact_height(top_height).show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 #[cfg(not(target_arch = "wasm32"))]
                 ui.menu_button("File", |ui| {
@@ -77,80 +82,97 @@ impl eframe::App for MyLifeApp {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading(&self.config.name);
-            
-            ui.horizontal(|ui| {
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    egui::ComboBox::from_label("YAML File")
-                        .selected_text(&self.selected_yaml)
-                        .show_ui(ui, |ui| {
-                            for yaml_file in &self.yaml_files {
-                                if ui.selectable_value(&mut self.selected_yaml, yaml_file.clone(), yaml_file).changed() {
-                                    self.config = load_config(&self.selected_yaml);
-                                }
-                            }
-                        });
-                }
 
-                #[cfg(target_arch = "wasm32")]
-                if ui.button("Load YAML").clicked() {
-                    let ctx_clone = ctx.clone();
-                    let mut app_clone = self.clone();
-                    wasm_bindgen_futures::spawn_local(async move {
-                        load_yaml(&mut app_clone, &ctx_clone).await;
-                    });
-                }
-
-                egui::ComboBox::from_label("View")
-                    .selected_text(&self.view)
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.view, "Lifetime".to_string(), "Lifetime");
-                        ui.selectable_value(&mut self.view, "Yearly".to_string(), "Yearly");
-                    });
-                
-                if self.view == "Lifetime" {
-                    egui::ComboBox::from_label("Life Expectancy")
-                        .selected_text(self.config.life_expectancy.to_string())
-                        .show_ui(ui, |ui| {
-                            for year in 60..=120 {
-                                ui.selectable_value(&mut self.config.life_expectancy, year, year.to_string());
-                            }
-                        });
-                } else if self.view == "Yearly" {
-                    egui::ComboBox::from_label("Year")
-                        .selected_text(self.selected_year.to_string())
-                        .show_ui(ui, |ui| {
-                            for year in self.config.yearly_events.keys() {
-                                ui.selectable_value(&mut self.selected_year, *year, year.to_string());
-                            }
-                        });
-                }
+        egui::TopBottomPanel::bottom("legend")
+        .exact_height(bottom_height)
+        .resizable(false)
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                draw_legend(ui, &self.config, &self.view, self.selected_year);
             });
-            
-            ui.add_space(20.0);
-
-            let available_size = ui.available_size();
-            let grid_size = Vec2::new(
-                available_size.x.min(800.0),
-                (available_size.y - 150.0).min(600.0),
-            );
-
-            egui::Frame::none()
-                .fill(egui::Color32::from_rgb(240, 240, 240))
-                .show(ui, |ui| {
+        });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let available_rect = ui.available_rect_before_wrap();
+            let min_width = 800.0;
+            let min_height = central_height.max(400.0);
+        
+            // Fixed top part
+            ui.vertical_centered(|ui| {
+                ui.heading(&self.config.name);
+                ui.horizontal(|ui| {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        egui::ComboBox::from_label("YAML File")
+                            .selected_text(&self.selected_yaml)
+                            .show_ui(ui, |ui| {
+                                for yaml_file in &self.yaml_files {
+                                    if ui.selectable_value(&mut self.selected_yaml, yaml_file.clone(), yaml_file).changed() {
+                                        self.config = load_config(&self.selected_yaml);
+                                    }
+                                }
+                            });
+                    }
+        
+                    #[cfg(target_arch = "wasm32")]
+                    if ui.button("Load YAML").clicked() {
+                        let ctx_clone = ctx.clone();
+                        let mut app_clone = self.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            load_yaml(&mut app_clone, &ctx_clone).await;
+                        });
+                    }
+        
+                    egui::ComboBox::from_label("View")
+                        .selected_text(&self.view)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.view, "Lifetime".to_string(), "Lifetime");
+                            ui.selectable_value(&mut self.view, "Yearly".to_string(), "Yearly");
+                        });
+                    
                     if self.view == "Lifetime" {
-                        draw_lifetime_view(ui, grid_size, &self.config);
-                    } else {
-                        draw_yearly_view(ui, grid_size, &self.config, self.selected_year);
+                        egui::ComboBox::from_label("Life Expectancy")
+                            .selected_text(self.config.life_expectancy.to_string())
+                            .show_ui(ui, |ui| {
+                                for year in 60..=120 {
+                                    ui.selectable_value(&mut self.config.life_expectancy, year, year.to_string());
+                                }
+                            });
+                    } else if self.view == "Yearly" {
+                        egui::ComboBox::from_label("Year")
+                            .selected_text(self.selected_year.to_string())
+                            .show_ui(ui, |ui| {
+                                for year in self.config.yearly_events.keys() {
+                                    ui.selectable_value(&mut self.selected_year, *year, year.to_string());
+                                }
+                            });
                     }
                 });
-
+            });
+        
             ui.add_space(20.0);
-            draw_legend(ui, &self.config, &self.view, self.selected_year);
+        
+            // Scrollable grid part
+            egui::ScrollArea::both()
+                .max_width(f32::INFINITY)
+                .show(ui, |ui| {
+                    let grid_size = egui::vec2(
+                        available_rect.width().min(min_width),
+                        (available_rect.height() - 100.0).min(min_height),
+                    );
+        
+                    egui::Frame::none()
+                        .fill(egui::Color32::from_rgb(240, 240, 240))
+                        .show(ui, |ui| {
+                            if self.view == "Lifetime" {
+                                draw_lifetime_view(ui, grid_size, &self.config);
+                            } else {
+                                draw_yearly_view(ui, grid_size, &self.config, self.selected_year);
+                            }
+                        });
+                });
         });
     }
+
 }
 
 #[cfg(target_arch = "wasm32")]
