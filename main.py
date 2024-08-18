@@ -5,6 +5,9 @@ from views import update_view
 import sys
 import os
 import signal
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+
 
 def signal_handler(sig, frame):
     print("\nExiting application...")
@@ -14,8 +17,17 @@ def signal_handler(sig, frame):
 # Register the signal handler
 signal.signal(signal.SIGINT, signal_handler)
 
+def shutdown_program(event=None):
+    print("\nExiting application...")
+    root.quit()
+    sys.exit(0)
+
+
 # Main window
-root = tk.Tk()
+root = ttk.Window(themename="superhero")  
+
+root.bind('<Control-q>', shutdown_program)
+root.bind('<Mod4-q>', shutdown_program)
 
 # Global variables
 config = {}
