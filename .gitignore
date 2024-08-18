@@ -2,11 +2,6 @@
 /target/
 **/*.rs.bk
 
-# Cargo.lock for binary projects (uncomment if this is a library)
-# Cargo.lock
-
-.cargo
-
 # IDE and editor files
 .idea/
 .vscode/
@@ -65,4 +60,3 @@ devenv.local.nix
 .direnv
 .envrc
 
-.venv

@@ -1,8 +1,15 @@
 [package]
 name = "mylife"
 version = "0.1.0"
+authors = ["Martin Schiller <hello@waozi.xyz>"]
 edition = "2021"
 rust-version = "1.76"
+include = ["LICENSE.md", "**/*.rs", "Cargo.toml"]
+
+
+[package.metadata.docs.rs]
+all-features = true
+targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 
 [dependencies]
@@ -13,14 +20,16 @@ eframe = { version = "0.28", default-features = false, features = [
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
 log = "0.4"
-env_logger = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 chrono = "0.4"
+cfg-if = "1.0"
 
-[package.metadata.docs.rs]
-all-features = true
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+
+[features]
+default = ["desktop"]
+desktop = []
+
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -31,10 +40,13 @@ env_logger = "0.10"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1.7"
+js-sys = "0.3"
+rfd = "0.14"
 
 # to access the DOM (to hide the loading text)
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.4"
+features = ["File", "FileList", "FileReader"] 
 
 [profile.release]
 opt-level = 2 # fast and small wasm
@@ -42,7 +54,6 @@ opt-level = 2 # fast and small wasm
 # Optimize all dependencies even in debug builds:
 [profile.dev.package."*"]
 opt-level = 2
-
 
 [patch.crates-io]
 

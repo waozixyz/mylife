@@ -35,7 +35,7 @@ fn main() {
     wasm_bindgen_futures::spawn_local(async {
         let start_result = eframe::WebRunner::new()
             .start(
-                "the_canvas_id",
+                "mylife-canvas",
                 web_options,
                 Box::new(|cc| Ok(Box::new(mylife::TemplateApp::new(cc)))),
             )

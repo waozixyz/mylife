@@ -46,13 +46,6 @@
     # Ensure lld is in the PATH
     export PATH="${pkgs.lld}/bin:$PATH"
 
-    # Set up cargo config
-    mkdir -p .cargo
-    cat << EOF > .cargo/config.toml
-    [target.wasm32-unknown-unknown]
-    rustflags = ["-C", "linker=wasm-ld"]
-    EOF
-
     # Verify WASM target is installed
     rustup target list --installed | grep wasm32-unknown-unknown || rustup target add wasm32-unknown-unknown
   '';

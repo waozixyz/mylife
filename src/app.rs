@@ -2,10 +2,14 @@ use eframe::{egui, epaint::Vec2};
 use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 use std::collections::HashMap;
+use cfg_if::cfg_if;
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 struct Config {
     name: String,
     date_of_birth: String,
@@ -14,62 +18,133 @@ struct Config {
     yearly_events: HashMap<i32, Vec<YearlyEvent>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct LifePeriod {
     name: String,
     start: String,
     color: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct YearlyEvent {
     name: String,
     start: String,
     color: String,
 }
 
-// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[serde(default)]
 pub struct TemplateApp {
     config: Config,
     view: String,
     selected_year: i32,
+    #[cfg(not(target_arch = "wasm32"))]
     yaml_files: Vec<String>,
+    #[cfg(target_arch = "wasm32")]
+    yaml_content: String,
     selected_yaml: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
+    #[serde(skip)]
     value: f32,
 }
+const DEFAULT_CONFIG_YAML: &str = "\
+name: John Doe
+date_of_birth: 2000-01
+life_expectancy: 80
+life_periods:
+  - name: Childhood
+    start: 2000-01
+    color: \"#FFB3BA\"
+  - name: Teenage Years
+    start: 2013-01
+    color: \"#BAFFC9\"
+  - name: Early Adulthood
+    start: 2018-01
+    color: \"#BAE1FF\"
+  - name: Career Growth
+    start: 2023-01
+    color: \"#FFFFBA\"
+yearly_events:
+  2022:
+    - name: Winter Internship
+      start: 2022-01-03
+      color: \"#4CAF50\"
+    - name: Spring Semester
+      start: 2022-03-21
+      color: \"#2196F3\"
+    - name: Summer Job
+      start: 2022-06-06
+      color: \"#FFA500\"
+    - name: Fall Semester
+      start: 2022-09-05
+      color: \"#9C27B0\"
+  2023:
+    - name: New Year Trip
+      start: 2023-01-01
+      color: \"#E91E63\"
+    - name: Job Search
+      start: 2023-02-01
+      color: \"#607D8B\"
+    - name: First Full-time Job
+      start: 2023-05-01
+      color: \"#795548\"
+    - name: Work From Home
+      start: 2023-09-01
+      color: \"#FF5722\"
+    - name: Year-end Vacation
+      start: 2023-12-23
+      color: \"#009688\"
+  2024:
+    - name: New Project at Work
+      start: 2024-01-08
+      color: \"#3F51B5\"
+    - name: Learning New Skills
+      start: 2024-04-01
+      color: \"#CDDC39\"
+    - name: Summer Workation
+      start: 2024-06-15
+      color: \"#FF9800\"
+    - name: Promotion Preparation
+      start: 2024-08-01
+      color: \"#9C27B0\"
+    - name: Holiday Season
+      start: 2024-11-25
+      color: \"#F44336\"
+";
 
 impl Default for TemplateApp {
     fn default() -> Self {
-        let yaml_files = get_yaml_files_in_data_folder();
-        let default_yaml = "default.yaml".to_string();
-        let config: Config = load_config(&default_yaml);
+        cfg_if! {
+            if #[cfg(not(target_arch = "wasm32"))] {
+                let yaml_files = get_yaml_files_in_data_folder();
+                let default_yaml = "default.yaml".to_string();
+                let config: Config = load_config(&default_yaml);
+            } else {
+                let config = load_config(DEFAULT_CONFIG_YAML);
+            }
+        }
+
         Self {
             config,
             view: "Lifetime".to_string(),
             selected_year: 2024,
+            #[cfg(not(target_arch = "wasm32"))]
             yaml_files,
+            #[cfg(target_arch = "wasm32")]
+            yaml_content: DEFAULT_CONFIG_YAML.to_string(),
+            #[cfg(not(target_arch = "wasm32"))]
             selected_yaml: default_yaml,
+            #[cfg(target_arch = "wasm32")]
+            selected_yaml: "Default".to_string(),
             value: 2.7,
         }
     }
 }
 
 impl TemplateApp {
-    /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
-
         Default::default()
     }
 
@@ -204,6 +279,7 @@ impl TemplateApp {
         egui::Color32::WHITE
     }
 }
+
 impl eframe::App for TemplateApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -212,16 +288,14 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
-
+                
+                #[cfg(not(target_arch = "wasm32"))]
+                ui.menu_button("File", |ui| {
+                    if ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+                ui.add_space(16.0);
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
         });
@@ -230,15 +304,27 @@ impl eframe::App for TemplateApp {
             ui.heading(&self.config.name);
             
             ui.horizontal(|ui| {
-                egui::ComboBox::from_label("YAML File")
-                    .selected_text(&self.selected_yaml)
-                    .show_ui(ui, |ui| {
-                        for yaml_file in &self.yaml_files {
-                            if ui.selectable_value(&mut self.selected_yaml, yaml_file.clone(), yaml_file).changed() {
-                                self.config = load_config(&self.selected_yaml);
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    egui::ComboBox::from_label("YAML File")
+                        .selected_text(&self.selected_yaml)
+                        .show_ui(ui, |ui| {
+                            for yaml_file in &self.yaml_files {
+                                if ui.selectable_value(&mut self.selected_yaml, yaml_file.clone(), yaml_file).changed() {
+                                    self.config = load_config(&self.selected_yaml);
+                                }
                             }
-                        }
+                        });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                if ui.button("Load YAML").clicked() {
+                    let ctx_clone = ctx.clone();
+                    let mut app_clone = self.clone();
+                    wasm_bindgen_futures::spawn_local(async move {
+                        load_yaml(&mut app_clone, &ctx_clone).await;
                     });
+                }
 
                 egui::ComboBox::from_label("View")
                     .selected_text(&self.view)
@@ -271,7 +357,7 @@ impl eframe::App for TemplateApp {
             let available_size = ui.available_size();
             let grid_size = Vec2::new(
                 available_size.x.min(800.0),
-                (available_size.y - 150.0).min(600.0), // Reserve space for legend and controls
+                (available_size.y - 150.0).min(600.0),
             );
 
             egui::Frame::none()
@@ -298,6 +384,7 @@ fn hex_to_color32(hex: &str) -> egui::Color32 {
     egui::Color32::from_rgb(r, g, b)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn get_yaml_files_in_data_folder() -> Vec<String> {
     let data_folder = Path::new("data");
     fs::read_dir(data_folder)
@@ -314,10 +401,52 @@ fn get_yaml_files_in_data_folder() -> Vec<String> {
         .collect()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn load_config(yaml_file: &str) -> Config {
     let yaml_path = Path::new("data").join(yaml_file);
     let yaml_content = fs::read_to_string(yaml_path)
         .unwrap_or_else(|_| panic!("Failed to read YAML file: {}", yaml_file));
     serde_yaml::from_str(&yaml_content)
         .unwrap_or_else(|_| panic!("Failed to parse YAML file: {}", yaml_file))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn load_config(yaml_content: &str) -> Config {
+    serde_yaml::from_str(yaml_content).unwrap_or_else(|e| {
+        log::error!("Failed to parse YAML content: {}. Using default config.", e);
+        Config::default()
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn load_yaml(app: &mut TemplateApp, ctx: &egui::Context) {
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("YAML", &["yaml", "yml"])
+        .pick_file()
+        .await;
+    
+    if let Some(file) = file {
+        let content = file.read().await;
+        match String::from_utf8(content) {
+            Ok(yaml_content) => {
+                app.yaml_content = yaml_content.clone();
+                match serde_yaml::from_str(&yaml_content) {
+                    Ok(new_config) => {
+                        app.config = new_config;
+                        log::info!("YAML file loaded successfully");
+                    },
+                    Err(e) => {
+                        log::error!("Failed to parse YAML content: {}. Using default config.", e);
+                        app.config = load_config(DEFAULT_CONFIG_YAML);
+                    }
+                }
+                ctx.request_repaint();
+            },
+            Err(e) => {
+                log::error!("Invalid UTF-8 in file: {}. Using default config.", e);
+                app.config = load_config(DEFAULT_CONFIG_YAML);
+                ctx.request_repaint();
+            }
+        }
+    }
 }
