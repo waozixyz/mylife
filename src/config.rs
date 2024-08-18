@@ -1,14 +1,42 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct Config {
+    pub name: String,
+    pub date_of_birth: String,
+    pub life_expectancy: u32,
+    pub categories: HashMap<String, String>,
+    pub life_periods: Vec<LifePeriod>,
+    pub yearly_events: HashMap<i32, Vec<YearlyEvent>>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct LifePeriod {
+    pub name: String,
+    pub start: String,
+    pub category: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct YearlyEvent {
+    pub category: String,
+    pub start: String,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub const DEFAULT_CONFIG_YAML: &str = "\
 name: John Doe
 date_of_birth: 2000-01
 life_expectancy: 80
 categories:
-  Childhood: "#FFB3BA"
-  Teenage: "#BAFFC9"
-  EarlyAdult: "#BAE1FF"
-  Career: "#FFFFBA"
-  Education: "#2196F3"
-  Work: "#4CAF50"
-  Vacation: "#FFA500"
+  Childhood: \"#FFB3BA\"
+  Teenage: \"#BAFFC9\"
+  EarlyAdult: \"#BAE1FF\"
+  Career: \"#FFFFBA\"
+  Education: \"#2196F3\"
+  Work: \"#4CAF50\"
+  Vacation: \"#FFA500\"
 life_periods:
   - name: Childhood
     start: 2000-01
@@ -54,3 +82,4 @@ yearly_events:
       start: 2024-08-01
     - category: Vacation
       start: 2024-11-25
+";

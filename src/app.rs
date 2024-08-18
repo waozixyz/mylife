@@ -1,40 +1,13 @@
 use eframe::{egui, epaint::Vec2};
-use serde::{Deserialize, Serialize};
-use chrono::NaiveDate;
-use std::collections::HashMap;
-use cfg_if::cfg_if;
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::fs;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
-
-#[derive(Serialize, Deserialize, Clone, Default)]
-struct Config {
-    name: String,
-    date_of_birth: String,
-    life_expectancy: u32,
-    life_periods: Vec<LifePeriod>,
-    yearly_events: HashMap<i32, Vec<YearlyEvent>>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct LifePeriod {
-    name: String,
-    start: String,
-    color: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct YearlyEvent {
-    name: String,
-    start: String,
-    color: String,
-}
+use crate::config::Config;
+use crate::ui::{draw_lifetime_view, draw_yearly_view, draw_legend};
+use crate::utils::{load_config, get_yaml_files_in_data_folder};
+#[cfg(target_arch = "wasm32")]
+use crate::config::DEFAULT_CONFIG_YAML;
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 #[serde(default)]
-pub struct TemplateApp {
+pub struct MyLifeApp {
     config: Config,
     view: String,
     selected_year: i32,
@@ -46,81 +19,17 @@ pub struct TemplateApp {
     #[serde(skip)]
     value: f32,
 }
-const DEFAULT_CONFIG_YAML: &str = "\
-name: John Doe
-date_of_birth: 2000-01
-life_expectancy: 80
-life_periods:
-  - name: Childhood
-    start: 2000-01
-    color: \"#FFB3BA\"
-  - name: Teenage Years
-    start: 2013-01
-    color: \"#BAFFC9\"
-  - name: Early Adulthood
-    start: 2018-01
-    color: \"#BAE1FF\"
-  - name: Career Growth
-    start: 2023-01
-    color: \"#FFFFBA\"
-yearly_events:
-  2022:
-    - name: Winter Internship
-      start: 2022-01-03
-      color: \"#4CAF50\"
-    - name: Spring Semester
-      start: 2022-03-21
-      color: \"#2196F3\"
-    - name: Summer Job
-      start: 2022-06-06
-      color: \"#FFA500\"
-    - name: Fall Semester
-      start: 2022-09-05
-      color: \"#9C27B0\"
-  2023:
-    - name: New Year Trip
-      start: 2023-01-01
-      color: \"#E91E63\"
-    - name: Job Search
-      start: 2023-02-01
-      color: \"#607D8B\"
-    - name: First Full-time Job
-      start: 2023-05-01
-      color: \"#795548\"
-    - name: Work From Home
-      start: 2023-09-01
-      color: \"#FF5722\"
-    - name: Year-end Vacation
-      start: 2023-12-23
-      color: \"#009688\"
-  2024:
-    - name: New Project at Work
-      start: 2024-01-08
-      color: \"#3F51B5\"
-    - name: Learning New Skills
-      start: 2024-04-01
-      color: \"#CDDC39\"
-    - name: Summer Workation
-      start: 2024-06-15
-      color: \"#FF9800\"
-    - name: Promotion Preparation
-      start: 2024-08-01
-      color: \"#9C27B0\"
-    - name: Holiday Season
-      start: 2024-11-25
-      color: \"#F44336\"
-";
 
-impl Default for TemplateApp {
+impl Default for MyLifeApp {
     fn default() -> Self {
-        cfg_if! {
-            if #[cfg(not(target_arch = "wasm32"))] {
+        cfg_if::cfg_if! {
+            if #[cfg(target_arch = "wasm32")] {
+                let config = load_config(DEFAULT_CONFIG_YAML);
+            } else {
                 let yaml_files = get_yaml_files_in_data_folder();
                 let default_yaml = "default.yaml".to_string();
                 let config: Config = load_config(&default_yaml);
-            } else {
-                let config = load_config(DEFAULT_CONFIG_YAML);
-            }
+            } 
         }
 
         Self {
@@ -140,147 +49,16 @@ impl Default for TemplateApp {
     }
 }
 
-impl TemplateApp {
+impl MyLifeApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
         Default::default()
     }
-
-    fn draw_lifetime_view(&self, ui: &mut egui::Ui, grid_size: Vec2) {
-        let dob = NaiveDate::parse_from_str(&format!("{}-01", self.config.date_of_birth), "%Y-%m-%d")
-            .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
-
-        let years = self.config.life_expectancy;
-        let rows = (years + 3) / 4;
-        let cols = 48;
-
-        let cell_size = (grid_size.x.min(grid_size.y * cols as f32 / rows as f32) / cols as f32).floor();
-        let grid_width = cell_size * cols as f32;
-        let grid_height = cell_size * rows as f32;
-
-        let offset = Vec2::new(
-            (grid_size.x - grid_width) / 2.0,
-            (grid_size.y - grid_height) / 2.0
-        );
-
-        for i in 0..rows {
-            for j in 0..cols {
-                let current_date = dob + chrono::Duration::days(((i * cols + j) * 30) as i64);
-                let color = self.get_color_for_date(&current_date);
-                let rect = egui::Rect::from_min_size(
-                    ui.min_rect().min + offset + Vec2::new(j as f32 * cell_size, i as f32 * cell_size),
-                    Vec2::new(cell_size, cell_size),
-                );
-                ui.painter().rect_filled(rect, 0.0, color);
-                ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-            }
-        }
-    }
-    
-    fn draw_yearly_view(&self, ui: &mut egui::Ui, grid_size: Vec2) {
-        if let Some(events) = self.config.yearly_events.get(&self.selected_year) {
-            let rows = 13;
-            let cols = 28;
-
-            let cell_size = (grid_size.x.min(grid_size.y * cols as f32 / rows as f32) / cols as f32).floor();
-            let grid_width = cell_size * cols as f32;
-            let grid_height = cell_size * rows as f32;
-
-            let offset = Vec2::new(
-                (grid_size.x - grid_width) / 2.0,
-                (grid_size.y - grid_height) / 2.0
-            );
-
-            for row in 0..rows {
-                for col in 0..cols {
-                    let day = row * cols + col + 1;
-                    let color = if day <= 365 {
-                        let date = NaiveDate::from_ymd_opt(self.selected_year, 1, 1).unwrap() + chrono::Duration::days(day as i64 - 1);
-                        self.get_color_for_yearly_event(&date, events)
-                    } else {
-                        egui::Color32::GRAY
-                    };
-                    let rect = egui::Rect::from_min_size(
-                        ui.min_rect().min + offset + Vec2::new(col as f32 * cell_size, row as f32 * cell_size),
-                        Vec2::new(cell_size, cell_size),
-                    );
-                    ui.painter().rect_filled(rect, 0.0, color);
-                    ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-                }
-            }
-        }
-    }
-
-    fn draw_legend(&self, ui: &mut egui::Ui) {
-        ui.label("Legend:");
-        ui.add_space(5.0);
-
-        let items_per_row = 3;
-        let _item_width = ui.available_width() / items_per_row as f32;
-
-        if self.view == "Lifetime" {
-            egui::Grid::new("legend_grid")
-                .spacing([10.0, 5.0])
-                .show(ui, |ui| {
-                    for (index, period) in self.config.life_periods.iter().enumerate() {
-                        let color = hex_to_color32(&period.color);
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, 0.0, color);
-                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-                            ui.label(format!("{} (from {})", period.name, period.start));
-                        });
-                        if (index + 1) % items_per_row == 0 {
-                            ui.end_row();
-                        }
-                    }
-                });
-        } else if let Some(events) = self.config.yearly_events.get(&self.selected_year) {
-            egui::Grid::new("legend_grid")
-                .spacing([10.0, 5.0])
-                .show(ui, |ui| {
-                    for (index, event) in events.iter().enumerate() {
-                        let color = hex_to_color32(&event.color);
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, 0.0, color);
-                            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-                            ui.label(format!("{} (from {})", event.name, event.start));
-                        });
-                        if (index + 1) % items_per_row == 0 {
-                            ui.end_row();
-                        }
-                    }
-                });
-        }
-    }
-
-    fn get_color_for_date(&self, date: &NaiveDate) -> egui::Color32 {
-        for period in self.config.life_periods.iter().rev() {
-            let start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
-                .unwrap_or_else(|e| panic!("Failed to parse start date '{}' for period '{}': {:?}", period.start, period.name, e));
-            if &start <= date {
-                return hex_to_color32(&period.color);
-            }
-        }
-        egui::Color32::WHITE
-    }
-
-    fn get_color_for_yearly_event(&self, date: &NaiveDate, events: &[YearlyEvent]) -> egui::Color32 {
-        for event in events.iter().rev() {
-            let start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d")
-                .unwrap_or_else(|e| panic!("Failed to parse start date '{}' for event '{}': {:?}", event.start, event.name, e));
-            if &start <= date {
-                return hex_to_color32(&event.color);
-            }
-        }
-        egui::Color32::WHITE
-    }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for MyLifeApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
@@ -288,7 +66,6 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                
                 #[cfg(not(target_arch = "wasm32"))]
                 ui.menu_button("File", |ui| {
                     if ui.button("Quit").clicked() {
@@ -364,62 +141,20 @@ impl eframe::App for TemplateApp {
                 .fill(egui::Color32::from_rgb(240, 240, 240))
                 .show(ui, |ui| {
                     if self.view == "Lifetime" {
-                        self.draw_lifetime_view(ui, grid_size);
+                        draw_lifetime_view(ui, grid_size, &self.config);
                     } else {
-                        self.draw_yearly_view(ui, grid_size);
+                        draw_yearly_view(ui, grid_size, &self.config, self.selected_year);
                     }
                 });
 
             ui.add_space(20.0);
-            self.draw_legend(ui);
+            draw_legend(ui, &self.config, &self.view, self.selected_year);
         });
     }
 }
 
-fn hex_to_color32(hex: &str) -> egui::Color32 {
-    let hex = hex.trim_start_matches('#');
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
-    egui::Color32::from_rgb(r, g, b)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn get_yaml_files_in_data_folder() -> Vec<String> {
-    let data_folder = Path::new("data");
-    fs::read_dir(data_folder)
-        .expect("Failed to read data folder")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "yaml" {
-                Some(path.file_name()?.to_string_lossy().into_owned())
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn load_config(yaml_file: &str) -> Config {
-    let yaml_path = Path::new("data").join(yaml_file);
-    let yaml_content = fs::read_to_string(yaml_path)
-        .unwrap_or_else(|_| panic!("Failed to read YAML file: {}", yaml_file));
-    serde_yaml::from_str(&yaml_content)
-        .unwrap_or_else(|_| panic!("Failed to parse YAML file: {}", yaml_file))
-}
-
 #[cfg(target_arch = "wasm32")]
-fn load_config(yaml_content: &str) -> Config {
-    serde_yaml::from_str(yaml_content).unwrap_or_else(|e| {
-        log::error!("Failed to parse YAML content: {}. Using default config.", e);
-        Config::default()
-    })
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn load_yaml(app: &mut TemplateApp, ctx: &egui::Context) {
+async fn load_yaml(app: &mut MyLifeApp, ctx: &egui::Context) {
     let file = rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
