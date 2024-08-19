@@ -14,7 +14,9 @@ use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use crate::utils::load_config;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::utils::get_yaml_files_in_data_folder;
+#[cfg(target_arch = "wasm32")]
 use std::collections::HashMap;
+#[cfg(target_arch = "wasm32")]
 use uuid::Uuid;
 
 
@@ -44,7 +46,7 @@ pub struct MyLifeApp {
     #[serde(skip)]
     original_legend_item: Option<LegendItem>,
 }
-
+#[cfg(target_arch = "wasm32")]
 impl Default for Config {
     fn default() -> Self {
         serde_yaml::from_str(DEFAULT_CONFIG_YAML).unwrap_or_else(|_| {
@@ -58,7 +60,7 @@ impl Default for Config {
         })
     }
 }
-
+#[cfg(target_arch = "wasm32")]
 impl From<Config> for RuntimeConfig {
     fn from(config: Config) -> Self {
         RuntimeConfig {
@@ -89,7 +91,6 @@ impl Default for MyLifeApp {
         
         #[cfg(not(target_arch = "wasm32"))]
         let config = {
-            let yaml_files = get_yaml_files_in_data_folder();
             let default_yaml = "default.yaml".to_string();
             load_config(&default_yaml)
         };
