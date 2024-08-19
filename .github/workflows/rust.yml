@@ -100,10 +100,7 @@ jobs:
           TARGET: armv7-unknown-linux-gnueabihf
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
-        - os: windows-latest
-          TARGET: x86_64-pc-windows-msvc
-          EXTENSION: .exe
-
+          
     steps:
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
