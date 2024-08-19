@@ -23,46 +23,65 @@ life_periods:
 - name: Traveling with Wifey
   start: 2024-01
   color: '#82307C'
+
 yearly_events:
   2024:
-  - color: '#A57164'
-    start: 2024-01-01
-  - color: '#5D7B8A'
-    start: 2024-02-16
-  - color: '#7BA05B'
-    start: 2024-03-09
-  - color: '#8F7E5F'
-    start: 2024-04-06
-  - color: '#9C7A72'
-    start: 2024-05-06
-  - color: '#8F7E5F'
-    start: 2024-06-05
-  - color: '#7BA05B'
-    start: 2024-07-03
-  - color: '#A57164'
-    start: 2024-08-01
+    - name: Indonesia
+      start: 2024-01-01
+      color: "#A57164"
+    - name: Malaysia
+      start: 2024-02-16
+      color: "#5D7B8A"
+    - name: Thailand/ Trang
+      start: 2024-03-09
+      color: "#7BA05B"
+    - name: Cambodia
+      start: 2024-04-06
+      color: "#8F7E5F"
+    - name: Vietnam
+      start: 2024-05-06
+      color: "#9C7A72"
+    - name: Cambodia
+      start: 2024-06-05
+      color: "#8F7E5F"
+    - name: Thailand/ Trang
+      start: 2024-07-03
+      color: "#7BA05B"
   2023:
-  - color: '#7BA05B'
-    start: 2023-01-01
-  - color: '#5D7B8A'
-    start: 2023-01-13
-  - color: '#A57164'
-    start: 2023-02-15
-  - color: '#7BA05B'
-    start: 2023-03-16
-  - color: '#9C7A72'
-    start: 2023-04-16
-  - color: '#7BA05B'
-    start: 2023-05-17
-  - color: '#8F7E5F'
-    start: 2023-06-16
-  - color: '#7BA05B'
-    start: 2023-07-07
-  - color: '#5D7B8A'
-    start: 2023-08-06
-  - color: '#A57164'
-    start: 2023-11-02
-  - color: '#5D7B8A'
-    start: 2023-11-29
-  - color: '#A57164'
-    start: 2023-12-24
+    - name: Indonesia
+      start: 2023-12-24
+      color: "#A57164"
+    - name: Malaysia
+      start: 2023-11-29
+      color: "#5D7B8A"
+    - name: Indonesia
+      start: 2023-11-02
+      color: "#A57164"
+    - name: Malaysia
+      start: 2023-08-06
+      color: "#5D7B8A"
+    - name: Thailand
+      start: 2023-07-07
+      color: "#7BA05B"
+    - name: Laos
+      start: 2023-06-16
+      color: "#8F7E5F"
+    - name: Thailand
+      start: 2023-05-17
+      color: "#7BA05B"
+    - name: Phillipines
+      start: 2023-04-16
+      color: "#9C7A72"
+    - name: Thailand
+      start: 2023-03-16
+      color: "#7BA05B"
+    - name: Indonesia
+      start: 2023-02-15
+      color: "#A57164"
+    - name: Malaysia
+      start: 2023-01-13
+      color: "#5D7B8A"
+    - name: Thailand
+      start: 2023-01-01
+      color: "#7BA05B"
+      

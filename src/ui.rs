@@ -90,7 +90,7 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConf
 }
 
 pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, selected_year: i32) -> Option<LegendItem> {
-    ui.label("Legend:");
+    ui.heading("Legend:");
     ui.add_space(5.0);
 
     let legend_height = 20.0;
