@@ -24,6 +24,7 @@ chrono = "0.4"
 cfg-if = "1.0"
 uuid = { version = "1.4", features = ["v4", "serde"] }
 catppuccin-egui = { version = "5.2.0", default-features = false, features = ["egui28"] }
+getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["desktop"]

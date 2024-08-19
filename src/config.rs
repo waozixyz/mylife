@@ -18,34 +18,48 @@ life_periods:
     color: \"#FFFFBA\"
 yearly_events:
   2022:
-    - color: \"#4CAF50\"
+    - name: Winter Internship
       start: 2022-01-03
-    - color: \"#2196F3\"
+      color: \"#4CAF50\"
+    - name: Spring Semester
       start: 2022-03-21
-    - color: \"#4CAF50\"
+      color: \"#2196F3\"
+    - name: Summer Job
       start: 2022-06-06
-    - color: \"#2196F3\"
+      color: \"#FFA500\"
+    - name: Fall Semester
       start: 2022-09-05
+      color: \"#9C27B0\"
   2023:
-    - color: \"#FFA500\"
+    - name: New Year Trip
       start: 2023-01-01
-    - color: \"#4CAF50\"
+      color: \"#E91E63\"
+    - name: Job Search
       start: 2023-02-01
-    - color: \"#FFFFBA\"
+      color: \"#607D8B\"
+    - name: First Full-time Job
       start: 2023-05-01
-    - color: \"#4CAF50\"
+      color: \"#795548\"
+    - name: Work From Home
       start: 2023-09-01
-    - color: \"#FFA500\"
+      color: \"#FF5722\"
+    - name: Year-end Vacation
       start: 2023-12-23
+      color: \"#009688\"
   2024:
-    - color: \"#4CAF50\"
+    - name: New Project at Work
       start: 2024-01-08
-    - color: \"#2196F3\"
+      color: \"#3F51B5\"
+    - name: Learning New Skills
       start: 2024-04-01
-    - color: \"#FFA500\"
+      color: \"#CDDC39\"
+    - name: Summer Workation
       start: 2024-06-15
-    - color: \"#FFFFBA\"
+      color: \"#FF9800\"
+    - name: Promotion Preparation
       start: 2024-08-01
-    - color: \"#FFA500\"
+      color: \"#9C27B0\"
+    - name: Holiday Season
       start: 2024-11-25
+      color: \"#F44336\"
 ";

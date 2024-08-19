@@ -1,12 +1,21 @@
 use eframe::egui;
 use crate::ui::{draw_lifetime_view, draw_yearly_view, draw_legend};
-use crate::utils::{load_config, get_yaml_files_in_data_folder};
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
+#[cfg(target_arch = "wasm32")]
+use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent, LegendItem};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::models::{Config, RuntimeConfig, LifePeriod, YearlyEvent, LegendItem};
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 use log::debug;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
+use crate::utils::load_config;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::utils::get_yaml_files_in_data_folder;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -36,28 +45,65 @@ pub struct MyLifeApp {
     original_legend_item: Option<LegendItem>,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        serde_yaml::from_str(DEFAULT_CONFIG_YAML).unwrap_or_else(|_| {
+            Config {
+                name: "John Doe".to_string(),
+                date_of_birth: "2000-01".to_string(),
+                life_expectancy: 80,
+                life_periods: vec![],
+                yearly_events: HashMap::new(),
+            }
+        })
+    }
+}
+
+impl From<Config> for RuntimeConfig {
+    fn from(config: Config) -> Self {
+        RuntimeConfig {
+            name: config.name,
+            date_of_birth: config.date_of_birth,
+            life_expectancy: config.life_expectancy,
+            life_periods: config.life_periods.into_iter().map(|p| RuntimeLifePeriod {
+                id: Uuid::new_v4(),
+                name: p.name,
+                start: p.start,
+                color: p.color,
+            }).collect(),
+            yearly_events: config.yearly_events.into_iter().map(|(year, events)| {
+                (year, events.into_iter().map(|e| RuntimeYearlyEvent {
+                    id: Uuid::new_v4(),
+                    color: e.color,
+                    start: e.start,
+                }).collect())
+            }).collect(),
+        }
+    }
+}
+
 impl Default for MyLifeApp {
     fn default() -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(target_arch = "wasm32")] {
-                let config = load_config(DEFAULT_CONFIG_YAML);
-            } else {
-                let yaml_files = get_yaml_files_in_data_folder();
-                let default_yaml = "default.yaml".to_string();
-                let config = load_config(&default_yaml);
-            } 
-        }
+        #[cfg(target_arch = "wasm32")]
+        let config = load_config(DEFAULT_CONFIG_YAML);
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        let config = {
+            let yaml_files = get_yaml_files_in_data_folder();
+            let default_yaml = "default.yaml".to_string();
+            load_config(&default_yaml)
+        };
 
         Self {
             config,
             view: "Lifetime".to_string(),
             selected_year: 2024,
             #[cfg(not(target_arch = "wasm32"))]
-            yaml_files,
+            yaml_files: get_yaml_files_in_data_folder(),
             #[cfg(target_arch = "wasm32")]
             yaml_content: DEFAULT_CONFIG_YAML.to_string(),
             #[cfg(not(target_arch = "wasm32"))]
-            selected_yaml: default_yaml,
+            selected_yaml: "default.yaml".to_string(),
             #[cfg(target_arch = "wasm32")]
             selected_yaml: "Default".to_string(),
             value: 2.7,
@@ -109,7 +155,7 @@ impl MyLifeApp {
         // For WASM, we might want to trigger a download or update some web storage here
     }
 }
-
+#[cfg(not(target_arch = "wasm32"))]
 fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
     Config {
         name: runtime_config.name.clone(),
