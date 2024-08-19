@@ -4,6 +4,7 @@ use crate::ui::{draw_lifetime_view, draw_yearly_view, draw_legend};
 use crate::utils::{load_config, get_yaml_files_in_data_folder};
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
+use crate::models::LegendItem;
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 #[serde(default)]
@@ -18,7 +19,9 @@ pub struct MyLifeApp {
     selected_yaml: String,
     #[serde(skip)]
     value: f32,
+    selected_legend_item: Option<LegendItem>,
 }
+
 
 impl Default for MyLifeApp {
     fn default() -> Self {
@@ -45,6 +48,7 @@ impl Default for MyLifeApp {
             #[cfg(target_arch = "wasm32")]
             selected_yaml: "Default".to_string(),
             value: 2.7,
+            selected_legend_item: None,
         }
     }
 }
@@ -65,9 +69,9 @@ impl eframe::App for MyLifeApp {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let screen_rect = ctx.screen_rect();
-        let top_height = screen_rect.height() * 0.1;
+        let top_height = 20.0;
         let bottom_height = screen_rect.height() * 0.2;
-        let central_height = screen_rect.height() * 0.8;
+        let central_height = screen_rect.height() * 0.8 - 20.0;
 
         egui::TopBottomPanel::top("top_panel").exact_height(top_height).show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -82,15 +86,79 @@ impl eframe::App for MyLifeApp {
             });
         });
 
-
         egui::TopBottomPanel::bottom("legend")
         .exact_height(bottom_height)
         .resizable(false)
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                draw_legend(ui, &self.config, &self.view, self.selected_year);
+                if let Some(legend_item) = draw_legend(ui, &self.config, &self.view, self.selected_year) {
+                    self.selected_legend_item = Some(legend_item);
+                }
             });
         });
+
+        if self.selected_legend_item.is_some() {
+            let mut item = self.selected_legend_item.clone().unwrap();
+            let mut should_save = false;
+            let mut should_close = false;
+
+            egui::Window::new("Edit Legend Item")
+                .show(ctx, |ui| {
+                    ui.vertical(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Name:");
+                            ui.text_edit_singleline(&mut item.name);
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Start:");
+                            ui.text_edit_singleline(&mut item.start);
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Color:");
+                            let mut color = egui::Color32::from_hex(&item.color).unwrap_or(egui::Color32::WHITE);
+                            ui.color_edit_button_srgba(&mut color);
+                            item.color = format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b());
+                        });
+
+                        ui.horizontal(|ui| {
+                            if ui.button("Save").clicked() {
+                                should_save = true;
+                                should_close = true;
+                            }
+                            if ui.button("Cancel").clicked() {
+                                should_close = true;
+                            }
+                        });
+                    });
+                });
+
+            if should_save {
+                // Update the config with the new values
+                if item.is_yearly {
+                    if let Some(events) = self.config.yearly_events.get_mut(&self.selected_year) {
+                        if let Some(event) = events.iter_mut().find(|e| e.start == item.start && e.color == item.name) {
+                            event.color = item.color.clone();
+                            event.start = item.start.clone();
+                        }
+                    }
+                } else {
+                    if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.name == item.name) {
+                        period.name = item.name.clone();
+                        period.start = item.start.clone();
+                        period.color = item.color.clone();
+                    }
+                }
+            }
+
+            if should_close {
+                self.selected_legend_item = None;
+            } else {
+                self.selected_legend_item = Some(item);
+            }
+        }
+        
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_rect = ui.available_rect_before_wrap();
             let min_width = 800.0;
@@ -172,7 +240,6 @@ impl eframe::App for MyLifeApp {
                 });
         });
     }
-
 }
 
 #[cfg(target_arch = "wasm32")]
