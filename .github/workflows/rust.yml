@@ -3,9 +3,6 @@ on: [push, pull_request, workflow_dispatch]
 name: CI
 
 env:
-  # --cfg=web_sys_unstable_apis is required to enable the web_sys clipboard API which egui_web uses
-  # https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.Clipboard.html
-  # https://rustwasm.github.io/docs/wasm-bindgen/web-sys/unstable-apis.html
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
 
@@ -15,11 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          components: rustfmt, clippy
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -30,12 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
+          targets: wasm32-unknown-unknown
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -46,11 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
       - uses: actions-rs/cargo@v1
         with:
@@ -62,11 +50,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: rustfmt
       - uses: actions-rs/cargo@v1
         with:
@@ -78,11 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: clippy
       - uses: actions-rs/cargo@v1
         with:
@@ -94,12 +76,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.76.0
-          target: wasm32-unknown-unknown
-          override: true
+          targets: wasm32-unknown-unknown
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
       - name: Build
@@ -113,16 +92,12 @@ jobs:
         include:
         - os: macos-latest
           TARGET: aarch64-apple-darwin
-
         - os: ubuntu-latest
           TARGET: aarch64-unknown-linux-gnu
-
         - os: ubuntu-latest
           TARGET: armv7-unknown-linux-gnueabihf
-
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
-
         - os: windows-latest
           TARGET: x86_64-pc-windows-msvc
           EXTENSION: .exe
@@ -131,32 +106,22 @@ jobs:
     - name: Building ${{ matrix.TARGET }}
       run: echo "${{ matrix.TARGET }}"
 
-    - uses: actions/checkout@master
-    - name: Install build dependencies - Rustup
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.TARGET }}
 
-    # For linux, it's necessary to use cross from the git repository to avoid glibc problems
-    # Ref: https://github.com/cross-rs/cross/issues/1510
-    - name: Install cross for linux
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
-
-    - name: Install cross for mac and windows
-      if: ${{ !contains(matrix.TARGET, 'linux') }}
-      run: |
-        cargo install cross
+    - name: Install cross
+      run: cargo install cross --git https://github.com/cross-rs/cross
 
     - name: Build
-      run: |
-        cross build --verbose --release --target=${{ matrix.TARGET }}
+      run: cross build --verbose --release --target=${{ matrix.TARGET }}
 
     - name: Rename
       run: cp target/${{ matrix.TARGET }}/release/eframe_template${{ matrix.EXTENSION }} eframe_template-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3
       with:
         name: eframe_template-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
         path: eframe_template-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
@@ -171,4 +136,3 @@ jobs:
         tag: ${{ github.ref }}
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         overwrite: true
-        
