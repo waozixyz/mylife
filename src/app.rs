@@ -142,17 +142,15 @@ impl MyLifeApp {
                     event.start = item.start.clone();
                 }
             }
-        } else {
-            if let Some(period) = self
-                .config
-                .life_periods
-                .iter_mut()
-                .find(|p| p.id == item.id)
-            {
-                period.name = item.name.clone();
-                period.start = item.start.clone();
-                period.color = item.color.clone();
-            }
+        } else if let Some(period) = self
+            .config
+            .life_periods
+            .iter_mut()
+            .find(|p| p.id == item.id)
+        {
+            period.name = item.name.clone();
+            period.start = item.start.clone();
+            period.color = item.color.clone();
         }
         self.save_config();
     }
@@ -360,10 +358,12 @@ impl eframe::App for MyLifeApp {
                         let mut start_date = item.start.clone();
                         if ui.text_edit_singleline(&mut start_date).changed() {
                             // Only update if it's a valid date
-                            if let Ok(_) = chrono::NaiveDate::parse_from_str(
+                            if chrono::NaiveDate::parse_from_str(
                                 &format!("{}-01", start_date),
                                 "%Y-%m-%d",
-                            ) {
+                            )
+                            .is_ok()
+                            {
                                 item.start = start_date;
                                 changed = true;
                             }
