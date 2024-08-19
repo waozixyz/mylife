@@ -8,6 +8,8 @@ use crate::ui::{draw_legend, draw_lifetime_view, draw_yearly_view};
 use eframe::egui;
 #[cfg(target_arch = "wasm32")]
 use futures::channel::oneshot;
+#[cfg(target_arch = "wasm32")]
+use crate::utils::config_to_runtime_config;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::utils::get_yaml_files_in_data_folder;
