@@ -3,21 +3,21 @@ use crate::config::DEFAULT_CONFIG_YAML;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::models::{Config, LegendItem, LifePeriod, RuntimeConfig, YearlyEvent};
 #[cfg(target_arch = "wasm32")]
-use crate::models::{Config, LegendItem, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent};
+use crate::models::{Config, LegendItem, RuntimeConfig};
 use crate::ui::{draw_legend, draw_lifetime_view, draw_yearly_view};
 use eframe::egui;
+#[cfg(target_arch = "wasm32")]
+use futures::channel::oneshot;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::utils::get_yaml_files_in_data_folder;
 use crate::utils::load_config;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use log::debug;
-#[cfg(target_arch = "wasm32")]
-use std::collections::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 #[cfg(target_arch = "wasm32")]
-use uuid::Uuid;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 enum CatppuccinTheme {
@@ -44,70 +44,27 @@ pub struct MyLifeApp {
     selected_legend_item: Option<LegendItem>,
     #[serde(skip)]
     original_legend_item: Option<LegendItem>,
-}
-#[cfg(target_arch = "wasm32")]
-impl Default for Config {
-    fn default() -> Self {
-        serde_yaml::from_str(DEFAULT_CONFIG_YAML).unwrap_or_else(|_| Config {
-            name: "John Doe".to_string(),
-            date_of_birth: "2000-01".to_string(),
-            life_expectancy: 80,
-            life_periods: vec![],
-            yearly_events: HashMap::new(),
-        })
-    }
-}
-#[cfg(target_arch = "wasm32")]
-impl From<Config> for RuntimeConfig {
-    fn from(config: Config) -> Self {
-        RuntimeConfig {
-            name: config.name,
-            date_of_birth: config.date_of_birth,
-            life_expectancy: config.life_expectancy,
-            life_periods: config
-                .life_periods
-                .into_iter()
-                .map(|p| RuntimeLifePeriod {
-                    id: Uuid::new_v4(),
-                    name: p.name,
-                    start: p.start,
-                    color: p.color,
-                })
-                .collect(),
-            yearly_events: config
-                .yearly_events
-                .into_iter()
-                .map(|(year, events)| {
-                    (
-                        year,
-                        events
-                            .into_iter()
-                            .map(|e| RuntimeYearlyEvent {
-                                id: Uuid::new_v4(),
-                                color: e.color,
-                                start: e.start,
-                            })
-                            .collect(),
-                    )
-                })
-                .collect(),
-        }
-    }
+    #[cfg(target_arch = "wasm32")]
+    loaded_configs: Vec<(String, RuntimeConfig)>,
+    #[cfg(target_arch = "wasm32")]
+    selected_config_index: usize,
+    #[cfg(target_arch = "wasm32")]
+    loaded_app: Option<Box<MyLifeApp>>,
 }
 
 impl Default for MyLifeApp {
     fn default() -> Self {
         #[cfg(target_arch = "wasm32")]
-        let config = load_config(DEFAULT_CONFIG_YAML);
+        let default_config = load_config(DEFAULT_CONFIG_YAML);
 
         #[cfg(not(target_arch = "wasm32"))]
-        let config = {
+        let default_config = {
             let default_yaml = "default.yaml".to_string();
             load_config(&default_yaml)
         };
 
         Self {
-            config,
+            config: default_config.clone(),
             view: "Lifetime".to_string(),
             selected_year: 2024,
             #[cfg(not(target_arch = "wasm32"))]
@@ -122,6 +79,12 @@ impl Default for MyLifeApp {
             selected_legend_item: None,
             original_legend_item: None,
             theme: CatppuccinTheme::Mocha,
+            #[cfg(target_arch = "wasm32")]
+            loaded_configs: vec![("Default".to_string(), default_config)],
+            #[cfg(target_arch = "wasm32")]
+            selected_config_index: 0,
+            #[cfg(target_arch = "wasm32")]
+            loaded_app: None,
         }
     }
 }
@@ -209,6 +172,15 @@ impl eframe::App for MyLifeApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        log::debug!("Entering update method");
+
+        #[cfg(target_arch = "wasm32")]
+        if let Some(loaded_app) = self.loaded_app.take() {
+            log::debug!("Loaded app found, updating main app");
+            *self = *loaded_app;
+            log::debug!("Main app updated");
+        }
+
         catppuccin_egui::set_theme(
             ctx,
             match self.theme {
@@ -271,14 +243,56 @@ impl eframe::App for MyLifeApp {
                                     }
                                 });
                         }
-
                         #[cfg(target_arch = "wasm32")]
-                        if ui.button("Load YAML").clicked() {
-                            let ctx_clone = ctx.clone();
-                            let mut app_clone = self.clone();
-                            wasm_bindgen_futures::spawn_local(async move {
-                                load_yaml(&mut app_clone, &ctx_clone).await;
-                            });
+                        {
+                            egui::ComboBox::from_label("Configuration")
+                                .selected_text(&self.selected_yaml)
+                                .show_ui(ui, |ui| {
+                                    for (index, (name, _)) in self.loaded_configs.iter().enumerate()
+                                    {
+                                        if ui
+                                            .selectable_value(
+                                                &mut self.selected_config_index,
+                                                index,
+                                                name,
+                                            )
+                                            .clicked()
+                                        {
+                                            self.config = self.loaded_configs[index].1.clone();
+                                            self.selected_yaml = name.clone();
+                                        }
+                                    }
+                                });
+
+                            if ui.button("Load YAML").clicked() {
+                                log::debug!("Load YAML button clicked");
+                                let app_ptr =
+                                    std::sync::Arc::new(std::sync::Mutex::new(self.clone()));
+                                let app_ptr_clone = app_ptr.clone();
+                                wasm_bindgen_futures::spawn_local(async move {
+                                    log::debug!("Async task started");
+                                    match load_yaml().await {
+                                        Some(new_app) => {
+                                            log::debug!("New app loaded, attempting to update");
+                                            match app_ptr_clone.lock() {
+                                                Ok(mut app) => {
+                                                    *app = new_app;
+                                                    log::debug!("App updated successfully");
+                                                }
+                                                Err(e) => {
+                                                    log::error!("Failed to acquire lock: {}", e)
+                                                }
+                                            }
+                                        }
+                                        None => log::debug!("No new app loaded"),
+                                    }
+                                    log::debug!("Async task completed");
+                                });
+                            }
+
+                            if ui.button("Save YAML").clicked() {
+                                save_yaml(self);
+                            }
                         }
 
                         egui::ComboBox::from_label("View")
@@ -451,34 +465,75 @@ impl eframe::App for MyLifeApp {
 }
 
 #[cfg(target_arch = "wasm32")]
-async fn load_yaml(app: &mut MyLifeApp, ctx: &egui::Context) {
+async fn load_yaml() -> Option<MyLifeApp> {
+    log::debug!("Entering load_yaml function");
     let file = rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
         .await;
 
-    if let Some(file) = file {
-        let content = file.read().await;
-        match String::from_utf8(content) {
-            Ok(yaml_content) => {
-                app.yaml_content = yaml_content.clone();
-                match serde_yaml::from_str(&yaml_content) {
-                    Ok(new_config) => {
-                        app.config = new_config;
-                        log::info!("YAML file loaded successfully");
-                    }
-                    Err(e) => {
-                        log::error!("Failed to parse YAML content: {}. Using default config.", e);
-                        app.config = load_config(DEFAULT_CONFIG_YAML);
-                    }
+    log::debug!("File picked: {:?}", file.is_some());
+
+    let file = file?;
+
+    log::debug!("Reading file content");
+    let content = file.read().await;
+    log::debug!("File content read, length: {} bytes", content.len());
+
+    match String::from_utf8(content) {
+        Ok(yaml_content) => {
+            log::debug!(
+                "YAML content (first 100 chars): {}",
+                &yaml_content[..yaml_content.len().min(100)]
+            );
+            match serde_yaml::from_str::<Config>(&yaml_content) {
+                Ok(config) => {
+                    log::debug!("YAML parsed successfully");
+                    let new_config = config_to_runtime_config(config);
+                    let config_name = file.file_name();
+                    log::debug!("New config name: {}", config_name);
+                    let mut new_app = MyLifeApp::default();
+                    new_app
+                        .loaded_configs
+                        .push((config_name.clone(), new_config.clone()));
+                    new_app.selected_config_index = new_app.loaded_configs.len() - 1;
+                    new_app.config = new_config;
+                    new_app.selected_yaml = config_name;
+                    log::info!("YAML file loaded successfully");
+                    Some(new_app)
                 }
-                ctx.request_repaint();
-            }
-            Err(e) => {
-                log::error!("Invalid UTF-8 in file: {}. Using default config.", e);
-                app.config = load_config(DEFAULT_CONFIG_YAML);
-                ctx.request_repaint();
+                Err(e) => {
+                    log::error!("Failed to parse YAML content: {}. Using default config.", e);
+                    None
+                }
             }
         }
+        Err(e) => {
+            log::error!("Invalid UTF-8 in file: {}. Using default config.", e);
+            None
+        }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn save_yaml(app: &MyLifeApp) {
+    let config = Config::from(&app.config);
+    let yaml_content = serde_yaml::to_string(&config).unwrap();
+
+    // Use the web_sys crate to create a Blob and download it
+    use wasm_bindgen::JsCast;
+    use web_sys::{Blob, HtmlAnchorElement, Url};
+
+    let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
+        .expect("Failed to create Blob");
+    let url = Url::create_object_url_with_blob(&blob).expect("Failed to create object URL");
+
+    let document = web_sys::window().unwrap().document().unwrap();
+    let anchor: HtmlAnchorElement = document.create_element("a").unwrap().dyn_into().unwrap();
+
+    anchor.set_href(&url);
+    anchor.set_download("config.yaml");
+    anchor.click();
+
+    Url::revoke_object_url(&url).expect("Failed to revoke object URL");
 }

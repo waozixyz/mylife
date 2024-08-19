@@ -1,13 +1,9 @@
-#[cfg(target_arch = "wasm32")]
-use crate::models::{Config, RuntimeConfig};
-#[cfg(not(target_arch = "wasm32"))]
 use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent};
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
-#[cfg(not(target_arch = "wasm32"))]
 use uuid::Uuid;
 
 pub fn hex_to_color32(hex: &str) -> egui::Color32 {
@@ -49,11 +45,10 @@ pub fn load_config(yaml_file: &str) -> RuntimeConfig {
 #[cfg(target_arch = "wasm32")]
 pub fn load_config(yaml_content: &str) -> RuntimeConfig {
     let config: Config = serde_yaml::from_str(yaml_content).unwrap_or_default();
-    RuntimeConfig::from(config)
+    config_to_runtime_config(config)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn config_to_runtime_config(config: Config) -> RuntimeConfig {
+pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
     let runtime_life_periods = config
         .life_periods
         .into_iter()

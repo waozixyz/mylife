@@ -41,11 +41,12 @@ wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1.7"
 js-sys = "0.3"
 rfd = "0.14"
+futures = "0.3"
 
 # to access the DOM (to hide the loading text)
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.4"
-features = ["File", "FileList", "FileReader"] 
+features = ["File", "FileList", "FileReader", "Blob", "Url", "HtmlAnchorElement"]
 
 [profile.release]
 opt-level = 2 # fast and small wasm
