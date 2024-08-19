@@ -7,7 +7,7 @@ life_periods:
   color: '#2f4f4f'
 - name: Teen Years on Malta
   start: 2008-06
-  color: '#4545A4'
+  color: '#191970'
 - name: Digital Nomad with yunity
   start: 2016-08
   color: '#4682b4'
@@ -20,9 +20,9 @@ life_periods:
 - name: Solo Travel in Asia
   start: 2022-03
   color: '#4682b4'
-- name: Traveling with Wifey
+- name: Traveling with Partner
   start: 2024-01
-  color: '#82307C'
+  color: '#878A8D'
 yearly_events:
   2024:
   - color: '#A57164'

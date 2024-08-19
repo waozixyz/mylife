@@ -1,15 +1,16 @@
 use eframe::egui;
-use crate::config::Config;
 use crate::ui::{draw_lifetime_view, draw_yearly_view, draw_legend};
 use crate::utils::{load_config, get_yaml_files_in_data_folder};
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
-use crate::models::LegendItem;
+use crate::models::{Config, RuntimeConfig, LifePeriod, YearlyEvent, LegendItem};
+use std::path::Path;
+use log::debug;
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 #[serde(default)]
 pub struct MyLifeApp {
-    config: Config,
+    config: RuntimeConfig,
     view: String,
     selected_year: i32,
     #[cfg(not(target_arch = "wasm32"))]
@@ -20,8 +21,9 @@ pub struct MyLifeApp {
     #[serde(skip)]
     value: f32,
     selected_legend_item: Option<LegendItem>,
+    #[serde(skip)]
+    original_legend_item: Option<LegendItem>,
 }
-
 
 impl Default for MyLifeApp {
     fn default() -> Self {
@@ -31,7 +33,7 @@ impl Default for MyLifeApp {
             } else {
                 let yaml_files = get_yaml_files_in_data_folder();
                 let default_yaml = "default.yaml".to_string();
-                let config: Config = load_config(&default_yaml);
+                let config = load_config(&default_yaml);
             } 
         }
 
@@ -49,9 +51,11 @@ impl Default for MyLifeApp {
             selected_yaml: "Default".to_string(),
             value: 2.7,
             selected_legend_item: None,
+            original_legend_item: None,
         }
     }
 }
+
 
 impl MyLifeApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -59,6 +63,56 @@ impl MyLifeApp {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
         Default::default()
+    }
+
+    fn update_config_item(&mut self, item: &LegendItem) {
+        if item.is_yearly {
+            if let Some(events) = self.config.yearly_events.get_mut(&self.selected_year) {
+                if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
+                    event.color = item.name.clone(); // For yearly events, name is stored in color
+                    event.start = item.start.clone();
+                }
+            }
+        } else {
+            if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.id == item.id) {
+                period.name = item.name.clone();
+                period.start = item.start.clone();
+                period.color = item.color.clone();
+            }
+        }
+        self.save_config();
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn save_config(&self) {
+        let config = runtime_config_to_config(&self.config);
+        let yaml = serde_yaml::to_string(&config).unwrap();
+        std::fs::write(Path::new("data").join(&self.selected_yaml), yaml).expect("Unable to write file");
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn save_config(&mut self) {
+        self.yaml_content = serde_yaml::to_string(&self.config).unwrap();
+        // For WASM, we might want to trigger a download or update some web storage here
+    }
+}
+
+fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
+    Config {
+        name: runtime_config.name.clone(),
+        date_of_birth: runtime_config.date_of_birth.clone(),
+        life_expectancy: runtime_config.life_expectancy,
+        life_periods: runtime_config.life_periods.iter().map(|p| LifePeriod {
+            name: p.name.clone(),
+            start: p.start.clone(),
+            color: p.color.clone(),
+        }).collect(),
+        yearly_events: runtime_config.yearly_events.iter().map(|(year, events)| {
+            (*year, events.iter().map(|e| YearlyEvent {
+                color: e.color.clone(),
+                start: e.start.clone(),
+            }).collect())
+        }).collect(),
     }
 }
 
@@ -96,64 +150,66 @@ impl eframe::App for MyLifeApp {
                 }
             });
         });
-
-        if self.selected_legend_item.is_some() {
-            let mut item = self.selected_legend_item.clone().unwrap();
-            let mut should_save = false;
+        
+        if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;
+
+            // Store the original item when opening the edit window
+            if self.original_legend_item.is_none() {
+                self.original_legend_item = Some(item.clone());
+            }
 
             egui::Window::new("Edit Legend Item")
                 .show(ctx, |ui| {
                     ui.vertical(|ui| {
+                        let mut changed = false;
                         ui.horizontal(|ui| {
                             ui.label("Name:");
-                            ui.text_edit_singleline(&mut item.name);
+                            if ui.text_edit_singleline(&mut item.name).changed() {
+                                changed = true;
+                                debug!("Name changed to: {}", item.name);
+                            }
                         });
 
                         ui.horizontal(|ui| {
                             ui.label("Start:");
-                            ui.text_edit_singleline(&mut item.start);
+                            let mut start_date = item.start.clone();
+                            if ui.text_edit_singleline(&mut start_date).changed() {
+                                // Only update if it's a valid date
+                                if let Ok(_) = chrono::NaiveDate::parse_from_str(&format!("{}-01", start_date), "%Y-%m-%d") {
+                                    item.start = start_date;
+                                    changed = true;
+                                }
+                            }
                         });
 
                         ui.horizontal(|ui| {
                             ui.label("Color:");
                             let mut color = egui::Color32::from_hex(&item.color).unwrap_or(egui::Color32::WHITE);
-                            ui.color_edit_button_srgba(&mut color);
-                            item.color = format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b());
+                            if ui.color_edit_button_srgba(&mut color).changed() {
+                                item.color = format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b());
+                                changed = true;
+                            }
                         });
 
+                        if changed {
+                            debug!("Item changed, updating config...");
+                            self.update_config_item(&item);
+                        }
+
+                        ui.label(format!("Debug - Current item: {:?}", item));
+
                         ui.horizontal(|ui| {
-                            if ui.button("Save").clicked() {
-                                should_save = true;
-                                should_close = true;
-                            }
-                            if ui.button("Cancel").clicked() {
+                            if ui.button("Close").clicked() {
                                 should_close = true;
                             }
                         });
                     });
                 });
 
-            if should_save {
-                // Update the config with the new values
-                if item.is_yearly {
-                    if let Some(events) = self.config.yearly_events.get_mut(&self.selected_year) {
-                        if let Some(event) = events.iter_mut().find(|e| e.start == item.start && e.color == item.name) {
-                            event.color = item.color.clone();
-                            event.start = item.start.clone();
-                        }
-                    }
-                } else {
-                    if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.name == item.name) {
-                        period.name = item.name.clone();
-                        period.start = item.start.clone();
-                        period.color = item.color.clone();
-                    }
-                }
-            }
-
             if should_close {
                 self.selected_legend_item = None;
+                self.original_legend_item = None;
             } else {
                 self.selected_legend_item = Some(item);
             }

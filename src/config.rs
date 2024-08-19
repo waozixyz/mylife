@@ -1,28 +1,3 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-#[derive(Serialize, Deserialize, Clone, Default)]
-pub struct Config {
-    pub name: String,
-    pub date_of_birth: String,
-    pub life_expectancy: u32,
-    pub life_periods: Vec<LifePeriod>,
-    pub yearly_events: HashMap<i32, Vec<YearlyEvent>>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct LifePeriod {
-    pub name: String,
-    pub start: String,
-    pub color: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct YearlyEvent {
-    pub color: String,
-    pub start: String,
-}
-
 #[cfg(target_arch = "wasm32")]
 pub const DEFAULT_CONFIG_YAML: &str = "\
 name: John Doe

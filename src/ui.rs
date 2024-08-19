@@ -1,11 +1,10 @@
 use eframe::egui;
 use eframe::epaint::Vec2;
 use chrono::{NaiveDate, Utc};
-use crate::config::{Config, LifePeriod, YearlyEvent};
 use crate::utils::hex_to_color32;
-use crate::models::LegendItem;
+use crate::models::{RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent, LegendItem};
 
-pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &Config) {
+pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConfig) {
     let dob = NaiveDate::parse_from_str(&format!("{}-01", config.date_of_birth), "%Y-%m-%d")
         .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
 
@@ -36,7 +35,7 @@ pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &Config) {
     }
 }
 
-pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &Config, selected_year: i32) {
+pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConfig, selected_year: i32) {
     if let Some(events) = config.yearly_events.get(&selected_year) {
         let rows = 13;
         let cols = 28;
@@ -70,7 +69,7 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &Config, sel
     }
 }
 
-pub fn draw_legend(ui: &mut egui::Ui, config: &Config, view: &str, selected_year: i32) -> Option<LegendItem> {
+pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, selected_year: i32) -> Option<LegendItem> {
     ui.label("Legend:");
     ui.add_space(5.0);
 
@@ -95,6 +94,7 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &Config, view: &str, selected_year
 
             if response.clicked() {
                 selected_item = Some(LegendItem {
+                    id: period.id,
                     name: period.name.clone(),
                     start: period.start.clone(),
                     color: period.color.clone(),
@@ -120,6 +120,7 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &Config, view: &str, selected_year
 
             if response.clicked() {
                 selected_item = Some(LegendItem {
+                    id: event.id,
                     name: event.color.clone(),
                     start: event.start.clone(),
                     color: event.color.clone(),
@@ -132,7 +133,7 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &Config, view: &str, selected_year
     selected_item
 }
 
-fn get_color_for_date(date: &NaiveDate, life_periods: &[LifePeriod]) -> egui::Color32 {
+fn get_color_for_date(date: &NaiveDate, life_periods: &[RuntimeLifePeriod]) -> egui::Color32 {
     let current_date = Utc::now().naive_utc().date();
     
     if date > &current_date {
@@ -149,7 +150,7 @@ fn get_color_for_date(date: &NaiveDate, life_periods: &[LifePeriod]) -> egui::Co
     egui::Color32::WHITE
 }
 
-fn get_color_for_yearly_event(date: &NaiveDate, events: &[YearlyEvent]) -> egui::Color32 {
+fn get_color_for_yearly_event(date: &NaiveDate, events: &[RuntimeYearlyEvent]) -> egui::Color32 {
     let current_date = Utc::now().naive_utc().date();
     
     if date > &current_date {
