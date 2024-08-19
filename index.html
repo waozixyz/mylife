@@ -134,11 +134,35 @@
     <!--Register Service Worker. this will cache the wasm / js scripts for offline use (for PWA functionality). -->
     <!-- Force refresh (Ctrl + F5) to load the latest files instead of cached files  -->
     <script>
-        // We disable caching during development so that we always view the latest version.
-        if ('serviceWorker' in navigator && window.location.hash !== "#dev") {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('sw.js');
+        if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+            .then((registration) => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                
+                // Function to add current page resources to cache
+                function addResourcesToCache() {
+                const resources = Array.from(document.getElementsByTagName('script'))
+                    .map(script => script.src)
+                    .concat(Array.from(document.getElementsByTagName('link'))
+                    .filter(link => link.rel === 'stylesheet')
+                    .map(link => link.href))
+                    .filter(url => url !== ""); // Remove empty URLs
+    
+                if (registration.active) {
+                    registration.active.postMessage({
+                    type: 'CACHE_URLS',
+                    payload: resources
+                    });
+                }
+                }
+    
+                // Call the function when the page loads
+                addResourcesToCache();
+            }, (err) => {
+                console.log('ServiceWorker registration failed: ', err);
             });
+        });
         }
     </script>
 </body>
