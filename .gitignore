@@ -60,3 +60,5 @@ devenv.local.nix
 .direnv
 .envrc
 
+data
+!data/config.yaml
