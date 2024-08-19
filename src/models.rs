@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -10,7 +10,6 @@ pub struct Config {
     pub life_periods: Vec<LifePeriod>,
     pub yearly_events: HashMap<i32, Vec<YearlyEvent>>,
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct RuntimeConfig {
@@ -51,7 +50,7 @@ pub struct RuntimeYearlyEvent {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LegendItem {
-    pub id: Uuid, 
+    pub id: Uuid,
     pub name: String,
     pub start: String,
     pub color: String,

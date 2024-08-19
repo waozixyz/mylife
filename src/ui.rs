@@ -1,8 +1,8 @@
+use crate::models::{LegendItem, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent};
+use crate::utils::hex_to_color32;
+use chrono::{NaiveDate, Utc};
 use eframe::egui;
 use eframe::epaint::Vec2;
-use chrono::{NaiveDate, Utc};
-use crate::utils::hex_to_color32;
-use crate::models::{RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent, LegendItem};
 pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConfig) {
     let dob = NaiveDate::parse_from_str(&format!("{}-01", config.date_of_birth), "%Y-%m-%d")
         .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
@@ -12,8 +12,10 @@ pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeCo
     let cols = 48;
 
     // Calculate cell size based on available space
-    let cell_size = (grid_size.x / cols as f32).min(grid_size.y / rows as f32).floor();
-    
+    let cell_size = (grid_size.x / cols as f32)
+        .min(grid_size.y / rows as f32)
+        .floor();
+
     // Calculate actual grid dimensions
     let grid_width = cell_size * cols as f32;
     let grid_height = cell_size * rows as f32;
@@ -21,13 +23,13 @@ pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeCo
     // Calculate offset to center the grid
     let offset = Vec2::new(
         (grid_size.x - grid_width) / 2.0,
-        (grid_size.y - grid_height) / 2.0
+        (grid_size.y - grid_height) / 2.0,
     );
 
     // Create a new rectangle for our grid
     let grid_rect = egui::Rect::from_min_size(
         ui.min_rect().min + offset,
-        Vec2::new(grid_width, grid_height)
+        Vec2::new(grid_width, grid_height),
     );
 
     // Draw the grid
@@ -40,18 +42,26 @@ pub fn draw_lifetime_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeCo
                 Vec2::new(cell_size, cell_size),
             );
             ui.painter().rect_filled(rect, 0.0, color);
-            ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+            ui.painter()
+                .rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
         }
     }
 }
-pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConfig, selected_year: i32) {
+pub fn draw_yearly_view(
+    ui: &mut egui::Ui,
+    grid_size: Vec2,
+    config: &RuntimeConfig,
+    selected_year: i32,
+) {
     if let Some(events) = config.yearly_events.get(&selected_year) {
         let rows = 13;
         let cols = 28;
 
         // Calculate cell size based on available space
-        let cell_size = (grid_size.x / cols as f32).min(grid_size.y / rows as f32).floor();
-        
+        let cell_size = (grid_size.x / cols as f32)
+            .min(grid_size.y / rows as f32)
+            .floor();
+
         // Calculate actual grid dimensions
         let grid_width = cell_size * cols as f32;
         let grid_height = cell_size * rows as f32;
@@ -59,13 +69,13 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConf
         // Calculate offset to center the grid
         let offset = Vec2::new(
             (grid_size.x - grid_width) / 2.0,
-            (grid_size.y - grid_height) / 2.0
+            (grid_size.y - grid_height) / 2.0,
         );
 
         // Create a new rectangle for our grid
         let grid_rect = egui::Rect::from_min_size(
             ui.min_rect().min + offset,
-            Vec2::new(grid_width, grid_height)
+            Vec2::new(grid_width, grid_height),
         );
 
         // Draw the grid
@@ -73,7 +83,8 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConf
             for col in 0..cols {
                 let day = row * cols + col + 1;
                 let color = if day <= 365 {
-                    let date = NaiveDate::from_ymd_opt(selected_year, 1, 1).unwrap() + chrono::Duration::days(day as i64 - 1);
+                    let date = NaiveDate::from_ymd_opt(selected_year, 1, 1).unwrap()
+                        + chrono::Duration::days(day as i64 - 1);
                     get_color_for_yearly_event(&date, events)
                 } else {
                     egui::Color32::GRAY
@@ -83,13 +94,19 @@ pub fn draw_yearly_view(ui: &mut egui::Ui, grid_size: Vec2, config: &RuntimeConf
                     Vec2::new(cell_size, cell_size),
                 );
                 ui.painter().rect_filled(rect, 0.0, color);
-                ui.painter().rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+                ui.painter()
+                    .rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
             }
         }
     }
 }
 
-pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, selected_year: i32) -> Option<LegendItem> {
+pub fn draw_legend(
+    ui: &mut egui::Ui,
+    config: &RuntimeConfig,
+    view: &str,
+    selected_year: i32,
+) -> Option<LegendItem> {
     ui.heading("Legend:");
     ui.add_space(5.0);
 
@@ -102,7 +119,10 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, select
 
         for period in sorted_periods {
             let color = hex_to_color32(&period.color);
-            let (rect, response) = ui.allocate_exact_size(egui::vec2(ui.available_width(), legend_height), egui::Sense::click());
+            let (rect, response) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), legend_height),
+                egui::Sense::click(),
+            );
             ui.painter().rect_filled(rect, 0.0, color);
             ui.painter().text(
                 rect.center(),
@@ -128,7 +148,10 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, select
 
         for event in sorted_events {
             let color = hex_to_color32(&event.color);
-            let (rect, response) = ui.allocate_exact_size(egui::vec2(ui.available_width(), legend_height), egui::Sense::click());
+            let (rect, response) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), legend_height),
+                egui::Sense::click(),
+            );
             ui.painter().rect_filled(rect, 0.0, color);
             ui.painter().text(
                 rect.center(),
@@ -155,14 +178,19 @@ pub fn draw_legend(ui: &mut egui::Ui, config: &RuntimeConfig, view: &str, select
 
 fn get_color_for_date(date: &NaiveDate, life_periods: &[RuntimeLifePeriod]) -> egui::Color32 {
     let current_date = Utc::now().naive_utc().date();
-    
+
     if date > &current_date {
         return egui::Color32::WHITE;
     }
 
     for period in life_periods.iter().rev() {
         let start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
-            .unwrap_or_else(|e| panic!("Failed to parse start date '{}' for period '{}': {:?}", period.start, period.name, e));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to parse start date '{}' for period '{}': {:?}",
+                    period.start, period.name, e
+                )
+            });
         if &start <= date {
             return hex_to_color32(&period.color);
         }
@@ -172,14 +200,18 @@ fn get_color_for_date(date: &NaiveDate, life_periods: &[RuntimeLifePeriod]) -> e
 
 fn get_color_for_yearly_event(date: &NaiveDate, events: &[RuntimeYearlyEvent]) -> egui::Color32 {
     let current_date = Utc::now().naive_utc().date();
-    
+
     if date > &current_date {
         return egui::Color32::WHITE;
     }
 
     for event in events.iter().rev() {
-        let start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d")
-            .unwrap_or_else(|e| panic!("Failed to parse start date '{}' for event: {:?}", event.start, e));
+        let start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d").unwrap_or_else(|e| {
+            panic!(
+                "Failed to parse start date '{}' for event: {:?}",
+                event.start, e
+            )
+        });
         if &start <= date {
             return hex_to_color32(&event.color);
         }
