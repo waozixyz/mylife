@@ -1,84 +1,104 @@
 # My Life Timeline
 
-A tool for visualizing life events on a timeline, available in Tcl/Tk (desktop) and JavaScript (web) versions.
+A Rust-based application for visualizing life events on a timeline, with both native and web versions using egui.
 
 ## Features
 
-- Display life periods on a timeline
-- Customize period names, start dates, and colors
+- Display life periods and yearly events on a timeline
+- Customize event names, start dates, and colors
 - Support for YAML configuration
 - Dynamic updates based on configuration changes
+- Cross-platform support (native and web)
 
 ## Development Setup
 
-This project uses `devenv` to manage dependencies. The following packages are included:
+This project uses `devenv` to manage dependencies and `trunk` for web builds.
 
-- `tcl`, `tk`, `tcllib`
-- `libyaml`
-- `gcc`
-- `raylib` (version `3.7.0`)
-- `cmake`, `pkg-config`
-- `python3`
+### Prerequisites
+
+- [Nix](https://nixos.org/download.html) with flakes enabled
+- [devenv](https://devenv.sh/)
 
 ### Setup Instructions
 
-1. Install [devenv](https://devenv.sh/).
-2. Run `devenv shell` to enter the development environment.
-
-### Commands
-
-- `build-run-c`: Build and run the C version.
-- `run-tcl`: Run the Tcl version.
-- `serve-web`: Serve the web version (accessible at http://localhost:8000).
+1. Clone the repository:
+```
+git clone https://github.com/waozixyz/mylife.git
+cd mylife
+```
+2. Enter the development environment:
+```
+devenv shell
+```
+3. Build and run the project:
+- For native:
+```
+cargo run
+```
+- For web:
+```
+trunk serve
+```
 
 ## Configuration Format
 
 ```yaml
 name: John Doe
-date_of_birth: "2000-01"
+date_of_birth: 2000-01
+life_expectancy: 80
 life_periods:
-  - name: Childhood
-    start: "2000-01"
-    color: "#FFB3BA"
-  - name: Teenage Years
-    start: "2013-01"
-    color: "#BAFFC9"
+- name: Childhood
+ start: 2000-01
+ color: "#FFB3BA"
+- name: Teenage Years
+ start: 2013-01
+ color: "#BAFFC9"
+yearly_events:
+2022:
+ - name: Winter Internship
+   start: 2022-01-03
+   color: "#4CAF50"
+ - name: Spring Semester
+   start: 2022-03-21
+   color: "#2196F3"
 ```
 
-## Tcl/Tk Version
+## Native Version
+### Requirements
+All requirements are managed by devenv and specified in the devenv.nix file.
 
+### Usage
+```cargo run```
+
+
+## Web Version
 ### Requirements
 
-- Tcl/Tk
-- `yaml` package
+- Trunk (installed via devenv)
+- wasm32-unknown-unknown target (automatically added by devenv)
 
 ### Usage
+Start the development server:
 
-```
-tclsh life.tcl [years] [yaml_file]
-```
+```trunk serve```
 
-- `years`: (Optional) Number of years to display (default: 100)
-- `yaml_file`: (Optional) Name of the YAML file in the `data` directory to load
+Open the provided URL in a web browser (usually http://127.0.0.1:8080)
 
-## JavaScript Version
+## Development
+### Adding Dependencies
+To add new dependencies, modify the Cargo.toml file and update the devenv.nix file if necessary.
 
-### Usage
+## Building for Release
 
-1. Open the HTML file in a web browser
-2. Modify the configuration using the form
-3. Load/Save configurations using the provided buttons
+- Native:
+```cargo build --release```
 
-## Raylib Version
-### Usage
-This project uses raylib for graphical rendering. Ensure consistency by using the specified version in the devenv.nix file.
+- Web:
+```trunk build --release```
 
-Use the command to provided in the devenv file to build and run the project.
 
-```
-build-run-c
-```
+## Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-
-This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License. See the LICENSE.md file for details.
