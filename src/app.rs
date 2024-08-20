@@ -1,17 +1,16 @@
-use crate::config_manager::get_config_manager;
-#[cfg(target_arch = "wasm32")]
-use crate::models::RuntimeConfig;
 use crate::models::{CatppuccinTheme, LegendItem, MyLifeApp};
-use crate::ui::{draw_legend, draw_lifetime_view, draw_yearly_view};
-use crate::utils::{
-    calculate_centered_rect, color32_to_hex, hex_to_color32, is_valid_date, save_config,
-};
+use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
+
+use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
+use crate::utils::config_utils::save_config;
+use crate::utils::date_utils::is_valid_date;
 
 #[cfg(target_arch = "wasm32")]
-use crate::utils::{get_default_config, load_config_async};
+use crate::utils::config_utils::get_default_config;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::utils::{get_available_configs, get_config};
+use crate::utils::config_utils::{get_available_configs, get_config};
+
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
 use log::debug;
@@ -19,13 +18,7 @@ use log::debug;
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
 #[cfg(target_arch = "wasm32")]
-use once_cell::sync::Lazy;
-#[cfg(target_arch = "wasm32")]
-use std::sync::Mutex;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::spawn_local;
-#[cfg(target_arch = "wasm32")]
-static NEW_CONFIG: Lazy<Mutex<Option<RuntimeConfig>>> = Lazy::new(|| Mutex::new(None));
+use crate::utils::wasm_config::NEW_CONFIG;
 
 impl Default for MyLifeApp {
     fn default() -> Self {
@@ -120,144 +113,13 @@ impl eframe::App for MyLifeApp {
                 CatppuccinTheme::Mocha => MOCHA,
             },
         );
-
         let screen_rect = ctx.screen_rect();
         let top_height = 50.0;
         let bottom_height = screen_rect.height() * 0.2;
         let central_height = screen_rect.height() - top_height - bottom_height;
 
-        egui::TopBottomPanel::top("top_panel")
-            .exact_height(top_height)
-            .show(ctx, |ui| {
-                egui::menu::bar(ui, |ui| {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-
-                    egui::ComboBox::from_label("Theme")
-                        .selected_text(format!("{:?}", self.theme))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.theme, CatppuccinTheme::Frappe, "Frappe");
-                            ui.selectable_value(&mut self.theme, CatppuccinTheme::Latte, "Latte");
-                            ui.selectable_value(
-                                &mut self.theme,
-                                CatppuccinTheme::Macchiato,
-                                "Macchiato",
-                            );
-                            ui.selectable_value(&mut self.theme, CatppuccinTheme::Mocha, "Mocha");
-                        });
-                });
-
-                ui.vertical_centered(|ui| {
-                    ui.horizontal(|ui| {
-                        egui::ComboBox::from_label("Configuration")
-                            .selected_text(&self.selected_yaml)
-                            .show_ui(ui, |ui| {
-                                #[cfg(not(target_arch = "wasm32"))]
-                                for yaml_file in &self.yaml_files {
-                                    if ui
-                                        .selectable_value(
-                                            &mut self.selected_yaml,
-                                            yaml_file.clone(),
-                                            yaml_file,
-                                        )
-                                        .changed()
-                                    {
-                                        self.config = get_config_manager()
-                                            .load_config(&self.selected_yaml)
-                                            .expect("Failed to load config");
-                                    }
-                                }
-                                #[cfg(target_arch = "wasm32")]
-                                for (index, (name, _)) in self.loaded_configs.iter().enumerate() {
-                                    if ui
-                                        .selectable_value(
-                                            &mut self.selected_config_index,
-                                            index,
-                                            name,
-                                        )
-                                        .clicked()
-                                    {
-                                        self.config = self.loaded_configs[index].1.clone();
-                                        self.selected_yaml = name.clone();
-                                    }
-                                }
-                            });
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            if ui.button("Load YAML").clicked() {
-                                let ctx = ctx.clone();
-                                spawn_local(async move {
-                                    if let Some(new_config) = load_config_async().await {
-                                        *NEW_CONFIG.lock().unwrap() = Some(new_config);
-                                        ctx.request_repaint();
-                                    }
-                                });
-                            }
-
-                            if ui.button("Save YAML").clicked() {
-                                get_config_manager()
-                                    .save_config(&self.config, "config.yaml")
-                                    .expect("Failed to save config");
-                            }
-                        }
-
-                        egui::ComboBox::from_label("View")
-                            .selected_text(&self.view)
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(
-                                    &mut self.view,
-                                    "Lifetime".to_string(),
-                                    "Lifetime",
-                                );
-                                ui.selectable_value(&mut self.view, "Yearly".to_string(), "Yearly");
-                            });
-
-                        if self.view == "Lifetime" {
-                            egui::ComboBox::from_label("Life Expectancy")
-                                .selected_text(self.config.life_expectancy.to_string())
-                                .show_ui(ui, |ui| {
-                                    for year in 60..=120 {
-                                        ui.selectable_value(
-                                            &mut self.config.life_expectancy,
-                                            year,
-                                            year.to_string(),
-                                        );
-                                    }
-                                });
-                        } else if self.view == "Yearly" {
-                            egui::ComboBox::from_label("Year")
-                                .selected_text(self.selected_year.to_string())
-                                .show_ui(ui, |ui| {
-                                    for year in self.config.yearly_events.keys() {
-                                        ui.selectable_value(
-                                            &mut self.selected_year,
-                                            *year,
-                                            year.to_string(),
-                                        );
-                                    }
-                                });
-                        }
-                    });
-                });
-            });
-
-        egui::TopBottomPanel::bottom("legend")
-            .min_height(bottom_height)
-            .resizable(true)
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    if let Some(legend_item) =
-                        draw_legend(ui, &self.config, &self.view, self.selected_year)
-                    {
-                        self.selected_legend_item = Some(legend_item);
-                    }
-                });
-            });
+        draw_top_panel(self, ctx, top_height);
+        draw_bottom_panel(self, ctx, bottom_height);
 
         if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;
@@ -280,7 +142,9 @@ impl eframe::App for MyLifeApp {
                     ui.horizontal(|ui| {
                         ui.label("Start:");
                         let mut start_date = item.start.clone();
-                        if ui.text_edit_singleline(&mut start_date).changed() && is_valid_date(&start_date) {
+                        if ui.text_edit_singleline(&mut start_date).changed()
+                            && is_valid_date(&start_date)
+                        {
                             item.start = start_date;
                             changed = true;
                         }
@@ -317,38 +181,6 @@ impl eframe::App for MyLifeApp {
                 self.selected_legend_item = Some(item);
             }
         }
-
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let available_rect = ui.available_rect_before_wrap();
-            let min_width = 800.0;
-            let min_height = central_height.max(400.0);
-
-            let desired_grid_size = egui::vec2(min_width, min_height);
-            let centered_rect = calculate_centered_rect(available_rect, desired_grid_size);
-            let grid_response = ui.allocate_ui_at_rect(centered_rect, |ui| {
-                egui::ScrollArea::both()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        egui::Frame::none()
-                            .fill(egui::Color32::from_rgb(240, 240, 240))
-                            .show(ui, |ui| {
-                                if self.view == "Lifetime" {
-                                    draw_lifetime_view(ui, centered_rect.size(), &self.config);
-                                } else {
-                                    draw_yearly_view(
-                                        ui,
-                                        centered_rect.size(),
-                                        &self.config,
-                                        self.selected_year,
-                                    );
-                                }
-                            });
-                    });
-            });
-
-            if grid_response.response.clicked() {
-                // Handle click events if needed
-            }
-        });
+        draw_central_panel(self, ctx, central_height);
     }
 }
