@@ -23,6 +23,7 @@ use std::sync::Mutex;
 #[cfg(target_arch = "wasm32")]
 use crate::models::{RuntimeConfig};
 
+#[cfg(target_arch = "wasm32")]
 
 static NEW_CONFIG: Lazy<Mutex<Option<RuntimeConfig>>> = Lazy::new(|| Mutex::new(None));
 
