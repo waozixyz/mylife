@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CatppuccinTheme {
     Frappe,
     Latte,
@@ -12,7 +12,7 @@ pub enum CatppuccinTheme {
     Mocha,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct MyLifeApp {
     pub theme: CatppuccinTheme,
@@ -35,12 +35,9 @@ pub struct MyLifeApp {
     pub selected_config_index: usize,
     #[cfg(target_arch = "wasm32")]
     pub loaded_app: Option<Box<MyLifeApp>>,
-
     #[cfg(target_arch = "wasm32")]
     pub loaded_config: Option<RuntimeConfig>,
-    
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
@@ -96,58 +93,33 @@ pub struct LegendItem {
     pub color: String,
     pub is_yearly: bool,
 }
-
 #[cfg(target_arch = "wasm32")]
 impl Default for Config {
     fn default() -> Self {
-        serde_yaml::from_str(DEFAULT_CONFIG_YAML).unwrap_or_else(|_| Config {
-            name: "John Doe".to_string(),
-            date_of_birth: "2000-01".to_string(),
-            life_expectancy: 80,
-            life_periods: vec![],
-            yearly_events: HashMap::new(),
-        })
-    }
-}
+        use log::{error, info};
 
-#[cfg(target_arch = "wasm32")]
-impl From<Config> for RuntimeConfig {
-    fn from(config: Config) -> Self {
-        RuntimeConfig {
-            name: config.name,
-            date_of_birth: config.date_of_birth,
-            life_expectancy: config.life_expectancy,
-            life_periods: config
-                .life_periods
-                .into_iter()
-                .map(|p| RuntimeLifePeriod {
-                    id: Uuid::new_v4(),
-                    name: p.name,
-                    start: p.start,
-                    color: p.color,
-                })
-                .collect(),
-            yearly_events: config
-                .yearly_events
-                .into_iter()
-                .map(|(year, events)| {
-                    (
-                        year,
-                        events
-                            .into_iter()
-                            .map(|e| RuntimeYearlyEvent {
-                                id: Uuid::new_v4(),
-                                color: e.color,
-                                start: e.start,
-                            })
-                            .collect(),
-                    )
-                })
-                .collect(),
+        info!("Attempting to create default Config");
+
+        match serde_yaml::from_str(DEFAULT_CONFIG_YAML) {
+            Ok(config) => {
+                info!("Successfully parsed DEFAULT_CONFIG_YAML");
+                info!("Parsed config: {:?}", config);
+                config
+            }
+            Err(e) => {
+                error!("Failed to parse DEFAULT_CONFIG_YAML: {:?}", e);
+                info!("Using fallback default config");
+                Config {
+                    name: "John Doe".to_string(),
+                    date_of_birth: "2000-01".to_string(),
+                    life_expectancy: 80,
+                    life_periods: vec![],
+                    yearly_events: HashMap::new(),
+                }
+            }
         }
     }
 }
-
 #[cfg(target_arch = "wasm32")]
 impl From<&RuntimeConfig> for Config {
     fn from(runtime_config: &RuntimeConfig) -> Self {

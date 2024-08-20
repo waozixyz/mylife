@@ -2,6 +2,7 @@
 
 mod app;
 mod config;
+mod config_manager;
 mod models;
 mod ui;
 mod utils;

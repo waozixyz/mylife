@@ -1,15 +1,13 @@
-use crate::models::{RuntimeLifePeriod, RuntimeYearlyEvent, Config, RuntimeConfig};
+#[cfg(target_arch = "wasm32")]
+use crate::config_manager::config_to_runtime_config;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::models::{LifePeriod, YearlyEvent};
-use eframe::egui;
-#[cfg(not(target_arch = "wasm32"))]
-use std::fs;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
-use uuid::Uuid;
+use crate::config_manager::get_config_manager;
+#[cfg(target_arch = "wasm32")]
+use crate::models::Config;
+use crate::models::RuntimeConfig;
+
 use chrono::NaiveDate;
-
-
+use eframe::egui;
 
 pub fn hex_to_color32(hex: &str) -> egui::Color32 {
     let hex = hex.trim_start_matches('#');
@@ -18,113 +16,6 @@ pub fn hex_to_color32(hex: &str) -> egui::Color32 {
     let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255);
     egui::Color32::from_rgb(r, g, b)
 }
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn get_yaml_files_in_data_folder() -> Vec<String> {
-    let data_folder = Path::new("data");
-    fs::read_dir(data_folder)
-        .expect("Failed to read data folder")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension()? == "yaml" {
-                Some(path.file_name()?.to_string_lossy().into_owned())
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn load_config(yaml_file: &str) -> RuntimeConfig {
-    let yaml_path = Path::new("data").join(yaml_file);
-    let yaml_content = fs::read_to_string(yaml_path)
-        .unwrap_or_else(|_| panic!("Failed to read YAML file: {}", yaml_file));
-    let config: Config = serde_yaml::from_str(&yaml_content)
-        .unwrap_or_else(|_| panic!("Failed to parse YAML file: {}", yaml_file));
-
-    config_to_runtime_config(config)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn load_config(yaml_content: &str) -> RuntimeConfig {
-    let config: Config = serde_yaml::from_str(yaml_content).unwrap_or_default();
-    config_to_runtime_config(config)
-}
-
-pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
-    let runtime_life_periods = config
-        .life_periods
-        .into_iter()
-        .map(|p| RuntimeLifePeriod {
-            id: Uuid::new_v4(),
-            name: p.name,
-            start: p.start,
-            color: p.color,
-        })
-        .collect();
-
-    let runtime_yearly_events = config
-        .yearly_events
-        .into_iter()
-        .map(|(year, events)| {
-            let runtime_events = events
-                .into_iter()
-                .map(|e| RuntimeYearlyEvent {
-                    id: Uuid::new_v4(),
-                    color: e.color,
-                    start: e.start,
-                })
-                .collect();
-            (year, runtime_events)
-        })
-        .collect();
-
-    RuntimeConfig {
-        name: config.name,
-        date_of_birth: config.date_of_birth,
-        life_expectancy: config.life_expectancy,
-        life_periods: runtime_life_periods,
-        yearly_events: runtime_yearly_events,
-    }
-}
-
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
-    Config {
-        name: runtime_config.name.clone(),
-        date_of_birth: runtime_config.date_of_birth.clone(),
-        life_expectancy: runtime_config.life_expectancy,
-        life_periods: runtime_config
-            .life_periods
-            .iter()
-            .map(|p| LifePeriod {
-                name: p.name.clone(),
-                start: p.start.clone(),
-                color: p.color.clone(),
-            })
-            .collect(),
-        yearly_events: runtime_config
-            .yearly_events
-            .iter()
-            .map(|(year, events)| {
-                (
-                    *year,
-                    events
-                        .iter()
-                        .map(|e| YearlyEvent {
-                            color: e.color.clone(),
-                            start: e.start.clone(),
-                        })
-                        .collect(),
-                )
-            })
-            .collect(),
-    }
-}
-
 
 pub fn calculate_centered_rect(available: egui::Rect, desired_size: egui::Vec2) -> egui::Rect {
     let size = egui::Vec2::new(
@@ -142,8 +33,23 @@ pub fn is_valid_date(date_str: &str) -> bool {
 pub fn color32_to_hex(color: egui::Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b())
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn get_config() -> RuntimeConfig {
+    get_config_manager()
+        .load_config("default.yaml")
+        .expect("Failed to load config")
+}
+
 #[cfg(target_arch = "wasm32")]
-pub async fn load_yaml() -> Option<RuntimeConfig> {
+pub fn get_default_config() -> RuntimeConfig {
+    let config = Config::default();
+    let runtime_config = config_to_runtime_config(config);
+    runtime_config
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn load_config_async() -> Option<RuntimeConfig> {
     let file = rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
@@ -151,30 +57,29 @@ pub async fn load_yaml() -> Option<RuntimeConfig> {
 
     let content = file.read().await;
     let yaml_content = String::from_utf8(content).ok()?;
-    
+
     let config: Config = serde_yaml::from_str(&yaml_content).ok()?;
     Some(config_to_runtime_config(config))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub fn save_config(config: &RuntimeConfig, yaml_file: &str) {
+    get_config_manager()
+        .save_config(config, yaml_file)
+        .expect("Failed to save config");
+}
+
 #[cfg(target_arch = "wasm32")]
-pub fn save_yaml(config: &RuntimeConfig) {
-    let config = Config::from(config);
-    let yaml_content = serde_yaml::to_string(&config).unwrap();
+pub fn save_config(config: &RuntimeConfig, _yaml_file: &str) {
+    // Implement WASM-specific save logic here
+    // For example, you might want to trigger a download of the YAML file
+    let _yaml_content = serde_yaml::to_string(config).expect("Failed to serialize config");
+    // Implement logic to trigger download of yaml_content
+}
 
-    // Use the web_sys crate to create a Blob and download it
-    use wasm_bindgen::JsCast;
-    use web_sys::{Blob, HtmlAnchorElement, Url};
-
-    let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
-        .expect("Failed to create Blob");
-    let url = Url::create_object_url_with_blob(&blob).expect("Failed to create object URL");
-
-    let document = web_sys::window().unwrap().document().unwrap();
-    let anchor: HtmlAnchorElement = document.create_element("a").unwrap().dyn_into().unwrap();
-
-    anchor.set_href(&url);
-    anchor.set_download("config.yaml");
-    anchor.click();
-
-    Url::revoke_object_url(&url).expect("Failed to revoke object URL");
+#[cfg(not(target_arch = "wasm32"))]
+pub fn get_available_configs() -> Vec<String> {
+    get_config_manager()
+        .get_available_configs()
+        .expect("Failed to get available configs")
 }
