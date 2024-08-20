@@ -1,10 +1,13 @@
-use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent};
+use crate::models::{LifePeriod, YearlyEvent, RuntimeLifePeriod, RuntimeYearlyEvent, Config, RuntimeConfig};
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 use uuid::Uuid;
+use chrono::NaiveDate;
+
+
 
 pub fn hex_to_color32(hex: &str) -> egui::Color32 {
     let hex = hex.trim_start_matches('#');
@@ -83,4 +86,57 @@ pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
         life_periods: runtime_life_periods,
         yearly_events: runtime_yearly_events,
     }
+}
+
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
+    Config {
+        name: runtime_config.name.clone(),
+        date_of_birth: runtime_config.date_of_birth.clone(),
+        life_expectancy: runtime_config.life_expectancy,
+        life_periods: runtime_config
+            .life_periods
+            .iter()
+            .map(|p| LifePeriod {
+                name: p.name.clone(),
+                start: p.start.clone(),
+                color: p.color.clone(),
+            })
+            .collect(),
+        yearly_events: runtime_config
+            .yearly_events
+            .iter()
+            .map(|(year, events)| {
+                (
+                    *year,
+                    events
+                        .iter()
+                        .map(|e| YearlyEvent {
+                            color: e.color.clone(),
+                            start: e.start.clone(),
+                        })
+                        .collect(),
+                )
+            })
+            .collect(),
+    }
+}
+
+
+pub fn calculate_centered_rect(available: egui::Rect, desired_size: egui::Vec2) -> egui::Rect {
+    let size = egui::Vec2::new(
+        desired_size.x.min(available.width()),
+        desired_size.y.min(available.height()),
+    );
+    let pos = available.center() - (size / 2.0);
+    egui::Rect::from_min_size(pos, size)
+}
+
+pub fn is_valid_date(date_str: &str) -> bool {
+    NaiveDate::parse_from_str(&format!("{}-01", date_str), "%Y-%m-%d").is_ok()
+}
+
+pub fn color32_to_hex(color: egui::Color32) -> String {
+    format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b())
 }

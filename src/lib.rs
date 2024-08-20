@@ -6,4 +6,4 @@ mod models;
 mod ui;
 mod utils;
 
-pub use app::MyLifeApp;
+pub use models::MyLifeApp;

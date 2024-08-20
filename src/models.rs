@@ -4,6 +4,40 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum CatppuccinTheme {
+    Frappe,
+    Latte,
+    Macchiato,
+    Mocha,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[serde(default)]
+pub struct MyLifeApp {
+    pub theme: CatppuccinTheme,
+    pub config: RuntimeConfig,
+    pub view: String,
+    pub selected_year: i32,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub yaml_files: Vec<String>,
+    #[cfg(target_arch = "wasm32")]
+    pub yaml_content: String,
+    pub selected_yaml: String,
+    #[serde(skip)]
+    pub value: f32,
+    pub selected_legend_item: Option<LegendItem>,
+    #[serde(skip)]
+    pub original_legend_item: Option<LegendItem>,
+    #[cfg(target_arch = "wasm32")]
+    pub loaded_configs: Vec<(String, RuntimeConfig)>,
+    #[cfg(target_arch = "wasm32")]
+    pub selected_config_index: usize,
+    #[cfg(target_arch = "wasm32")]
+    pub loaded_app: Option<Box<MyLifeApp>>,
+}
+
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
     pub name: String,

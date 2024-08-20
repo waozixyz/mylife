@@ -1,19 +1,17 @@
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
+use crate::models::{MyLifeApp, CatppuccinTheme, LegendItem};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::models::{Config, LegendItem, LifePeriod, RuntimeConfig, YearlyEvent};
-#[cfg(target_arch = "wasm32")]
-use crate::models::{Config, LegendItem, RuntimeConfig};
 use crate::ui::{draw_legend, draw_lifetime_view, draw_yearly_view};
 use eframe::egui;
 #[cfg(target_arch = "wasm32")]
 use futures::channel::oneshot;
-#[cfg(target_arch = "wasm32")]
-use crate::utils::config_to_runtime_config;
-
+use crate::utils::{
+    runtime_config_to_config, calculate_centered_rect, 
+    is_valid_date, color32_to_hex, hex_to_color32, load_config,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::utils::get_yaml_files_in_data_folder;
-use crate::utils::load_config;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use log::debug;
 #[cfg(not(target_arch = "wasm32"))]
@@ -21,38 +19,6 @@ use std::path::Path;
 #[cfg(target_arch = "wasm32")]
 use std::sync::{Arc, Mutex};
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-enum CatppuccinTheme {
-    Frappe,
-    Latte,
-    Macchiato,
-    Mocha,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-#[serde(default)]
-pub struct MyLifeApp {
-    theme: CatppuccinTheme,
-    config: RuntimeConfig,
-    view: String,
-    selected_year: i32,
-    #[cfg(not(target_arch = "wasm32"))]
-    yaml_files: Vec<String>,
-    #[cfg(target_arch = "wasm32")]
-    yaml_content: String,
-    selected_yaml: String,
-    #[serde(skip)]
-    value: f32,
-    selected_legend_item: Option<LegendItem>,
-    #[serde(skip)]
-    original_legend_item: Option<LegendItem>,
-    #[cfg(target_arch = "wasm32")]
-    loaded_configs: Vec<(String, RuntimeConfig)>,
-    #[cfg(target_arch = "wasm32")]
-    selected_config_index: usize,
-    #[cfg(target_arch = "wasm32")]
-    loaded_app: Option<Box<MyLifeApp>>,
-}
 
 impl Default for MyLifeApp {
     fn default() -> Self {
@@ -99,26 +65,23 @@ impl MyLifeApp {
         Default::default()
     }
 
+
     fn update_config_item(&mut self, item: &LegendItem) {
         if item.is_yearly {
             if let Some(events) = self.config.yearly_events.get_mut(&self.selected_year) {
                 if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
-                    event.color = item.name.clone(); // For yearly events, name is stored in color
+                    event.color = item.name.clone();
                     event.start = item.start.clone();
                 }
             }
-        } else if let Some(period) = self
-            .config
-            .life_periods
-            .iter_mut()
-            .find(|p| p.id == item.id)
-        {
+        } else if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.id == item.id) {
             period.name = item.name.clone();
             period.start = item.start.clone();
             period.color = item.color.clone();
         }
         self.save_config();
     }
+    
 
     #[cfg(not(target_arch = "wasm32"))]
     fn save_config(&self) {
@@ -132,39 +95,6 @@ impl MyLifeApp {
     fn save_config(&mut self) {
         self.yaml_content = serde_yaml::to_string(&self.config).unwrap();
         // For WASM, we might want to trigger a download or update some web storage here
-    }
-}
-#[cfg(not(target_arch = "wasm32"))]
-fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
-    Config {
-        name: runtime_config.name.clone(),
-        date_of_birth: runtime_config.date_of_birth.clone(),
-        life_expectancy: runtime_config.life_expectancy,
-        life_periods: runtime_config
-            .life_periods
-            .iter()
-            .map(|p| LifePeriod {
-                name: p.name.clone(),
-                start: p.start.clone(),
-                color: p.color.clone(),
-            })
-            .collect(),
-        yearly_events: runtime_config
-            .yearly_events
-            .iter()
-            .map(|(year, events)| {
-                (
-                    *year,
-                    events
-                        .iter()
-                        .map(|e| YearlyEvent {
-                            color: e.color.clone(),
-                            start: e.start.clone(),
-                        })
-                        .collect(),
-                )
-            })
-            .collect(),
     }
 }
 
@@ -349,11 +279,10 @@ impl eframe::App for MyLifeApp {
                     }
                 });
             });
-
+            
         if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;
 
-            // Store the original item when opening the edit window
             if self.original_legend_item.is_none() {
                 self.original_legend_item = Some(item.clone());
             }
@@ -373,13 +302,7 @@ impl eframe::App for MyLifeApp {
                         ui.label("Start:");
                         let mut start_date = item.start.clone();
                         if ui.text_edit_singleline(&mut start_date).changed() {
-                            // Only update if it's a valid date
-                            if chrono::NaiveDate::parse_from_str(
-                                &format!("{}-01", start_date),
-                                "%Y-%m-%d",
-                            )
-                            .is_ok()
-                            {
+                            if is_valid_date(&start_date) {
                                 item.start = start_date;
                                 changed = true;
                             }
@@ -388,11 +311,9 @@ impl eframe::App for MyLifeApp {
 
                     ui.horizontal(|ui| {
                         ui.label("Color:");
-                        let mut color =
-                            egui::Color32::from_hex(&item.color).unwrap_or(egui::Color32::WHITE);
+                        let mut color = hex_to_color32(&item.color);
                         if ui.color_edit_button_srgba(&mut color).changed() {
-                            item.color =
-                                format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b());
+                            item.color = color32_to_hex(color);
                             changed = true;
                         }
                     });
@@ -420,24 +341,13 @@ impl eframe::App for MyLifeApp {
             }
         }
 
-        fn calculate_centered_rect(available: egui::Rect, desired_size: egui::Vec2) -> egui::Rect {
-            let size = egui::Vec2::new(
-                desired_size.x.min(available.width()),
-                desired_size.y.min(available.height()),
-            );
-            let pos = available.center() - (size / 2.0);
-            egui::Rect::from_min_size(pos, size)
-        }
-
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_rect = ui.available_rect_before_wrap();
             let min_width = 800.0;
             let min_height = central_height.max(400.0);
 
-            // Calculate the desired grid size
             let desired_grid_size = egui::vec2(min_width, min_height);
             let centered_rect = calculate_centered_rect(available_rect, desired_grid_size);
-            // Create a new UI for our centered grid
             let grid_response = ui.allocate_ui_at_rect(centered_rect, |ui| {
                 egui::ScrollArea::both()
                     .auto_shrink([false; 2])
