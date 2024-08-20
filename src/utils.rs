@@ -1,4 +1,8 @@
-use crate::models::{LifePeriod, YearlyEvent, RuntimeLifePeriod, RuntimeYearlyEvent, Config, RuntimeConfig};
+use crate::models::{RuntimeLifePeriod, RuntimeYearlyEvent, Config, RuntimeConfig};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::models::{LifePeriod, YearlyEvent};
+#[cfg(target_arch = "wasm32")]
+use crate::models::MyLifeApp;
 use eframe::egui;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
@@ -139,4 +143,79 @@ pub fn is_valid_date(date_str: &str) -> bool {
 
 pub fn color32_to_hex(color: egui::Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b())
+}
+
+
+#[cfg(target_arch = "wasm32")]
+pub async fn load_yaml() -> Option<MyLifeApp> {
+    log::debug!("Entering load_yaml function");
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("YAML", &["yaml", "yml"])
+        .pick_file()
+        .await;
+
+    log::debug!("File picked: {:?}", file.is_some());
+
+    let file = file?;
+
+    log::debug!("Reading file content");
+    let content = file.read().await;
+    log::debug!("File content read, length: {} bytes", content.len());
+
+    match String::from_utf8(content) {
+        Ok(yaml_content) => {
+            log::debug!(
+                "YAML content (first 100 chars): {}",
+                &yaml_content[..yaml_content.len().min(100)]
+            );
+            match serde_yaml::from_str::<Config>(&yaml_content) {
+                Ok(config) => {
+                    log::debug!("YAML parsed successfully");
+                    let new_config = config_to_runtime_config(config);
+                    let config_name = file.file_name();
+                    log::debug!("New config name: {}", config_name);
+                    let mut new_app = MyLifeApp::default();
+                    new_app
+                        .loaded_configs
+                        .push((config_name.clone(), new_config.clone()));
+                    new_app.selected_config_index = new_app.loaded_configs.len() - 1;
+                    new_app.config = new_config;
+                    new_app.selected_yaml = config_name;
+                    log::info!("YAML file loaded successfully");
+                    Some(new_app)
+                }
+                Err(e) => {
+                    log::error!("Failed to parse YAML content: {}. Using default config.", e);
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Invalid UTF-8 in file: {}. Using default config.", e);
+            None
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn save_yaml(app: &MyLifeApp) {
+    let config = Config::from(&app.config);
+    let yaml_content = serde_yaml::to_string(&config).unwrap();
+
+    // Use the web_sys crate to create a Blob and download it
+    use wasm_bindgen::JsCast;
+    use web_sys::{Blob, HtmlAnchorElement, Url};
+
+    let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
+        .expect("Failed to create Blob");
+    let url = Url::create_object_url_with_blob(&blob).expect("Failed to create object URL");
+
+    let document = web_sys::window().unwrap().document().unwrap();
+    let anchor: HtmlAnchorElement = document.create_element("a").unwrap().dyn_into().unwrap();
+
+    anchor.set_href(&url);
+    anchor.set_download("config.yaml");
+    anchor.click();
+
+    Url::revoke_object_url(&url).expect("Failed to revoke object URL");
 }
