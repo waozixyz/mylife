@@ -16,6 +16,16 @@ use log::debug;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
+#[cfg(target_arch = "wasm32")]
+use once_cell::sync::Lazy;
+#[cfg(target_arch = "wasm32")]
+use std::sync::Mutex;
+#[cfg(target_arch = "wasm32")]
+use crate::models::{RuntimeConfig};
+
+
+static NEW_CONFIG: Lazy<Mutex<Option<RuntimeConfig>>> = Lazy::new(|| Mutex::new(None));
+
 impl Default for MyLifeApp {
     fn default() -> Self {
         #[cfg(target_arch = "wasm32")]
@@ -49,6 +59,10 @@ impl Default for MyLifeApp {
             selected_config_index: 0,
             #[cfg(target_arch = "wasm32")]
             loaded_app: None,
+            #[cfg(target_arch = "wasm32")]
+
+            loaded_config: None,
+
         }
     }
 }
@@ -98,16 +112,20 @@ impl eframe::App for MyLifeApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
-
+    
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        log::debug!("Entering update method");
-
+        log::info!("Entering update method. Current name: {}", self.config.name);
         #[cfg(target_arch = "wasm32")]
-        if let Some(loaded_app) = self.loaded_app.take() {
-            log::debug!("Loaded app found, updating main app");
-            *self = *loaded_app;
-            log::debug!("Main app updated");
+        {
+            if let Some(new_config) = NEW_CONFIG.lock().unwrap().take() {
+                self.config = new_config;
+                self.selected_yaml = "Loaded YAML".to_string();
+                self.loaded_configs = vec![("Loaded YAML".to_string(), self.config.clone())];
+                self.selected_config_index = 0;
+                log::info!("App updated. Current name: {}", self.config.name);
+            }
         }
+
 
         catppuccin_egui::set_theme(
             ctx,
@@ -191,35 +209,19 @@ impl eframe::App for MyLifeApp {
                                         }
                                     }
                                 });
-
                             if ui.button("Load YAML").clicked() {
-                                log::debug!("Load YAML button clicked");
-                                let app_ptr =
-                                    std::sync::Arc::new(std::sync::Mutex::new(self.clone()));
-                                let app_ptr_clone = app_ptr.clone();
-                                wasm_bindgen_futures::spawn_local(async move {
-                                    log::debug!("Async task started");
-                                    match load_yaml().await {
-                                        Some(new_app) => {
-                                            log::debug!("New app loaded, attempting to update");
-                                            match app_ptr_clone.lock() {
-                                                Ok(mut app) => {
-                                                    *app = new_app;
-                                                    log::debug!("App updated successfully");
+                                            let ctx = ctx.clone();
+                                            wasm_bindgen_futures::spawn_local(async move {
+                                                if let Some(new_config) = load_yaml().await {
+                                                    *NEW_CONFIG.lock().unwrap() = Some(new_config);
+                                                    ctx.request_repaint(); // Request a repaint to process the new config
                                                 }
-                                                Err(e) => {
-                                                    log::error!("Failed to acquire lock: {}", e)
-                                                }
-                                            }
+                                            });
                                         }
-                                        None => log::debug!("No new app loaded"),
-                                    }
-                                    log::debug!("Async task completed");
-                                });
-                            }
+                                    
 
                             if ui.button("Save YAML").clicked() {
-                                save_yaml(self);
+                                save_yaml(&self.config);
                             }
                         }
 

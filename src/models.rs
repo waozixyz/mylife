@@ -12,7 +12,7 @@ pub enum CatppuccinTheme {
     Mocha,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct MyLifeApp {
     pub theme: CatppuccinTheme,
@@ -35,6 +35,10 @@ pub struct MyLifeApp {
     pub selected_config_index: usize,
     #[cfg(target_arch = "wasm32")]
     pub loaded_app: Option<Box<MyLifeApp>>,
+
+    #[cfg(target_arch = "wasm32")]
+    pub loaded_config: Option<RuntimeConfig>,
+    
 }
 
 
