@@ -71,7 +71,7 @@ impl MyLifeApp {
                 .config
                 .yearly_events
                 .entry(self.selected_year)
-                .or_insert_with(Vec::new);
+                .or_default();
             if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
                 event.name = item.name.clone();
                 event.color = item.color.clone();
@@ -85,25 +85,23 @@ impl MyLifeApp {
                     start: item.start.clone(),
                 });
             }
+        } else if let Some(period) = self
+            .config
+            .life_periods
+            .iter_mut()
+            .find(|p| p.id == item.id)
+        {
+            period.name = item.name.clone();
+            period.start = item.start.clone();
+            period.color = item.color.clone();
         } else {
-            if let Some(period) = self
-                .config
-                .life_periods
-                .iter_mut()
-                .find(|p| p.id == item.id)
-            {
-                period.name = item.name.clone();
-                period.start = item.start.clone();
-                period.color = item.color.clone();
-            } else {
-                // This is a new item
-                self.config.life_periods.push(RuntimeLifePeriod {
-                    id: item.id,
-                    name: item.name.clone(),
-                    start: item.start.clone(),
-                    color: item.color.clone(),
-                });
-            }
+            // This is a new item
+            self.config.life_periods.push(RuntimeLifePeriod {
+                id: item.id,
+                name: item.name.clone(),
+                start: item.start.clone(),
+                color: item.color.clone(),
+            });
         }
         save_config(&self.config, &self.selected_yaml);
     }

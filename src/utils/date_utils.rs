@@ -9,7 +9,7 @@ pub fn is_valid_date(date: &str, year_month_only: bool) -> bool {
                 && year.parse::<i32>().is_ok()
                 && month
                     .parse::<u32>()
-                    .map(|m| m >= 1 && m <= 12)
+                    .map(|m| (1..=12).contains(&m))
                     .unwrap_or(false);
         }
         false
