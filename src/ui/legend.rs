@@ -8,7 +8,6 @@ pub fn draw_legend(
     view: &str,
     selected_year: i32,
 ) -> Option<LegendItem> {
-    ui.heading("Legend:");
     ui.add_space(5.0);
 
     let legend_height = 20.0;
@@ -57,7 +56,7 @@ pub fn draw_legend(
             ui.painter().text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
-                format!("{} (from {})", event.color, event.start),
+                format!("{} (from {})", event.name, event.start),
                 egui::TextStyle::Body.resolve(ui.style()),
                 egui::Color32::BLACK,
             );
@@ -65,7 +64,7 @@ pub fn draw_legend(
             if response.clicked() {
                 selected_item = Some(LegendItem {
                     id: event.id,
-                    name: event.color.clone(),
+                    name: event.name.clone(),
                     start: event.start.clone(),
                     color: event.color.clone(),
                     is_yearly: true,

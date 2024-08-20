@@ -142,6 +142,7 @@ pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
                         .into_iter()
                         .map(|e| RuntimeYearlyEvent {
                             id: Uuid::new_v4(),
+                            name: e.name,
                             color: e.color,
                             start: e.start,
                         })
@@ -176,6 +177,7 @@ pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
                     events
                         .iter()
                         .map(|e| crate::models::YearlyEvent {
+                            name: e.name.clone(),
                             color: e.color.clone(),
                             start: e.start.clone(),
                         })

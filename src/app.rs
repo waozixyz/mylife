@@ -1,4 +1,7 @@
-use crate::models::{CatppuccinTheme, LegendItem, MyLifeApp};
+use crate::models::{
+    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeYearlyEvent,
+};
+
 use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
 
 use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
@@ -13,7 +16,6 @@ use crate::utils::config_utils::{get_available_configs, get_config};
 
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
-use log::debug;
 
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
@@ -51,6 +53,7 @@ impl Default for MyLifeApp {
             loaded_app: None,
             #[cfg(target_arch = "wasm32")]
             loaded_config: None,
+            temp_start_date: "".to_string(),
         }
     }
 }
@@ -62,24 +65,45 @@ impl MyLifeApp {
         }
         Default::default()
     }
-
     fn update_config_item(&mut self, item: &LegendItem) {
         if item.is_yearly {
-            if let Some(events) = self.config.yearly_events.get_mut(&self.selected_year) {
-                if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
-                    event.color = item.name.clone();
-                    event.start = item.start.clone();
-                }
+            let events = self
+                .config
+                .yearly_events
+                .entry(self.selected_year)
+                .or_insert_with(Vec::new);
+            if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
+                event.name = item.name.clone();
+                event.color = item.color.clone();
+                event.start = item.start.clone();
+            } else {
+                // This is a new item
+                events.push(RuntimeYearlyEvent {
+                    id: item.id,
+                    name: item.name.clone(),
+                    color: item.color.clone(),
+                    start: item.start.clone(),
+                });
             }
-        } else if let Some(period) = self
-            .config
-            .life_periods
-            .iter_mut()
-            .find(|p| p.id == item.id)
-        {
-            period.name = item.name.clone();
-            period.start = item.start.clone();
-            period.color = item.color.clone();
+        } else {
+            if let Some(period) = self
+                .config
+                .life_periods
+                .iter_mut()
+                .find(|p| p.id == item.id)
+            {
+                period.name = item.name.clone();
+                period.start = item.start.clone();
+                period.color = item.color.clone();
+            } else {
+                // This is a new item
+                self.config.life_periods.push(RuntimeLifePeriod {
+                    id: item.id,
+                    name: item.name.clone(),
+                    start: item.start.clone(),
+                    color: item.color.clone(),
+                });
+            }
         }
         save_config(&self.config, &self.selected_yaml);
     }
@@ -91,8 +115,6 @@ impl eframe::App for MyLifeApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        log::info!("Entering update method. Current name: {}", self.config.name);
-
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(new_config) = NEW_CONFIG.lock().unwrap().take() {
@@ -100,7 +122,7 @@ impl eframe::App for MyLifeApp {
                 self.selected_yaml = "Loaded YAML".to_string();
                 self.loaded_configs = vec![("Loaded YAML".to_string(), self.config.clone())];
                 self.selected_config_index = 0;
-                log::info!("App updated. Current name: {}", self.config.name);
+                println!("App updated. Current name: {}", self.config.name);
             }
         }
 
@@ -123,30 +145,60 @@ impl eframe::App for MyLifeApp {
 
         if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;
+            let mut changed = false;
 
             if self.original_legend_item.is_none() {
                 self.original_legend_item = Some(item.clone());
+                self.temp_start_date = item.start.clone();
+                println!("Initializing temp_start_date: {}", self.temp_start_date);
             }
 
             egui::Window::new("Edit Legend Item").show(ctx, |ui| {
                 ui.vertical(|ui| {
-                    let mut changed = false;
                     ui.horizontal(|ui| {
                         ui.label("Name:");
                         if ui.text_edit_singleline(&mut item.name).changed() {
                             changed = true;
-                            debug!("Name changed to: {}", item.name);
+                            println!("Name changed to: {}", item.name);
                         }
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Start:");
-                        let mut start_date = item.start.clone();
-                        if ui.text_edit_singleline(&mut start_date).changed()
-                            && is_valid_date(&start_date)
-                        {
-                            item.start = start_date;
-                            changed = true;
+                        let response = ui.text_edit_singleline(&mut self.temp_start_date);
+
+                        if response.changed() {
+                            println!(
+                                "Date input changed. Current value: {}",
+                                self.temp_start_date
+                            );
+                            if is_valid_date(&self.temp_start_date, !item.is_yearly) {
+                                item.start = self.temp_start_date.clone();
+                                changed = true;
+                                println!(
+                                    "Valid date entered. Updated item.start to: {}",
+                                    item.start
+                                );
+                            } else {
+                                println!("Invalid date entered. Not updating item.start.");
+                            }
+                        }
+
+                        if response.lost_focus() {
+                            println!(
+                                "Date input lost focus. Current value: {}",
+                                self.temp_start_date
+                            );
+                            if is_valid_date(&self.temp_start_date, !item.is_yearly) {
+                                item.start = self.temp_start_date.clone();
+                                changed = true;
+                                println!(
+                                    "Valid date on lost focus. Updated item.start to: {}",
+                                    item.start
+                                );
+                            } else {
+                                println!("Invalid date on lost focus. Not updating item.start.");
+                            }
                         }
                     });
 
@@ -159,13 +211,6 @@ impl eframe::App for MyLifeApp {
                         }
                     });
 
-                    if changed {
-                        debug!("Item changed, updating config...");
-                        self.update_config_item(&item);
-                    }
-
-                    ui.label(format!("Debug - Current item: {:?}", item));
-
                     ui.horizontal(|ui| {
                         if ui.button("Close").clicked() {
                             should_close = true;
@@ -174,9 +219,29 @@ impl eframe::App for MyLifeApp {
                 });
             });
 
+            if changed {
+                println!(
+                    "Item changed, updating config. Current start date: {}",
+                    item.start
+                );
+                self.update_config_item(&item);
+            }
+
             if should_close {
+                println!(
+                    "Closing edit window. Final temp_start_date: {}",
+                    self.temp_start_date
+                );
+                if is_valid_date(&self.temp_start_date, !item.is_yearly) {
+                    item.start = self.temp_start_date.clone();
+                    self.update_config_item(&item);
+                    println!("Valid date on close. Final item.start: {}", item.start);
+                } else {
+                    println!("Invalid date on close. Not updating item.start.");
+                }
                 self.selected_legend_item = None;
                 self.original_legend_item = None;
+                self.temp_start_date.clear();
             } else {
                 self.selected_legend_item = Some(item);
             }

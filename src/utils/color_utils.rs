@@ -1,6 +1,7 @@
 use crate::models::{RuntimeLifePeriod, RuntimeYearlyEvent};
 use chrono::{NaiveDate, Utc};
 use eframe::egui;
+use log::warn;
 
 pub fn hex_to_color32(hex: &str) -> egui::Color32 {
     let hex = hex.trim_start_matches('#');
@@ -31,11 +32,13 @@ where
     }
 
     for item in items.iter().rev() {
-        let start = NaiveDate::parse_from_str(&get_start(item), "%Y-%m-%d").unwrap_or_else(|e| {
-            panic!("Failed to parse start date '{}': {:?}", get_start(item), e)
-        });
-        if &start <= date {
-            return hex_to_color32(get_color(item));
+        match NaiveDate::parse_from_str(&get_start(item), "%Y-%m-%d") {
+            Ok(start) if &start <= date => return hex_to_color32(get_color(item)),
+            Ok(_) => continue,
+            Err(e) => {
+                warn!("Failed to parse start date '{}': {:?}", get_start(item), e);
+                continue;
+            }
         }
     }
     egui::Color32::WHITE

@@ -15,6 +15,7 @@ pub enum CatppuccinTheme {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct MyLifeApp {
+    pub temp_start_date: String,
     pub theme: CatppuccinTheme,
     pub config: RuntimeConfig,
     pub view: String,
@@ -66,6 +67,7 @@ pub struct LifePeriod {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct YearlyEvent {
+    pub name: String,
     pub color: String,
     pub start: String,
 }
@@ -81,6 +83,7 @@ pub struct RuntimeLifePeriod {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RuntimeYearlyEvent {
     pub id: Uuid,
+    pub name: String,
     pub color: String,
     pub start: String,
 }
