@@ -3,7 +3,7 @@ name = "mylife"
 version = "0.1.0"
 authors = ["Martin Schiller <hello@waozi.xyz>"]
 edition = "2021"
-rust-version = "1.76"
+rust-version = "1.80.1"
 include = ["LICENSE.md", "**/*.rs", "Cargo.toml"]
 
 [package.metadata.docs.rs]
