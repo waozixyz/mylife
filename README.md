@@ -4,7 +4,7 @@ A Rust-based application for visualizing life events on a timeline, with both na
 
 ## Features
 
-- Display life periods and yearly events on a timeline
+- Display life periods and life period events on a timeline
 - Customize event names, start dates, and colors
 - Support for YAML configuration
 - Dynamic updates based on configuration changes
@@ -53,14 +53,13 @@ life_periods:
 - name: Teenage Years
  start: 2013-01
  color: "#BAFFC9"
-yearly_events:
-2022:
- - name: Winter Internship
-   start: 2022-01-03
-   color: "#4CAF50"
- - name: Spring Semester
-   start: 2022-03-21
-   color: "#2196F3"
+ events:
+  - name: Winter Internship
+    start: 2022-01-03
+    color: "#4CAF50"
+  - name: Spring Semester
+    start: 2022-03-21
+    color: "#2196F3"
 ```
 
 ## Native Version

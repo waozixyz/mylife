@@ -27,7 +27,7 @@ pub fn draw_bottom_panel(app: &mut MyLifeApp, ctx: &egui::Context, bottom_height
                                 name: "New Period".to_string(),
                                 start: default_start,
                                 color: "#000000".to_string(),
-                                is_yearly: false,
+                                is_event: false,
                             }
                         } else {
                             LegendItem {
@@ -35,7 +35,7 @@ pub fn draw_bottom_panel(app: &mut MyLifeApp, ctx: &egui::Context, bottom_height
                                 name: "New Event".to_string(),
                                 start: default_start,
                                 color: "#000000".to_string(),
-                                is_yearly: true,
+                                is_event: true,
                             }
                         };
 
@@ -45,9 +45,7 @@ pub fn draw_bottom_panel(app: &mut MyLifeApp, ctx: &egui::Context, bottom_height
 
                 ui.add_space(5.0);
 
-                if let Some(legend_item) =
-                    draw_legend(ui, &app.config, &app.view, app.selected_year)
-                {
+                if let Some(legend_item) = draw_legend(ui, &app.config, &app.view, app.selected_life_period) {
                     app.selected_legend_item = Some(legend_item);
                 }
             });

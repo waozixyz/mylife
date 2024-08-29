@@ -1,59 +1,55 @@
 use crate::models::{
-    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeYearlyEvent,
+    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeLifePeriodEvent,
+    Config, RuntimeConfig,
 };
-
 use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
-
 use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
-use crate::utils::config_utils::save_config;
+use crate::utils::config_utils::{save_config, get_available_configs, get_config};
 use crate::utils::date_utils::is_valid_date;
-
-#[cfg(target_arch = "wasm32")]
-use crate::utils::config_utils::get_default_config;
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::utils::config_utils::{get_available_configs, get_config};
 
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
+use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
-use crate::config::DEFAULT_CONFIG_YAML;
+use manganis::*;
+
 #[cfg(target_arch = "wasm32")]
-use crate::utils::wasm_config::NEW_CONFIG;
+const DEFAULT_CONFIG: &str = mg!(file("./configs/default.yaml"));
+#[cfg(target_arch = "wasm32")]
+const OTHER_CONFIG: &str = mg!(file("./configs/other.yaml"));
 
 impl Default for MyLifeApp {
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let default_config = get_config();
         #[cfg(target_arch = "wasm32")]
-        let default_config = get_default_config();
+        let default_config = Self::load_config_from_yaml(DEFAULT_CONFIG);
 
         Self {
             config: default_config.clone(),
             view: "Lifetime".to_string(),
-            selected_year: 2024,
             #[cfg(not(target_arch = "wasm32"))]
             yaml_files: get_available_configs(),
             #[cfg(target_arch = "wasm32")]
-            yaml_content: DEFAULT_CONFIG_YAML.to_string(),
+            yaml_content: DEFAULT_CONFIG.to_string(),
             #[cfg(not(target_arch = "wasm32"))]
             selected_yaml: "default.yaml".to_string(),
             #[cfg(target_arch = "wasm32")]
             selected_yaml: "Default".to_string(),
-            value: 2.7,
             selected_legend_item: None,
             original_legend_item: None,
             theme: CatppuccinTheme::Mocha,
             #[cfg(target_arch = "wasm32")]
-            loaded_configs: vec![("Default".to_string(), default_config)],
+            loaded_configs: vec![
+                ("Default".to_string(), default_config),
+                ("Other".to_string(), Self::load_config_from_yaml(OTHER_CONFIG)),
+            ],
             #[cfg(target_arch = "wasm32")]
             selected_config_index: 0,
-            #[cfg(target_arch = "wasm32")]
-            loaded_app: None,
-            #[cfg(target_arch = "wasm32")]
-            loaded_config: None,
             temp_start_date: "".to_string(),
+            selected_life_period: None,
+            value: 0.0,
         }
     }
 }
@@ -65,25 +61,29 @@ impl MyLifeApp {
         }
         Default::default()
     }
+
+    #[cfg(target_arch = "wasm32")]
+    fn load_config_from_yaml(yaml_content: &str) -> RuntimeConfig {
+        let config: Config = serde_yaml::from_str(yaml_content)
+            .expect("Failed to parse YAML");
+        config_to_runtime_config(config)
+    }
+
     fn update_config_item(&mut self, item: &LegendItem) {
-        if item.is_yearly {
-            let events = self
-                .config
-                .yearly_events
-                .entry(self.selected_year)
-                .or_default();
-            if let Some(event) = events.iter_mut().find(|e| e.id == item.id) {
-                event.name = item.name.clone();
-                event.color = item.color.clone();
-                event.start = item.start.clone();
-            } else {
-                // This is a new item
-                events.push(RuntimeYearlyEvent {
-                    id: item.id,
-                    name: item.name.clone(),
-                    color: item.color.clone(),
-                    start: item.start.clone(),
-                });
+        if item.is_event {
+            if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.id == self.selected_life_period.unwrap()) {
+                if let Some(event) = period.events.iter_mut().find(|e| e.id == item.id) {
+                    event.name = item.name.clone();
+                    event.color = item.color.clone();
+                    event.start = item.start.clone();
+                } else {
+                    period.events.push(RuntimeLifePeriodEvent {
+                        id: item.id,
+                        name: item.name.clone(),
+                        color: item.color.clone(),
+                        start: item.start.clone(),
+                    });
+                }
             }
         } else if let Some(period) = self
             .config
@@ -95,12 +95,12 @@ impl MyLifeApp {
             period.start = item.start.clone();
             period.color = item.color.clone();
         } else {
-            // This is a new item
             self.config.life_periods.push(RuntimeLifePeriod {
                 id: item.id,
                 name: item.name.clone(),
                 start: item.start.clone(),
                 color: item.color.clone(),
+                events: Vec::new(),
             });
         }
         save_config(&self.config, &self.selected_yaml);
@@ -113,17 +113,6 @@ impl eframe::App for MyLifeApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(new_config) = NEW_CONFIG.lock().unwrap().take() {
-                self.config = new_config;
-                self.selected_yaml = "Loaded YAML".to_string();
-                self.loaded_configs = vec![("Loaded YAML".to_string(), self.config.clone())];
-                self.selected_config_index = 0;
-                println!("App updated. Current name: {}", self.config.name);
-            }
-        }
-
         catppuccin_egui::set_theme(
             ctx,
             match self.theme {
@@ -139,7 +128,26 @@ impl eframe::App for MyLifeApp {
         let central_height = screen_rect.height() - top_height - bottom_height;
 
         draw_top_panel(self, ctx, top_height);
+        draw_central_panel(self, ctx, central_height);
         draw_bottom_panel(self, ctx, bottom_height);
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            egui::Window::new("Config Selection").show(ctx, |ui| {
+                egui::ComboBox::from_label("Select Config")
+                    .selected_text(&self.loaded_configs[self.selected_config_index].0)
+                    .show_ui(ui, |ui| {
+                        for (i, (name, _)) in self.loaded_configs.iter().enumerate() {
+                            ui.selectable_value(&mut self.selected_config_index, i, name);
+                        }
+                    });
+
+                if ui.button("Load Selected Config").clicked() {
+                    self.config = self.loaded_configs[self.selected_config_index].1.clone();
+                    self.selected_yaml = self.loaded_configs[self.selected_config_index].0.clone();
+                }
+            });
+        }
 
         if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;
@@ -148,7 +156,6 @@ impl eframe::App for MyLifeApp {
             if self.original_legend_item.is_none() {
                 self.original_legend_item = Some(item.clone());
                 self.temp_start_date = item.start.clone();
-                println!("Initializing temp_start_date: {}", self.temp_start_date);
             }
 
             egui::Window::new("Edit Legend Item").show(ctx, |ui| {
@@ -157,7 +164,6 @@ impl eframe::App for MyLifeApp {
                         ui.label("Name:");
                         if ui.text_edit_singleline(&mut item.name).changed() {
                             changed = true;
-                            println!("Name changed to: {}", item.name);
                         }
                     });
 
@@ -165,37 +171,10 @@ impl eframe::App for MyLifeApp {
                         ui.label("Start:");
                         let response = ui.text_edit_singleline(&mut self.temp_start_date);
 
-                        if response.changed() {
-                            println!(
-                                "Date input changed. Current value: {}",
-                                self.temp_start_date
-                            );
-                            if is_valid_date(&self.temp_start_date, !item.is_yearly) {
+                        if response.changed() || response.lost_focus() {
+                            if is_valid_date(&self.temp_start_date, !item.is_event) {
                                 item.start = self.temp_start_date.clone();
                                 changed = true;
-                                println!(
-                                    "Valid date entered. Updated item.start to: {}",
-                                    item.start
-                                );
-                            } else {
-                                println!("Invalid date entered. Not updating item.start.");
-                            }
-                        }
-
-                        if response.lost_focus() {
-                            println!(
-                                "Date input lost focus. Current value: {}",
-                                self.temp_start_date
-                            );
-                            if is_valid_date(&self.temp_start_date, !item.is_yearly) {
-                                item.start = self.temp_start_date.clone();
-                                changed = true;
-                                println!(
-                                    "Valid date on lost focus. Updated item.start to: {}",
-                                    item.start
-                                );
-                            } else {
-                                println!("Invalid date on lost focus. Not updating item.start.");
                             }
                         }
                     });
@@ -218,24 +197,13 @@ impl eframe::App for MyLifeApp {
             });
 
             if changed {
-                println!(
-                    "Item changed, updating config. Current start date: {}",
-                    item.start
-                );
                 self.update_config_item(&item);
             }
 
             if should_close {
-                println!(
-                    "Closing edit window. Final temp_start_date: {}",
-                    self.temp_start_date
-                );
-                if is_valid_date(&self.temp_start_date, !item.is_yearly) {
+                if is_valid_date(&self.temp_start_date, !item.is_event) {
                     item.start = self.temp_start_date.clone();
                     self.update_config_item(&item);
-                    println!("Valid date on close. Final item.start: {}", item.start);
-                } else {
-                    println!("Invalid date on close. Not updating item.start.");
                 }
                 self.selected_legend_item = None;
                 self.original_legend_item = None;
@@ -244,6 +212,5 @@ impl eframe::App for MyLifeApp {
                 self.selected_legend_item = Some(item);
             }
         }
-        draw_central_panel(self, ctx, central_height);
     }
 }

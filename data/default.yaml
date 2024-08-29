@@ -4,34 +4,17 @@ life_expectancy: 80
 life_periods:
 - name: Childhood
   start: 2000-01
-  color: '#FFB3BA'
+  color: '#5100FF'
 - name: Teenage Years
   start: 2013-01
-  color: '#BAFFC9'
-- name: Early Adulthood
+  color: '#00FF77'
+- name: University
   start: 2018-01
-  color: '#BAE1FF'
+  color: '#00BEFF'
 - name: Career Growth
-  start: 2023-01
-  color: '#EBEBA8'
-- name: Heaven
-  start: 2024-03
-  color: '#D79494'
-yearly_events:
-  2022:
-  - name: Winter Internship
-    color: '#4CAF50'
-    start: 2022-01-03
-  - name: Spring Semester
-    color: '#2196F3'
-    start: 2022-03-21
-  - name: Summer Job
-    color: '#FFA500'
-    start: 2022-06-06
-  - name: Fall Semester
-    color: '#9C27B0'
-    start: 2022-09-05
-  2023:
+  start: 2022-01
+  color: '#FFFF00'
+  events:
   - name: New Year Trip
     color: '#E91E63'
     start: 2023-01-01
@@ -47,19 +30,34 @@ yearly_events:
   - name: Year-end Vacation
     color: '#009688'
     start: 2023-12-23
-  2024:
-  - name: New Project at Work
-    color: '#3F51B5'
-    start: 2024-01-08
-  - name: Learning New Skills
-    color: '#CDDC39'
-    start: 2024-04-01
-  - name: Summer Workation
-    color: '#FF9800'
-    start: 2024-06-15
-  - name: Promotion Preparation
+  - name: Fall Semester
     color: '#9C27B0'
-    start: 2024-08-01
-  - name: Holiday Season
-    color: '#F44336'
-    start: 2024-11-25
+    start: 2022-09-05
+  - name: Summer Job
+    color: '#FFA500'
+    start: 2022-06-06
+  - name: Spring Semester
+    color: '#2196F3'
+    start: 2022-03-21
+  - name: Winter Internship
+    color: '#4CAF50'
+    start: 2022-01-03
+- name: Working
+  start: 2024-01
+  color: '#FF9E00'
+  events:
+    - name: New Project at Work
+      color: '#3F51B5'
+      start: 2024-01-08
+    - name: Learning New Skills
+      color: '#CDDC39'
+      start: 2024-04-01
+    - name: Summer Workation
+      color: '#FF9800'
+      start: 2024-06-15
+    - name: Promotion Preparation
+      color: '#9C27B0'
+      start: 2024-08-01
+    - name: Holiday Season
+      color: '#F44336'
+      start: 2024-11-25

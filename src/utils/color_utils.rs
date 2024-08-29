@@ -1,4 +1,4 @@
-use crate::models::{RuntimeLifePeriod, RuntimeYearlyEvent};
+use crate::models::{RuntimeLifePeriod, RuntimeLifePeriodEvent};
 use chrono::{NaiveDate, Utc};
 use eframe::egui;
 use log::warn;
@@ -53,9 +53,9 @@ pub fn get_color_for_date(date: &NaiveDate, life_periods: &[RuntimeLifePeriod]) 
     )
 }
 
-pub fn get_color_for_yearly_event(
+pub fn get_color_for_life_period_event(
     date: &NaiveDate,
-    events: &[RuntimeYearlyEvent],
+    events: &[RuntimeLifePeriodEvent],
 ) -> egui::Color32 {
     get_color_for_item(
         date,

@@ -1,4 +1,4 @@
-use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeYearlyEvent};
+use crate::models::{Config, LifePeriod, LifePeriodEvent, RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
 use std::io;
 use uuid::Uuid;
 
@@ -31,6 +31,7 @@ impl NativeConfigManager {
         Self { data_folder }
     }
 }
+
 #[cfg(not(target_arch = "wasm32"))]
 impl ConfigManager for NativeConfigManager {
     fn load_config(&self, yaml_file: &str) -> io::Result<RuntimeConfig> {
@@ -40,6 +41,7 @@ impl ConfigManager for NativeConfigManager {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         Ok(config_to_runtime_config(config))
     }
+
     fn save_config(&self, config: &RuntimeConfig, yaml_file: &str) -> io::Result<()> {
         let config = runtime_config_to_config(config);
         let yaml_content = serde_yaml::to_string(&config)
@@ -47,7 +49,7 @@ impl ConfigManager for NativeConfigManager {
         let yaml_path = std::path::Path::new(&self.data_folder).join(yaml_file);
         std::fs::write(yaml_path, yaml_content)
     }
-    #[cfg(not(target_arch = "wasm32"))]
+
     fn get_available_configs(&self) -> io::Result<Vec<String>> {
         let data_folder = Path::new(&self.data_folder);
         Ok(fs::read_dir(data_folder)?
@@ -100,10 +102,6 @@ impl ConfigManager for WasmConfigManager {
 
         Ok(())
     }
-    #[cfg(not(target_arch = "wasm32"))]
-    fn get_available_configs(&self) -> io::Result<Vec<String>> {
-        Ok(vec!["Default".to_string()])
-    }
 }
 
 pub fn get_config_manager() -> Box<dyn ConfigManager> {
@@ -122,38 +120,28 @@ pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
         name: config.name,
         date_of_birth: config.date_of_birth,
         life_expectancy: config.life_expectancy,
-        life_periods: config
-            .life_periods
+        life_periods: config.life_periods
             .into_iter()
-            .map(|p| RuntimeLifePeriod {
+            .map(|period| RuntimeLifePeriod {
                 id: Uuid::new_v4(),
-                name: p.name,
-                start: p.start,
-                color: p.color,
-            })
-            .collect(),
-        yearly_events: config
-            .yearly_events
-            .into_iter()
-            .map(|(year, events)| {
-                (
-                    year,
-                    events
-                        .into_iter()
-                        .map(|e| RuntimeYearlyEvent {
-                            id: Uuid::new_v4(),
-                            name: e.name,
-                            color: e.color,
-                            start: e.start,
-                        })
-                        .collect(),
-                )
+                name: period.name,
+                start: period.start,
+                color: period.color,
+                events: period.events
+                    .into_iter()
+                    .map(|event| RuntimeLifePeriodEvent {
+                        id: Uuid::new_v4(),
+                        name: event.name,
+                        color: event.color,
+                        start: event.start,
+                    })
+                    .collect(),
             })
             .collect(),
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+
 pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
     Config {
         name: runtime_config.name.clone(),
@@ -162,27 +150,18 @@ pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
         life_periods: runtime_config
             .life_periods
             .iter()
-            .map(|p| crate::models::LifePeriod {
+            .map(|p|LifePeriod {
                 name: p.name.clone(),
                 start: p.start.clone(),
                 color: p.color.clone(),
-            })
-            .collect(),
-        yearly_events: runtime_config
-            .yearly_events
-            .iter()
-            .map(|(year, events)| {
-                (
-                    *year,
-                    events
-                        .iter()
-                        .map(|e| crate::models::YearlyEvent {
-                            name: e.name.clone(),
-                            color: e.color.clone(),
-                            start: e.start.clone(),
-                        })
-                        .collect(),
-                )
+                events: p.events
+                    .iter()
+                    .map(|e| LifePeriodEvent {
+                        name: e.name.clone(),
+                        color: e.color.clone(),
+                        start: e.start.clone(),
+                    })
+                    .collect(),
             })
             .collect(),
     }

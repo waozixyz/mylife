@@ -1,7 +1,6 @@
 #[cfg(target_arch = "wasm32")]
 use crate::config::DEFAULT_CONFIG_YAML;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,11 +14,11 @@ pub enum CatppuccinTheme {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct MyLifeApp {
+    pub selected_life_period: Option<Uuid>,
     pub temp_start_date: String,
     pub theme: CatppuccinTheme,
     pub config: RuntimeConfig,
     pub view: String,
-    pub selected_year: i32,
     #[cfg(not(target_arch = "wasm32"))]
     pub yaml_files: Vec<String>,
     #[cfg(target_arch = "wasm32")]
@@ -46,7 +45,6 @@ pub struct Config {
     pub date_of_birth: String,
     pub life_expectancy: u32,
     pub life_periods: Vec<LifePeriod>,
-    pub yearly_events: HashMap<i32, Vec<YearlyEvent>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
@@ -55,7 +53,6 @@ pub struct RuntimeConfig {
     pub date_of_birth: String,
     pub life_expectancy: u32,
     pub life_periods: Vec<RuntimeLifePeriod>,
-    pub yearly_events: HashMap<i32, Vec<RuntimeYearlyEvent>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -63,10 +60,11 @@ pub struct LifePeriod {
     pub name: String,
     pub start: String,
     pub color: String,
+    #[serde(default)]
+    pub events: Vec<LifePeriodEvent>,
 }
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct YearlyEvent {
+pub struct LifePeriodEvent {
     pub name: String,
     pub color: String,
     pub start: String,
@@ -78,10 +76,11 @@ pub struct RuntimeLifePeriod {
     pub name: String,
     pub start: String,
     pub color: String,
+    #[serde(default)]
+    pub events: Vec<RuntimeLifePeriodEvent>,
 }
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RuntimeYearlyEvent {
+pub struct RuntimeLifePeriodEvent {
     pub id: Uuid,
     pub name: String,
     pub color: String,
@@ -94,8 +93,9 @@ pub struct LegendItem {
     pub name: String,
     pub start: String,
     pub color: String,
-    pub is_yearly: bool,
+    pub is_event: bool,
 }
+
 #[cfg(target_arch = "wasm32")]
 impl Default for Config {
     fn default() -> Self {
@@ -117,12 +117,12 @@ impl Default for Config {
                     date_of_birth: "2000-01".to_string(),
                     life_expectancy: 80,
                     life_periods: vec![],
-                    yearly_events: HashMap::new(),
                 }
             }
         }
     }
 }
+
 #[cfg(target_arch = "wasm32")]
 impl From<&RuntimeConfig> for Config {
     fn from(runtime_config: &RuntimeConfig) -> Self {
@@ -137,22 +137,11 @@ impl From<&RuntimeConfig> for Config {
                     name: p.name.clone(),
                     start: p.start.clone(),
                     color: p.color.clone(),
-                })
-                .collect(),
-            yearly_events: runtime_config
-                .yearly_events
-                .iter()
-                .map(|(year, events)| {
-                    (
-                        *year,
-                        events
-                            .iter()
-                            .map(|e| YearlyEvent {
-                                color: e.color.clone(),
-                                start: e.start.clone(),
-                            })
-                            .collect(),
-                    )
+                    events: p.events.iter().map(|e| LifePeriodEvent {
+                        name: e.name.clone(),
+                        color: e.color.clone(),
+                        start: e.start.clone(),
+                    }).collect(),
                 })
                 .collect(),
         }

@@ -30,11 +30,7 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
                     .show_ui(ui, |ui| {
                         ui.selectable_value(&mut app.theme, CatppuccinTheme::Frappe, "Frappe");
                         ui.selectable_value(&mut app.theme, CatppuccinTheme::Latte, "Latte");
-                        ui.selectable_value(
-                            &mut app.theme,
-                            CatppuccinTheme::Macchiato,
-                            "Macchiato",
-                        );
+                        ui.selectable_value(&mut app.theme, CatppuccinTheme::Macchiato, "Macchiato");
                         ui.selectable_value(&mut app.theme, CatppuccinTheme::Mocha, "Mocha");
                     });
             });
@@ -46,14 +42,7 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
                         .show_ui(ui, |ui| {
                             #[cfg(not(target_arch = "wasm32"))]
                             for yaml_file in &app.yaml_files {
-                                if ui
-                                    .selectable_value(
-                                        &mut app.selected_yaml,
-                                        yaml_file.clone(),
-                                        yaml_file,
-                                    )
-                                    .changed()
-                                {
+                                if ui.selectable_value(&mut app.selected_yaml, yaml_file.clone(), yaml_file).changed() {
                                     app.config = get_config_manager()
                                         .load_config(&app.selected_yaml)
                                         .expect("Failed to load config");
@@ -61,10 +50,7 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
                             }
                             #[cfg(target_arch = "wasm32")]
                             for (index, (name, _)) in app.loaded_configs.iter().enumerate() {
-                                if ui
-                                    .selectable_value(&mut app.selected_config_index, index, name)
-                                    .clicked()
-                                {
+                                if ui.selectable_value(&mut app.selected_config_index, index, name).clicked() {
                                     app.config = app.loaded_configs[index].1.clone();
                                     app.selected_yaml = name.clone();
                                 }
@@ -93,33 +79,37 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
                         .selected_text(&app.view)
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut app.view, "Lifetime".to_string(), "Lifetime");
-                            ui.selectable_value(&mut app.view, "Yearly".to_string(), "Yearly");
+                            if app.selected_life_period.is_some() {
+                                ui.selectable_value(&mut app.view, "EventView".to_string(), "Event View");
+                            }
                         });
 
-                    if app.view == "Lifetime" {
-                        egui::ComboBox::from_label("Life Expectancy")
-                            .selected_text(app.config.life_expectancy.to_string())
-                            .show_ui(ui, |ui| {
-                                for year in 60..=120 {
-                                    ui.selectable_value(
-                                        &mut app.config.life_expectancy,
-                                        year,
-                                        year.to_string(),
-                                    );
+                    match app.view.as_str() {
+                        "Lifetime" => {
+                            egui::ComboBox::from_label("Life Expectancy")
+                                .selected_text(app.config.life_expectancy.to_string())
+                                .show_ui(ui, |ui| {
+                                    for year in 60..=120 {
+                                        ui.selectable_value(
+                                            &mut app.config.life_expectancy,
+                                            year,
+                                            year.to_string(),
+                                        );
+                                    }
+                                });
+                        }
+                        "EventView" => {
+                            if let Some(period_id) = app.selected_life_period {
+                                if let Some(period) = app.config.life_periods.iter().find(|p| p.id == period_id) {
+                                    ui.label(&period.name);
                                 }
-                            });
-                    } else if app.view == "Yearly" {
-                        egui::ComboBox::from_label("Year")
-                            .selected_text(app.selected_year.to_string())
-                            .show_ui(ui, |ui| {
-                                for year in app.config.yearly_events.keys() {
-                                    ui.selectable_value(
-                                        &mut app.selected_year,
-                                        *year,
-                                        year.to_string(),
-                                    );
-                                }
-                            });
+                            }
+                            if ui.button("Back to Lifetime").clicked() {
+                                app.view = "Lifetime".to_string();
+                                app.selected_life_period = None;
+                            }
+                        }
+                        _ => {}
                     }
                 });
             });
