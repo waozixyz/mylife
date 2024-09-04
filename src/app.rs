@@ -1,6 +1,5 @@
 use crate::models::{
     CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeLifePeriodEvent,
-    Config, RuntimeConfig,
 };
 use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
 use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
@@ -9,7 +8,6 @@ use crate::utils::date_utils::is_valid_date;
 
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
-use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
 use manganis::*;
@@ -125,10 +123,9 @@ impl eframe::App for MyLifeApp {
         let screen_rect = ctx.screen_rect();
         let top_height = 50.0;
         let bottom_height = screen_rect.height() * 0.2;
-        let central_height = screen_rect.height() - top_height - bottom_height;
 
         draw_top_panel(self, ctx, top_height);
-        draw_central_panel(self, ctx, central_height);
+        draw_central_panel(self, ctx, top_height, bottom_height);
         draw_bottom_panel(self, ctx, bottom_height);
 
         #[cfg(target_arch = "wasm32")]

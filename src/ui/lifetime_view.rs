@@ -1,5 +1,4 @@
 use crate::models::{RuntimeConfig, RuntimeLifePeriod};
-use crate::utils::color_utils::get_color_for_date;
 use chrono::NaiveDate;
 use eframe::egui;
 use eframe::epaint::Vec2;

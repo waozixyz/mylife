@@ -1,5 +1,4 @@
 use crate::models::RuntimeConfig;
-use crate::config_manager::config_to_runtime_config;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::config_manager::get_config_manager;

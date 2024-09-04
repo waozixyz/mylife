@@ -1,4 +1,4 @@
-use crate::models::{RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
+use crate::models::{RuntimeConfig, RuntimeLifePeriodEvent};
 use crate::utils::color_utils::hex_to_color32;
 use chrono::NaiveDate;
 use eframe::egui;
@@ -6,7 +6,7 @@ use eframe::epaint::Vec2;
 use uuid::Uuid;
 pub fn draw_event_view(
     ui: &mut egui::Ui,
-    grid_size: Vec2,
+    available_size: Vec2,
     config: &RuntimeConfig,
     selected_life_period_id: Uuid,
 ) {
@@ -20,7 +20,7 @@ pub fn draw_event_view(
             return;
         }
 
-        // Find the earliest event start date
+        // Find the earliest event start date and end date
         let start_date = events.iter()
             .filter_map(|event| NaiveDate::parse_from_str(&event.start, "%Y-%m-%d").ok())
             .min()
@@ -37,39 +37,62 @@ pub fn draw_event_view(
         };
 
         let total_days = (end_date - start_date).num_days() as usize;
-        let rows = (total_days + 27) / 28; // Round up to nearest multiple of 28
         let cols = 28;
+        let rows = (total_days + cols - 1) / cols; // Round up to nearest multiple of 28
 
-        let cell_size = (grid_size.x / cols as f32)
-            .min(grid_size.y / rows as f32)
-            .floor();
+        // Debug information
+        let debug_height = ui.text_style_height(&egui::TextStyle::Body) * 7.0; // Approximate height for 7 lines of debug text
+        ui.label(format!("Available size: {:?}", available_size));
+        ui.label(format!("Total days: {}", total_days));
+        ui.label(format!("Rows: {}", rows));
+
+        // Adjust available size to account for debug information
+        let adjusted_available_size = Vec2::new(available_size.x, available_size.y - debug_height);
+
+        // Calculate cell size based on adjusted available space
+        let cell_width = adjusted_available_size.x / cols as f32;
+        let cell_height = adjusted_available_size.y / rows as f32;
+        let cell_size = cell_width.min(cell_height).floor();
+
+        // Debug information
+        ui.label(format!("Cell width: {:.2}", cell_width));
+        ui.label(format!("Cell height: {:.2}", cell_height));
+        ui.label(format!("Cell size: {:.2}", cell_size));
 
         let grid_width = cell_size * cols as f32;
         let grid_height = cell_size * rows as f32;
 
+        // Debug information
+        ui.label(format!("Grid size: {:.2} x {:.2}", grid_width, grid_height));
+
         let offset = Vec2::new(
-            (grid_size.x - grid_width) / 2.0,
-            (grid_size.y - grid_height) / 2.0,
+            (adjusted_available_size.x - grid_width) / 2.0,
+            0.0, // Align to the top
         );
 
         let grid_rect = egui::Rect::from_min_size(
-            ui.min_rect().min + offset,
+            ui.min_rect().min + offset + Vec2::new(0.0, debug_height), // Add debug_height to y-coordinate
             Vec2::new(grid_width, grid_height),
         );
 
-        for day in 0..total_days {
-            let row = day / 28;
-            let col = day % 28;
-            let date = start_date + chrono::Duration::days(day as i64);
-            let color = get_color_for_event(&date, events, &end_date);
-            let rect = egui::Rect::from_min_size(
-                grid_rect.min + Vec2::new(col as f32 * cell_size, row as f32 * cell_size),
-                Vec2::new(cell_size, cell_size),
-            );
-            ui.painter().rect_filled(rect, 0.0, color);
-            ui.painter()
-                .rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
-        }
+        // Create a ScrollArea to allow scrolling if the grid is too large
+        egui::ScrollArea::both().show(ui, |ui| {
+            ui.set_min_size(adjusted_available_size);
+
+            for day in 0..total_days {
+                let row = day / cols;
+                let col = day % cols;
+                let date = start_date + chrono::Duration::days(day as i64);
+                let color = get_color_for_event(&date, events, &end_date);
+                let rect = egui::Rect::from_min_size(
+                    grid_rect.min + Vec2::new(col as f32 * cell_size, row as f32 * cell_size),
+                    Vec2::new(cell_size, cell_size),
+                );
+                ui.painter().rect_filled(rect, 0.0, color);
+                ui.painter()
+                    .rect_stroke(rect, 0.0, egui::Stroke::new(1.0, egui::Color32::GRAY));
+            }
+        });
     } else {
         ui.centered_and_justified(|ui| {
             ui.label("Selected life period not found.");
