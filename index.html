@@ -30,6 +30,10 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="white">
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#404040">
 
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <style>
         html {
             /* Remove touch delay: */
@@ -134,36 +138,52 @@
     <!--Register Service Worker. this will cache the wasm / js scripts for offline use (for PWA functionality). -->
     <!-- Force refresh (Ctrl + F5) to load the latest files instead of cached files  -->
     <script>
-        if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-            .then((registration) => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                
-                // Function to add current page resources to cache
-                function addResourcesToCache() {
-                const resources = Array.from(document.getElementsByTagName('script'))
-                    .map(script => script.src)
-                    .concat(Array.from(document.getElementsByTagName('link'))
-                    .filter(link => link.rel === 'stylesheet')
-                    .map(link => link.href))
-                    .filter(url => url !== ""); // Remove empty URLs
+        // Set this to false when debugging
+        const isProduction = false;
     
-                if (registration.active) {
-                    registration.active.postMessage({
-                    type: 'CACHE_URLS',
-                    payload: resources
-                    });
-                }
-                }
-    
-                // Call the function when the page loads
-                addResourcesToCache();
-            }, (err) => {
-                console.log('ServiceWorker registration failed: ', err);
+        if (isProduction && 'serviceWorker' in navigator) {
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    
+                    // Function to add current page resources to cache
+                    function addResourcesToCache() {
+                    const resources = Array.from(document.getElementsByTagName('script'))
+                        .map(script => script.src)
+                        .concat(Array.from(document.getElementsByTagName('link'))
+                        .filter(link => link.rel === 'stylesheet')
+                        .map(link => link.href))
+                        .filter(url => url !== ""); // Remove empty URLs
+        
+                    if (registration.active) {
+                        registration.active.postMessage({
+                        type: 'CACHE_URLS',
+                        payload: resources
+                        });
+                    }
+                    }
+        
+                    // Call the function when the page loads
+                    addResourcesToCache();
+                }, (err) => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
             });
-        });
+        } else {
+            console.log('Service Worker disabled for debugging');
         }
+    </script>
+    <!-- Add the new WASM cache-busting script here -->
+    <script>
+        window.addEventListener('load', function() {
+            const wasmScriptElement = document.querySelector('script[type="module"]');
+            if (wasmScriptElement) {
+                const originalSrc = wasmScriptElement.src;
+                wasmScriptElement.src = originalSrc + '?t=' + new Date().getTime();
+            }
+        });
     </script>
 </body>
 

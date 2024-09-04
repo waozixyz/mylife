@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use eframe::egui;
 use eframe::epaint::Vec2;
 use uuid::Uuid;
+
 pub fn draw_event_view(
     ui: &mut egui::Ui,
     available_size: Vec2,
@@ -20,7 +21,6 @@ pub fn draw_event_view(
             return;
         }
 
-        // Find the earliest event start date and end date
         let start_date = events.iter()
             .filter_map(|event| NaiveDate::parse_from_str(&event.start, "%Y-%m-%d").ok())
             .min()
@@ -38,46 +38,27 @@ pub fn draw_event_view(
 
         let total_days = (end_date - start_date).num_days() as usize;
         let cols = 28;
-        let rows = (total_days + cols - 1) / cols; // Round up to nearest multiple of 28
+        let rows = (total_days + cols - 1) / cols;
 
-        // Debug information
-        let debug_height = ui.text_style_height(&egui::TextStyle::Body) * 7.0; // Approximate height for 7 lines of debug text
-        ui.label(format!("Available size: {:?}", available_size));
-        ui.label(format!("Total days: {}", total_days));
-        ui.label(format!("Rows: {}", rows));
-
-        // Adjust available size to account for debug information
-        let adjusted_available_size = Vec2::new(available_size.x, available_size.y - debug_height);
-
-        // Calculate cell size based on adjusted available space
-        let cell_width = adjusted_available_size.x / cols as f32;
-        let cell_height = adjusted_available_size.y / rows as f32;
+        let cell_width = available_size.x / cols as f32;
+        let cell_height = available_size.y / rows as f32;
         let cell_size = cell_width.min(cell_height).floor();
-
-        // Debug information
-        ui.label(format!("Cell width: {:.2}", cell_width));
-        ui.label(format!("Cell height: {:.2}", cell_height));
-        ui.label(format!("Cell size: {:.2}", cell_size));
 
         let grid_width = cell_size * cols as f32;
         let grid_height = cell_size * rows as f32;
 
-        // Debug information
-        ui.label(format!("Grid size: {:.2} x {:.2}", grid_width, grid_height));
-
         let offset = Vec2::new(
-            (adjusted_available_size.x - grid_width) / 2.0,
-            0.0, // Align to the top
+            (available_size.x - grid_width) / 2.0,
+            0.0,
         );
 
         let grid_rect = egui::Rect::from_min_size(
-            ui.min_rect().min + offset + Vec2::new(0.0, debug_height), // Add debug_height to y-coordinate
+            ui.min_rect().min + offset,
             Vec2::new(grid_width, grid_height),
         );
 
-        // Create a ScrollArea to allow scrolling if the grid is too large
         egui::ScrollArea::both().show(ui, |ui| {
-            ui.set_min_size(adjusted_available_size);
+            ui.set_min_size(available_size);
 
             for day in 0..total_days {
                 let row = day / cols;

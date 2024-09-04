@@ -9,9 +9,6 @@ use crate::utils::date_utils::is_valid_date;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
 
-#[cfg(target_arch = "wasm32")]
-use crate::utils::config_utils::load_config_async;
-
 impl Default for MyLifeApp {
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
@@ -92,18 +89,6 @@ impl MyLifeApp {
         }
         save_config(&self.config, &self.selected_yaml);
     }
-    #[cfg(target_arch = "wasm32")]
-    fn load_custom_config(&mut self) {
-        let future = {
-            let mut app = self.clone();
-            async move {
-                if let Some(config) = load_config_async().await {
-                    app.loaded_config = Some(config);
-                }
-            }
-        };
-        wasm_bindgen_futures::spawn_local(future);
-    }
 }
 
 impl eframe::App for MyLifeApp {
@@ -129,32 +114,6 @@ impl eframe::App for MyLifeApp {
         draw_central_panel(self, ctx, top_height, bottom_height);
         draw_bottom_panel(self, ctx, bottom_height);
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            egui::Window::new("Config Selection").show(ctx, |ui| {
-                egui::ComboBox::from_label("Select Config")
-                    .selected_text(&self.loaded_configs[self.selected_config_index].0)
-                    .show_ui(ui, |ui| {
-                        for (i, (name, _)) in self.loaded_configs.iter().enumerate() {
-                            ui.selectable_value(&mut self.selected_config_index, i, name);
-                        }
-                    });
-
-                if ui.button("Load Selected Config").clicked() {
-                    self.config = self.loaded_configs[self.selected_config_index].1.clone();
-                    self.selected_yaml = self.loaded_configs[self.selected_config_index].0.clone();
-                }
-
-                if ui.button("Load Custom Config").clicked() {
-                    self.load_custom_config();
-                }
-            });
-
-            if let Some(config) = self.loaded_config.take() {
-                self.config = config;
-                self.selected_yaml = "Custom".to_string();
-            }
-        }
 
         if let Some(mut item) = self.selected_legend_item.clone() {
             let mut should_close = false;

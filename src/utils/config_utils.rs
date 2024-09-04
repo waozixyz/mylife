@@ -7,8 +7,6 @@ use crate::config_manager::get_config_manager;
 use crate::config_manager::config_to_runtime_config;
 
 #[cfg(target_arch = "wasm32")]
-use manganis::*;
-#[cfg(target_arch = "wasm32")]
 use crate::models::Config;
 
 #[cfg(target_arch = "wasm32")]

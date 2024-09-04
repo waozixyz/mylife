@@ -1,4 +1,6 @@
-use crate::models::{Config, LifePeriod, LifePeriodEvent, RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
+use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::models::{LifePeriod, LifePeriodEvent};
 use std::io;
 use uuid::Uuid;
 
