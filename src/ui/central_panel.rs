@@ -31,12 +31,6 @@ pub fn draw_central_panel(app: &mut MyLifeApp, ctx: &egui::Context, central_heig
                                     if let Some(period_id) = app.selected_life_period {
                                         draw_event_view(ui, centered_rect.size(), &app.config, period_id);
                                         
-                                        ui.vertical(|ui| {
-                                            if ui.button("Back to Lifetime View").clicked() {
-                                                app.view = "Lifetime".to_string();
-                                                app.selected_life_period = None;
-                                            }
-                                        });
                                     } else {
                                         ui.label("No life period selected");
                                     }

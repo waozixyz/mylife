@@ -4,7 +4,6 @@ use chrono::NaiveDate;
 use eframe::egui;
 use eframe::epaint::Vec2;
 use uuid::Uuid;
-
 pub fn draw_event_view(
     ui: &mut egui::Ui,
     grid_size: Vec2,
@@ -21,14 +20,19 @@ pub fn draw_event_view(
             return;
         }
 
-        let start_date = NaiveDate::parse_from_str(&format!("{}-01", life_period.start), "%Y-%m-%d")
-            .expect("Invalid start date format in life period");
+        // Find the earliest event start date
+        let start_date = events.iter()
+            .filter_map(|event| NaiveDate::parse_from_str(&event.start, "%Y-%m-%d").ok())
+            .min()
+            .unwrap_or_else(|| {
+                NaiveDate::parse_from_str(&life_period.start, "%Y-%m").unwrap_or(chrono::Local::now().date_naive())
+            });
+
         let end_date = if let Some(next_period) = config.life_periods.iter()
             .find(|p| p.start > life_period.start) {
-            NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d")
-                .expect("Invalid start date format in next life period")
+            NaiveDate::parse_from_str(&next_period.start, "%Y-%m")
+                .unwrap_or(chrono::Local::now().date_naive())
         } else {
-            // If there's no next period, use the current date
             chrono::Local::now().date_naive()
         };
 
