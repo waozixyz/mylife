@@ -19,7 +19,6 @@ pub fn draw_central_panel(app: &mut MyLifeApp, ctx: &egui::Context, central_heig
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     egui::Frame::none()
-                        .fill(egui::Color32::from_rgb(240, 240, 240))
                         .show(ui, |ui| {
                             match app.view.as_str() {
                                 "Lifetime" => {
