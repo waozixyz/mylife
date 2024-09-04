@@ -16,15 +16,21 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
     egui::TopBottomPanel::top("top_panel")
         .exact_height(top_height)
         .show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))]
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                });
-                ui.add_space(16.0);
 
+            ui.vertical(|ui| {
+                draw_top_row(app, ui);
+                draw_bottom_row(app, ctx, ui);
+            });
+        });
+
+
+    // Settings modal (unchanged)
+    if app.show_settings {
+        egui::Window::new("Settings")
+            .collapsible(false)
+            .resizable(false)
+            .show(ctx, |ui| {
+                // Theme selector
                 egui::ComboBox::from_label("Theme")
                     .selected_text(format!("{:?}", app.theme))
                     .show_ui(ui, |ui| {
@@ -33,85 +39,103 @@ pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32)
                         ui.selectable_value(&mut app.theme, CatppuccinTheme::Macchiato, "Macchiato");
                         ui.selectable_value(&mut app.theme, CatppuccinTheme::Mocha, "Mocha");
                     });
+
+                // Life expectancy selector (only show in Lifetime view)
+                if app.view == "Lifetime" {
+                    egui::ComboBox::from_label("Life Expectancy")
+                        .selected_text(app.config.life_expectancy.to_string())
+                        .show_ui(ui, |ui| {
+                            for year in 60..=120 {
+                                ui.selectable_value(
+                                    &mut app.config.life_expectancy,
+                                    year,
+                                    year.to_string(),
+                                );
+                            }
+                        });
+                }
+
+                if ui.button("Close").clicked() {
+                    app.show_settings = false;
+                }
+            });
+    }
+}
+
+fn draw_top_row(app: &mut MyLifeApp, ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+
+        // Back button (only in EventView)
+        if app.view == "EventView" {
+            if ui.button("⬅").clicked() {
+                app.view = "Lifetime".to_string();
+                app.selected_life_period = None;
+            }
+        }
+
+        // Configuration selector
+        egui::ComboBox::from_label("Configuration")
+            .selected_text(&app.selected_yaml)
+            .show_ui(ui, |ui| {
+                #[cfg(not(target_arch = "wasm32"))]
+                for yaml_file in &app.yaml_files {
+                    if ui.selectable_value(&mut app.selected_yaml, yaml_file.clone(), yaml_file).changed() {
+                        app.config = get_config_manager()
+                            .load_config(&app.selected_yaml)
+                            .expect("Failed to load config");
+                    }
+                }
+                #[cfg(target_arch = "wasm32")]
+                for (index, (name, _)) in app.loaded_configs.iter().enumerate() {
+                    if ui.selectable_value(&mut app.selected_config_index, index, name).clicked() {
+                        app.config = app.loaded_configs[index].1.clone();
+                        app.selected_yaml = name.clone();
+                    }
+                }
             });
 
-            ui.vertical_centered(|ui| {
-                ui.horizontal(|ui| {
-                    egui::ComboBox::from_label("Configuration")
-                        .selected_text(&app.selected_yaml)
-                        .show_ui(ui, |ui| {
-                            #[cfg(not(target_arch = "wasm32"))]
-                            for yaml_file in &app.yaml_files {
-                                if ui.selectable_value(&mut app.selected_yaml, yaml_file.clone(), yaml_file).changed() {
-                                    app.config = get_config_manager()
-                                        .load_config(&app.selected_yaml)
-                                        .expect("Failed to load config");
-                                }
-                            }
-                            #[cfg(target_arch = "wasm32")]
-                            for (index, (name, _)) in app.loaded_configs.iter().enumerate() {
-                                if ui.selectable_value(&mut app.selected_config_index, index, name).clicked() {
-                                    app.config = app.loaded_configs[index].1.clone();
-                                    app.selected_yaml = name.clone();
-                                }
-                            }
-                        });
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        if ui.button("Load YAML").clicked() {
-                            let ctx = ctx.clone();
-                            spawn_local(async move {
-                                if let Some(new_config) = load_config_async().await {
-                                    *NEW_CONFIG.lock().unwrap() = Some(new_config);
-                                    ctx.request_repaint();
-                                }
-                            });
-                        }
+        // Push the settings button to the right
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui.button("⚙").clicked() {
+                app.show_settings = true;
+            }
+        });
+    });
+}
 
-                        if ui.button("Save YAML").clicked() {
-                            get_config_manager()
-                                .save_config(&app.config, "config.yaml")
-                                .expect("Failed to save config");
+fn draw_bottom_row(app: &mut MyLifeApp, ctx: &egui::Context, ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if ui.button("Load YAML").clicked() {
+                let ctx = ctx.clone();
+                spawn_local(async move {
+                    match load_config_async().await {
+                        Some((name, new_config)) => {
+                            ctx.request_repaint();
+                            // Update the NEW_CONFIG
+                            *NEW_CONFIG.lock().unwrap() = Some((name, new_config));
                         }
-                    }
-
-                    egui::ComboBox::from_label("View")
-                        .selected_text(&app.view)
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut app.view, "Lifetime".to_string(), "Lifetime");
-                            if app.selected_life_period.is_some() {
-                                ui.selectable_value(&mut app.view, "EventView".to_string(), "Event View");
-                            }
-                        });
-
-                    match app.view.as_str() {
-                        "Lifetime" => {
-                            egui::ComboBox::from_label("Life Expectancy")
-                                .selected_text(app.config.life_expectancy.to_string())
-                                .show_ui(ui, |ui| {
-                                    for year in 60..=120 {
-                                        ui.selectable_value(
-                                            &mut app.config.life_expectancy,
-                                            year,
-                                            year.to_string(),
-                                        );
-                                    }
-                                });
+                        None => {
+                            let _ = rfd::MessageDialog::new()
+                                .set_title("Error")
+                                .set_description("Failed to load YAML configuration. Check the console for details.")
+                                .show();
                         }
-                        "EventView" => {
-                            if let Some(period_id) = app.selected_life_period {
-                                if let Some(period) = app.config.life_periods.iter().find(|p| p.id == period_id) {
-                                    ui.label(&period.name);
-                                }
-                            }
-                            if ui.button("Back to Lifetime").clicked() {
-                                app.view = "Lifetime".to_string();
-                                app.selected_life_period = None;
-                            }
-                        }
-                        _ => {}
                     }
                 });
-            });
-        });
+            }
+
+            if ui.button("Save YAML").clicked() {
+                get_config_manager()
+                    .save_config(&app.config, &app.selected_yaml)
+                    .expect("Failed to save config");
+            }
+        }
+        // Quit button (non-WASM only)
+        #[cfg(not(target_arch = "wasm32"))]
+        if ui.button("Quit").clicked() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    });
 }

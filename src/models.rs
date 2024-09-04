@@ -37,6 +37,7 @@ pub struct MyLifeApp {
     pub loaded_app: Option<Box<MyLifeApp>>,
     #[cfg(target_arch = "wasm32")]
     pub loaded_config: Option<RuntimeConfig>,
+    pub show_settings: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

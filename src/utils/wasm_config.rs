@@ -9,4 +9,4 @@ use std::sync::Mutex;
 
 // Define the static variable for WASM only
 #[cfg(target_arch = "wasm32")]
-pub static NEW_CONFIG: Lazy<Mutex<Option<RuntimeConfig>>> = Lazy::new(|| Mutex::new(None));
+pub static NEW_CONFIG: Lazy<Mutex<Option<(String, RuntimeConfig)>>> = Lazy::new(|| Mutex::new(None));

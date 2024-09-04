@@ -4,14 +4,14 @@ use chrono::NaiveDate;
 use eframe::egui;
 use eframe::epaint::Vec2;
 use uuid::Uuid;
-
+use web_sys::console;
 pub fn draw_event_view(
     ui: &mut egui::Ui,
     available_size: Vec2,
     config: &RuntimeConfig,
     selected_life_period_id: Uuid,
 ) {
-    if let Some(life_period) = config.life_periods.iter().find(|p| p.id == selected_life_period_id) {
+    if let Some((index, life_period)) = config.life_periods.iter().enumerate().find(|(_, p)| p.id == selected_life_period_id) {
         let events = &life_period.events;
         
         if events.is_empty() {
@@ -28,14 +28,21 @@ pub fn draw_event_view(
                 NaiveDate::parse_from_str(&life_period.start, "%Y-%m").unwrap_or(chrono::Local::now().date_naive())
             });
 
-        let end_date = if let Some(next_period) = config.life_periods.iter()
-            .find(|p| p.start > life_period.start) {
-            NaiveDate::parse_from_str(&next_period.start, "%Y-%m")
-                .unwrap_or(chrono::Local::now().date_naive())
+        let end_date = if index < config.life_periods.len() - 1 {
+            NaiveDate::parse_from_str(&format!("{}-01", &config.life_periods[index + 1].start), "%Y-%m-%d")
+                .unwrap_or_else(|_| chrono::Local::now().date_naive())
         } else {
             chrono::Local::now().date_naive()
         };
 
+        console::log_1(&format!("start date: {}", start_date).into());
+        console::log_1(&format!("end date: {}", end_date).into());
+    
+        if index < config.life_periods.len() - 1 {
+            console::log_1(&format!("next life period start: {}", config.life_periods[index + 1].start).into());
+        } else {
+            console::log_1(&"This is the last life period".into());
+        }
         let total_days = (end_date - start_date).num_days() as usize;
         let cols = 28;
         let rows = (total_days + cols - 1) / cols;

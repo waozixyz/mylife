@@ -5,7 +5,7 @@ use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
 use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
 use crate::utils::config_utils::{save_config, get_available_configs, get_config};
 use crate::utils::date_utils::is_valid_date;
-
+use crate::utils::wasm_config::NEW_CONFIG;
 use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
 
@@ -41,6 +41,7 @@ impl Default for MyLifeApp {
             loaded_config: None,
             #[cfg(target_arch = "wasm32")]
             yaml_content: String::new(),
+            show_settings: false,
         }
     }
 }
@@ -97,6 +98,16 @@ impl eframe::App for MyLifeApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some((name, config)) = NEW_CONFIG.lock().unwrap().take() {
+                self.config = config.clone();
+                self.selected_yaml = name.clone();
+                self.loaded_configs.push((name, config.clone()));
+                self.selected_config_index = self.loaded_configs.len() - 1;
+            }
+        }    
+
         catppuccin_egui::set_theme(
             ctx,
             match self.theme {

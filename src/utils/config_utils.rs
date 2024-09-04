@@ -15,49 +15,70 @@ const DEFAULT_CONFIG: &str = include_str!("../../data/default.yaml");
 #[cfg(target_arch = "wasm32")]
 pub fn get_default_config() -> RuntimeConfig {
     use web_sys::console;
-    console::log_1(&"Loading default config".into());
-    console::log_1(&format!("DEFAULT_CONFIG: {}", DEFAULT_CONFIG).into());
     
-    load_config_from_yaml(DEFAULT_CONFIG)
+    load_config_from_yaml(DEFAULT_CONFIG).expect("REASON")
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn load_config_from_yaml(yaml_content: &str) -> RuntimeConfig {
+pub fn load_config_from_yaml(yaml_content: &str) -> Result<RuntimeConfig, String> {
     use web_sys::console;
     console::log_1(&format!("YAML content: {}", yaml_content).into());
     
     let config: Config = match serde_yaml::from_str(yaml_content) {
         Ok(c) => c,
         Err(e) => {
-            console::error_1(&format!("Failed to parse YAML: {:?}", e).into());
-            panic!("Failed to parse YAML: {:?}", e);
+            let error_msg = format!("Failed to parse YAML: {:?}", e);
+            console::error_1(&error_msg.clone().into());
+            return Err(error_msg);
         }
     };
-    config_to_runtime_config(config)
+    Ok(config_to_runtime_config(config))
 }
 
 
 #[cfg(target_arch = "wasm32")]
 pub fn get_available_configs() -> Vec<(String, RuntimeConfig)> {
     use web_sys::console;
-    console::log_1(&"Getting available configs".into());
     
     vec![
-        ("Default".to_string(), load_config_from_yaml(DEFAULT_CONFIG)),
+        ("Default".to_string(), load_config_from_yaml(DEFAULT_CONFIG).expect("REASON")),
     ]
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn load_config_async() -> Option<RuntimeConfig> {
-    let file = rfd::AsyncFileDialog::new()
+pub async fn load_config_async() -> Option<(String, RuntimeConfig)> {
+    use web_sys::console;
+    
+    let file = match rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
-        .await?;
+        .await {
+            Some(f) => f,
+            None => {
+                console::log_1(&"No file selected".into());
+                return None;
+            }
+        };
 
     let content = file.read().await;
-    let yaml_content = String::from_utf8(content).ok()?;
 
-    Some(load_config_from_yaml(&yaml_content))
+    let yaml_content = match String::from_utf8(content) {
+        Ok(s) => s,
+        Err(e) => {
+            console::error_1(&format!("Failed to convert content to UTF-8: {:?}", e).into());
+            return None;
+        }
+    };
+
+    match load_config_from_yaml(&yaml_content) {
+        Ok(config) => {
+            Some((file.file_name(), config))
+        }
+        Err(e) => {
+            console::error_1(&format!("Failed to load config from YAML: {:?}", e).into());
+            None
+        }
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
