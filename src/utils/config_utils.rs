@@ -4,21 +4,16 @@ use crate::models::RuntimeConfig;
 use crate::config_manager::get_config_manager;
 
 #[cfg(target_arch = "wasm32")]
+use crate::config_manager::config_to_runtime_config;
+
+#[cfg(target_arch = "wasm32")]
 use manganis::*;
 #[cfg(target_arch = "wasm32")]
 use crate::models::Config;
 
 #[cfg(target_arch = "wasm32")]
-const DEFAULT_CONFIG: &str = mg!(file("./configs/default.yaml"));
-#[cfg(target_arch = "wasm32")]
-const OTHER_CONFIG: &str = mg!(file("./configs/other.yaml"));
+const DEFAULT_CONFIG: &str = mg!(file("data/default.yaml"));
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn get_config() -> RuntimeConfig {
-    get_config_manager()
-        .load_config("default.yaml")
-        .expect("Failed to load config")
-}
 
 #[cfg(target_arch = "wasm32")]
 pub fn get_default_config() -> RuntimeConfig {
@@ -36,7 +31,6 @@ pub fn load_config_from_yaml(yaml_content: &str) -> RuntimeConfig {
 pub fn get_available_configs() -> Vec<(String, RuntimeConfig)> {
     vec![
         ("Default".to_string(), load_config_from_yaml(DEFAULT_CONFIG)),
-        ("Other".to_string(), load_config_from_yaml(OTHER_CONFIG)),
     ]
 }
 
@@ -94,4 +88,17 @@ pub fn get_available_configs() -> Vec<String> {
     get_config_manager()
         .get_available_configs()
         .expect("Failed to get available configs")
+}
+
+pub fn get_config() -> RuntimeConfig {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        get_config_manager()
+            .load_config("default.yaml")
+            .expect("Failed to load config")
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        get_default_config()
+    }
 }

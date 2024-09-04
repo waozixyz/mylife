@@ -1,5 +1,5 @@
 use crate::models::{
-    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeLifePeriodEvent,
+    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeLifePeriodEvent
 };
 use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
 use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
@@ -10,27 +10,20 @@ use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
 use eframe::egui;
 
 #[cfg(target_arch = "wasm32")]
-use manganis::*;
-
-#[cfg(target_arch = "wasm32")]
-const DEFAULT_CONFIG: &str = mg!(file("./configs/default.yaml"));
-#[cfg(target_arch = "wasm32")]
-const OTHER_CONFIG: &str = mg!(file("./configs/other.yaml"));
+use crate::utils::config_utils::load_config_async;
 
 impl Default for MyLifeApp {
     fn default() -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let default_config = get_config();
         #[cfg(target_arch = "wasm32")]
-        let default_config = Self::load_config_from_yaml(DEFAULT_CONFIG);
+        let default_config = get_config();
 
         Self {
             config: default_config.clone(),
             view: "Lifetime".to_string(),
             #[cfg(not(target_arch = "wasm32"))]
             yaml_files: get_available_configs(),
-            #[cfg(target_arch = "wasm32")]
-            yaml_content: DEFAULT_CONFIG.to_string(),
             #[cfg(not(target_arch = "wasm32"))]
             selected_yaml: "default.yaml".to_string(),
             #[cfg(target_arch = "wasm32")]
@@ -39,15 +32,18 @@ impl Default for MyLifeApp {
             original_legend_item: None,
             theme: CatppuccinTheme::Mocha,
             #[cfg(target_arch = "wasm32")]
-            loaded_configs: vec![
-                ("Default".to_string(), default_config),
-                ("Other".to_string(), Self::load_config_from_yaml(OTHER_CONFIG)),
-            ],
+            loaded_configs: get_available_configs(),
             #[cfg(target_arch = "wasm32")]
             selected_config_index: 0,
             temp_start_date: "".to_string(),
             selected_life_period: None,
             value: 0.0,
+            #[cfg(target_arch = "wasm32")]
+            loaded_app: None,
+            #[cfg(target_arch = "wasm32")]
+            loaded_config: None,
+            #[cfg(target_arch = "wasm32")]
+            yaml_content: String::new(),
         }
     }
 }
@@ -58,13 +54,6 @@ impl MyLifeApp {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
         Default::default()
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn load_config_from_yaml(yaml_content: &str) -> RuntimeConfig {
-        let config: Config = serde_yaml::from_str(yaml_content)
-            .expect("Failed to parse YAML");
-        config_to_runtime_config(config)
     }
 
     fn update_config_item(&mut self, item: &LegendItem) {
@@ -102,6 +91,18 @@ impl MyLifeApp {
             });
         }
         save_config(&self.config, &self.selected_yaml);
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn load_custom_config(&mut self) {
+        let future = {
+            let mut app = self.clone();
+            async move {
+                if let Some(config) = load_config_async().await {
+                    app.loaded_config = Some(config);
+                }
+            }
+        };
+        wasm_bindgen_futures::spawn_local(future);
     }
 }
 
@@ -143,7 +144,16 @@ impl eframe::App for MyLifeApp {
                     self.config = self.loaded_configs[self.selected_config_index].1.clone();
                     self.selected_yaml = self.loaded_configs[self.selected_config_index].0.clone();
                 }
+
+                if ui.button("Load Custom Config").clicked() {
+                    self.load_custom_config();
+                }
             });
+
+            if let Some(config) = self.loaded_config.take() {
+                self.config = config;
+                self.selected_yaml = "Custom".to_string();
+            }
         }
 
         if let Some(mut item) = self.selected_legend_item.clone() {

@@ -1,7 +1,4 @@
-use crate::models::{RuntimeLifePeriod, RuntimeLifePeriodEvent};
-use chrono::{NaiveDate, Utc};
 use eframe::egui;
-use log::warn;
 
 pub fn hex_to_color32(hex: &str) -> egui::Color32 {
     let hex = hex.trim_start_matches('#');
@@ -13,54 +10,4 @@ pub fn hex_to_color32(hex: &str) -> egui::Color32 {
 
 pub fn color32_to_hex(color: egui::Color32) -> String {
     format!("#{:02X}{:02X}{:02X}", color.r(), color.g(), color.b())
-}
-
-fn get_color_for_item<T, F, G>(
-    date: &NaiveDate,
-    items: &[T],
-    get_start: F,
-    get_color: G,
-) -> egui::Color32
-where
-    F: Fn(&T) -> String,
-    G: Fn(&T) -> &String,
-{
-    let current_date = Utc::now().naive_utc().date();
-
-    if date > &current_date {
-        return egui::Color32::WHITE;
-    }
-
-    for item in items.iter().rev() {
-        match NaiveDate::parse_from_str(&get_start(item), "%Y-%m-%d") {
-            Ok(start) if &start <= date => return hex_to_color32(get_color(item)),
-            Ok(_) => continue,
-            Err(e) => {
-                warn!("Failed to parse start date '{}': {:?}", get_start(item), e);
-                continue;
-            }
-        }
-    }
-    egui::Color32::WHITE
-}
-
-pub fn get_color_for_date(date: &NaiveDate, life_periods: &[RuntimeLifePeriod]) -> egui::Color32 {
-    get_color_for_item(
-        date,
-        life_periods,
-        |period| format!("{}-01", period.start),
-        |period| &period.color,
-    )
-}
-
-pub fn get_color_for_life_period_event(
-    date: &NaiveDate,
-    events: &[RuntimeLifePeriodEvent],
-) -> egui::Color32 {
-    get_color_for_item(
-        date,
-        events,
-        |event| event.start.clone(),
-        |event| &event.color,
-    )
 }

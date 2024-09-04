@@ -141,7 +141,7 @@ pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
     }
 }
 
-
+#[cfg(not(target_arch = "wasm32"))]
 pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
     Config {
         name: runtime_config.name.clone(),
