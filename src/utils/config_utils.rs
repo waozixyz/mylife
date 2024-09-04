@@ -12,23 +12,38 @@ use manganis::*;
 use crate::models::Config;
 
 #[cfg(target_arch = "wasm32")]
-const DEFAULT_CONFIG: &str = mg!(file("data/default.yaml"));
-
+const DEFAULT_CONFIG: &str = include_str!("../../data/default.yaml");
 
 #[cfg(target_arch = "wasm32")]
 pub fn get_default_config() -> RuntimeConfig {
+    use web_sys::console;
+    console::log_1(&"Loading default config".into());
+    console::log_1(&format!("DEFAULT_CONFIG: {}", DEFAULT_CONFIG).into());
+    
     load_config_from_yaml(DEFAULT_CONFIG)
 }
 
 #[cfg(target_arch = "wasm32")]
 pub fn load_config_from_yaml(yaml_content: &str) -> RuntimeConfig {
-    let config: Config = serde_yaml::from_str(yaml_content)
-        .expect("Failed to parse YAML");
+    use web_sys::console;
+    console::log_1(&format!("YAML content: {}", yaml_content).into());
+    
+    let config: Config = match serde_yaml::from_str(yaml_content) {
+        Ok(c) => c,
+        Err(e) => {
+            console::error_1(&format!("Failed to parse YAML: {:?}", e).into());
+            panic!("Failed to parse YAML: {:?}", e);
+        }
+    };
     config_to_runtime_config(config)
 }
 
+
 #[cfg(target_arch = "wasm32")]
 pub fn get_available_configs() -> Vec<(String, RuntimeConfig)> {
+    use web_sys::console;
+    console::log_1(&"Getting available configs".into());
+    
     vec![
         ("Default".to_string(), load_config_from_yaml(DEFAULT_CONFIG)),
     ]
