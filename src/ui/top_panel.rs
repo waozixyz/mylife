@@ -15,8 +15,6 @@ use dioxus_logger::tracing::error;
 pub fn TopPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
 
-    #[cfg(target_arch = "wasm32")]
-    let mut selected_config_index = use_context::<Signal<usize>>();
 
     #[cfg(target_arch = "wasm32")]
     let options = get_config_manager().get_available_configs().unwrap_or_default();
@@ -102,13 +100,15 @@ pub fn TopPanel() -> Element {
                         #[cfg(target_arch = "wasm32")]
                         {
                             if let Some(index) = app_state().loaded_configs.iter().position(|(name, _)| name == &evt.value()) {
-                                selected_config_index.set(index);
+                                app_state.write().selected_config_index = index;
                                 app_state.write().config = app_state().loaded_configs[index].1.clone();
                             }
                         }
                     },
 
                     // Directly generating options with a for loop
+
+
                     for option in options.iter() {
                         option { value: "{option}", "{option}" }
                     }
