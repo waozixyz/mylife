@@ -27,7 +27,6 @@ pub fn App() -> Element {
         loaded_configs: Vec::new(),
         #[cfg(target_arch = "wasm32")]
         selected_config_index: 0,
-        hovered_period: None,
         item_state: None,
         temp_start_date: String::new(),
     });

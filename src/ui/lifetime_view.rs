@@ -4,41 +4,56 @@ use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
 use dioxus_logger::tracing::{info, error, debug};
 
+#[derive(PartialEq, Clone)]
+struct CellData {
+    color: String,
+    period: Option<RuntimeLifePeriod>,
+    date: NaiveDate,
+}
+
 #[component]
 pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
-    let mut app_state = use_context::<Signal<MyLifeApp>>();
-    
-    let dob = use_memo(move || {
-        NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
-            .expect("Invalid date_of_birth format in config. Expected YYYY-MM")
+    let app_state = use_context::<Signal<MyLifeApp>>();
+    let mut hovered_period = use_signal(|| None::<Uuid>);
+
+    let cell_data = use_memo(move || {
+        let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
+            .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
+        
+        let years = app_state().config.life_expectancy;
+        let cols = 48;
+        let rows = (years + 3) / 4;
+        let current_date = Local::now().date_naive();
+
+        (0..rows * cols).map(|index| {
+            let year = index / 12;
+            let month = index % 12;
+            let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
+            let (color, period) = get_color_and_period_for_date(cell_date, &app_state().config.life_periods, current_date);
+            
+            CellData {
+                color,
+                period,
+                date: cell_date,
+            }
+        }).collect::<Vec<_>>()
     });
-
-    let years = app_state().config.life_expectancy;
-    let cols = 48;
-    let rows = (years + 3) / 4;  
-
-    let current_date = Local::now().date_naive();
 
     rsx! {
         div {
             class: "lifetime-view",
 
-            {(0..rows * cols).map(|index| {
-                let year = index / 12;
-                let month = index % 12;
-                let cell_date = (*dob)() + Duration::days((year * 365 + month * 30) as i64);
-                let (color, period) = get_color_and_period_for_date(cell_date, &app_state().config.life_periods, current_date);
-
-                let is_hovered = period.as_ref().map_or(false, |p| Some(p.id) == app_state().hovered_period);
+            {cell_data().iter().map(|cell| {
+                let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
                 let cell_class = if is_hovered { "lifetime-cell hovered" } else { "lifetime-cell" };
 
                 rsx! {
                     div {
-                        key: "{year}-{month}",
+                        key: "{cell.date}",
                         class: "{cell_class}",
-                        style: "background-color: {color};",
+                        style: "background-color: {cell.color};",
                         onclick: {
-                            let period = period.clone();
+                            let period = cell.period.clone();
                             move |_| {
                                 if let Some(period) = &period {
                                     if !period.events.is_empty() {
@@ -48,16 +63,16 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                             }
                         },
                         onmouseenter: {
-                            let period = period.clone();
+                            let period = cell.period.clone();
                             move |_|  {
                                 if let Some(period) = &period {
                                     if !period.events.is_empty() {
-                                        app_state.write().hovered_period = Some(period.id);
+                                        hovered_period.set(Some(period.id));
                                     }
                                 }
                             }
                         },
-                        onmouseleave: move |_| app_state.write().hovered_period = None,
+                        onmouseleave: move |_| hovered_period.set(None),
                     }
                 }
             })}
@@ -91,7 +106,6 @@ fn get_color_and_period_for_date(date: NaiveDate, life_periods: &[RuntimeLifePer
             }
         };
         
-        debug!("Checking period: start={}, end={}, color={}", period_start, period_end, period.color);
         
         if date >= period_start && date < period_end {
             debug!("Found matching period: start={}, end={}, color={}", period_start, period_end, period.color);

@@ -21,7 +21,6 @@ pub struct MyLifeApp {
     #[cfg(target_arch = "wasm32")]
     pub selected_config_index: usize,
     pub show_settings: bool,
-    pub hovered_period: Option<Uuid>,
     pub item_state: Option<LegendItem>,
     pub temp_start_date: String,
 }
