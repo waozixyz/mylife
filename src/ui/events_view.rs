@@ -5,8 +5,7 @@ use uuid::Uuid;
 
 #[component]
 pub fn EventView(selected_life_period_id: Uuid) -> Element {
-    let mut app_state = use_context::<Signal<MyLifeApp>>();
-
+    let app_state = use_context::<Signal<MyLifeApp>>();
 
     let life_period = use_memo(move || {
         app_state().config.life_periods
@@ -45,14 +44,15 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
             rsx! {
                 div {
                     class: "event-view",
-                    style: "display: grid; grid-template-columns: repeat({cols}, 1fr); width: 100%; height: 100%; overflow: auto;",
+                    style: "grid-template-columns: repeat({cols}, 1fr);",
                     {(0..total_days).map(|day| {
                         let date = start_date + Duration::days(day as i64);
                         let color = get_color_for_event(&date, events, &end_date);
                         rsx! {
                             div {
                                 key: "{day}",
-                                style: "aspect-ratio: 1; background-color: {color}; border: 1px solid gray;",
+                                class: "event-cell",
+                                style: "background-color: {color};",
                                 title: "{date}"
                             }
                         }

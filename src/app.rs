@@ -58,7 +58,6 @@ pub fn App() -> Element {
             CentralPanel {}
             BottomPanel {}
             EditLegendItem {}
-            SettingsWindow {}
         }
     }
 }

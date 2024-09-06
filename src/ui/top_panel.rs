@@ -8,24 +8,12 @@ use wasm_bindgen_futures::spawn_local;
 #[cfg(target_arch = "wasm32")]
 use crate::config_manager::load_config_async;
 
-#[cfg(not(target_arch = "wasm32"))]
-use dioxus_logger::tracing::{info, error, debug};
+use dioxus_logger::tracing::error;
+
 
 #[component]
 pub fn TopPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
-    
-    info!("Current view: {:?}", app_state().view);
-    info!("Selected YAML: {:?}", app_state().selected_yaml);
-
-    info!("Rendering TopPanel");
-
-    debug!("Context values in TopPanel:");
-    debug!("  config: {:?}", app_state().config);
-    debug!("  view: {:?}", app_state().view);
-    debug!("  selected_yaml: {:?}", app_state().selected_yaml);
-    debug!("  show_settings: {:?}", app_state().show_settings);
-    debug!("  loaded_configs: {:?}", app_state().loaded_configs);
 
     #[cfg(target_arch = "wasm32")]
     let mut selected_config_index = use_context::<Signal<usize>>();
@@ -35,12 +23,10 @@ pub fn TopPanel() -> Element {
     
     #[cfg(not(target_arch = "wasm32"))]
     let options: Vec<String> = {
-        debug!("Creating options for config selector");
         let mut config_names = Vec::new();
         for (name, _) in app_state().loaded_configs.iter() {
             config_names.push(name.clone());
         }
-        debug!("Available options: {:?}", config_names);
         config_names
     };
 
@@ -74,15 +60,12 @@ pub fn TopPanel() -> Element {
         rsx! {
             button {
                 onclick: move |_| {
-                    info!("Quit button clicked");
                     std::process::exit(0);
                 },
                 "Quit"
             }
         }
     };
-
-    info!("Rendering TopPanel RSX");
 
     rsx! {
         div {
@@ -95,7 +78,6 @@ pub fn TopPanel() -> Element {
                 if app_state().view == "EventView" {
                     button {
                         onclick: move |_| {
-                            info!("Back button clicked, setting view to Lifetime");
                             app_state.write().view = "Lifetime".to_string();
                         },
                         span { "⬅" },
@@ -107,7 +89,6 @@ pub fn TopPanel() -> Element {
                 select {
                     value: "{app_state().selected_yaml}",
                     onchange: move |evt| {
-                        info!("Config selector changed to: {}", evt.value());
                         app_state.write().selected_yaml = evt.value();
                         #[cfg(not(target_arch = "wasm32"))]
                         {
@@ -137,7 +118,6 @@ pub fn TopPanel() -> Element {
                 button {
                     class: "settings-button",
                     onclick: move |_| {
-                        info!("Settings button clicked");
                         app_state.write().show_settings = true;
                     },
                     "⚙"
@@ -160,7 +140,6 @@ pub fn TopPanel() -> Element {
                         value: "{app_state().config.life_expectancy}",
                         onchange: move |evt| {
                             if let Ok(value) = evt.value().parse() {
-                                info!("Life expectancy changed to: {}", value);
                                 app_state.write().config = RuntimeConfig {
                                     life_expectancy: value,
                                     ..app_state().config
@@ -178,7 +157,6 @@ pub fn TopPanel() -> Element {
             
                 button {
                     onclick: move |_| {
-                        info!("Settings modal closed");
                         app_state.write().show_settings = false;
                     },
                     "Close"

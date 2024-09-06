@@ -1,21 +1,21 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, RuntimeConfig, RuntimeLifePeriod};
+use crate::models::{MyLifeApp, RuntimeLifePeriod};
 use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
-use std::rc::Rc;
-use std::cell::RefCell;
-
+use dioxus_logger::tracing::{info, error, debug};
 
 #[component]
 pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
     
-    let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
-        .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
+    let dob = use_memo(move || {
+        NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
+            .expect("Invalid date_of_birth format in config. Expected YYYY-MM")
+    });
 
     let years = app_state().config.life_expectancy;
-    let cols = 48;  // 4 years * 12 months
-    let rows = (years + 3) / 4;  // Ceiling division to get number of rows
+    let cols = 48;
+    let rows = (years + 3) / 4;  
 
     let current_date = Local::now().date_naive();
 
@@ -26,20 +26,21 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
             {(0..rows * cols).map(|index| {
                 let year = index / 12;
                 let month = index % 12;
-                let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
-                let (color, period) = get_color_and_period_for_date(cell_date, app_state().config.life_periods.clone());
-                let period = Rc::new(RefCell::new(period));
+                let cell_date = (*dob)() + Duration::days((year * 365 + month * 30) as i64);
+                let (color, period) = get_color_and_period_for_date(cell_date, &app_state().config.life_periods, current_date);
 
-                let is_hovered = period.borrow().as_ref().map_or(false, |p| Some(p.id) == app_state().hovered_period);
+                let is_hovered = period.as_ref().map_or(false, |p| Some(p.id) == app_state().hovered_period);
                 let cell_class = if is_hovered { "lifetime-cell hovered" } else { "lifetime-cell" };
+
                 rsx! {
                     div {
                         key: "{year}-{month}",
                         class: "{cell_class}",
+                        style: "background-color: {color};",
                         onclick: {
-                            let period = Rc::clone(&period);
+                            let period = period.clone();
                             move |_| {
-                                if let Some(period) = period.borrow().as_ref() {
+                                if let Some(period) = &period {
                                     if !period.events.is_empty() {
                                         on_period_click.call(period.id);
                                     }
@@ -47,9 +48,9 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                             }
                         },
                         onmouseenter: {
-                            let period = Rc::clone(&period);
-                            move |_| {
-                                if let Some(period) = period.borrow().as_ref() {
+                            let period = period.clone();
+                            move |_|  {
+                                if let Some(period) = &period {
                                     if !period.events.is_empty() {
                                         app_state.write().hovered_period = Some(period.id);
                                     }
@@ -61,20 +62,42 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                 }
             })}
         }
-
     }
 }
 
-fn get_color_and_period_for_date(date: NaiveDate, life_periods: Vec<RuntimeLifePeriod>) -> (String, Option<RuntimeLifePeriod>) {
-    // Convert the vector into an iterator
-    life_periods.into_iter().rev()
-        .find(|period| {
-            // Parse the period start date
-            let period_start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
-                .expect("Invalid start date format in life period");
-            // Check if the date is greater than or equal to the period start date
-            date >= period_start
-        })
-        .map(|period| (period.color.clone(), Some(period)))
-        .unwrap_or(("#808080".to_string(), None))
+fn get_color_and_period_for_date(date: NaiveDate, life_periods: &[RuntimeLifePeriod], current_date: NaiveDate) -> (String, Option<RuntimeLifePeriod>) {
+    debug!("Searching for period for date: {}", date);
+
+    for (index, period) in life_periods.iter().rev().enumerate() {
+        let period_start = match NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d") {
+            Ok(date) => date,
+            Err(e) => {
+                error!("Failed to parse start date for period: {}. Error: {}", period.start, e);
+                continue;
+            }
+        };
+        
+        let period_end = if index == 0 {
+            // This is the last period, use current date as end
+            current_date
+        } else {
+            // Use the start of the next period as the end of this period
+            match NaiveDate::parse_from_str(&format!("{}-01", life_periods[life_periods.len() - index].start), "%Y-%m-%d") {
+                Ok(date) => date,
+                Err(e) => {
+                    error!("Failed to parse start date for next period: {}. Error: {}", life_periods[life_periods.len() - index].start, e);
+                    continue;
+                }
+            }
+        };
+        
+        debug!("Checking period: start={}, end={}, color={}", period_start, period_end, period.color);
+        
+        if date >= period_start && date < period_end {
+            debug!("Found matching period: start={}, end={}, color={}", period_start, period_end, period.color);
+            return (period.color.clone(), Some(period.clone()));
+        }
+    }
+
+    ("#fafafa".to_string(), None)
 }

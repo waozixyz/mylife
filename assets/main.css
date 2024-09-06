@@ -151,3 +151,24 @@ body {
 .lifetime-cell.hovered {
     border: 2px solid #c800c8;
 }
+
+.event-view {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.event-cell {
+    aspect-ratio: 1;
+    border: 1px solid gray;
+}
+
+.event-view-empty, .event-view-not-found {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    font-style: italic;
+    color: var(--text-color);
+}
