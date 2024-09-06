@@ -1,0 +1,181 @@
+
+/* Completely overhauled input styles */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="url"],
+input[type="tel"],
+input[type="color"],
+input[type="search"],
+textarea,
+select {
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 3px var(--shadow-color);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--input-focus-color);
+    box-shadow: 0 0 0 2px var(--input-focus-color);
+}
+
+/* Custom select styling */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+/* Custom checkbox and radio button styling */
+input[type="checkbox"],
+input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+    position: relative;
+    padding-left: 30px;
+    cursor: pointer;
+    display: inline-block;
+    line-height: 24px;
+    margin-bottom: 16px;
+}
+
+input[type="checkbox"] + label:before,
+input[type="radio"] + label:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--input-border-color);
+    background: var(--input-bg-color);
+    transition: all 0.3s ease;
+}
+
+input[type="checkbox"] + label:before {
+    border-radius: 4px;
+}
+
+input[type="radio"] + label:before {
+    border-radius: 50%;
+}
+
+input[type="checkbox"]:checked + label:before,
+input[type="radio"]:checked + label:before {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+input[type="checkbox"]:checked + label:after {
+    content: '\2714';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+input[type="radio"]:checked + label:after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-color);
+}
+
+/* Placeholder styling */
+::placeholder {
+    color: var(--text-color);
+    opacity: 0.6;
+}
+
+:-ms-input-placeholder {
+    color: var(--text-color);
+    opacity: 0.6;
+}
+
+::-ms-input-placeholder {
+    color: var(--text-color);
+    opacity: 0.6;
+}
+
+/* Custom file input styling */
+input[type="file"] {
+    display: none;
+}
+
+input[type="file"] + label {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    padding: 12px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+input[type="file"] + label:hover {
+    background-color: var(--button-hover-color);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+
+
+/* Common Element Styles */
+button {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+button:hover {
+    background-color: var(--button-hover-color);
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+/* Specific button styles */
+.settings-button {
+    background-color: var(--accent-color);
+    padding: 8px 16px;
+    font-size: 1.2em;
+}

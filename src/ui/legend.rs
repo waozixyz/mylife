@@ -1,83 +1,83 @@
-use crate::models::{LegendItem, RuntimeConfig};
-use crate::utils::color_utils::hex_to_color32;
-use eframe::egui;
+use dioxus::prelude::*;
+use crate::models::{MyLifeApp, LegendItem, RuntimeConfig};
 use uuid::Uuid;
 
-pub fn draw_legend(
-    ui: &mut egui::Ui,
-    config: &RuntimeConfig,
-    view: &str,
-    selected_life_period: Option<Uuid>,
-) -> Option<LegendItem> {
-    ui.add_space(5.0);
+#[component]
+pub fn Legend() -> Element {
+    // Fetch signals from context
+    let mut app_state = use_context::<Signal<MyLifeApp>>();
 
-    let legend_height = 20.0;
-    let mut selected_item = None;
+    // Directly handle rendering without `legend_items` variable
+    let legend_items = {
+        let mut legend_items = Vec::new();
+        match app_state().view.as_str() {
+            "Lifetime" => {
+                
+                let mut sorted_periods = app_state().config.life_periods.clone();
+                sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
 
-    match view {
-        "Lifetime" => {
-            let mut sorted_periods = config.life_periods.clone();
-            sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
-
-            for period in sorted_periods {
-                let color = hex_to_color32(&period.color);
-                let (rect, response) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), legend_height),
-                    egui::Sense::click(),
-                );
-                ui.painter().rect_filled(rect, 0.0, color);
-                ui.painter().text(
-                    rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    format!("{} (from {})", period.name, period.start),
-                    egui::TextStyle::Body.resolve(ui.style()),
-                    egui::Color32::BLACK,
-                );
-
-                if response.clicked() {
-                    selected_item = Some(LegendItem {
+                for period in sorted_periods {
+                    let item = LegendItem {
                         id: period.id,
-                        name: period.name.clone(),
-                        start: period.start.clone(),
-                        color: period.color.clone(),
+                        name: period.name,
+                        start: period.start,
+                        color: period.color,
                         is_event: false,
+                    };
+                    legend_items.push(rsx! {
+                        div {
+                            key: "{item.id}",
+                            class: "legend-item",
+                            style: "display: flex; align-items: center; height: 20px; cursor: pointer; background-color: {item.color};",
+                            onclick: move |_| app_state.write().selected_legend_item = Some(item.clone()),
+                            div {
+                                class: "legend-item-text",
+                                style: "color: black; text-align: center; width: 100%;",
+                                "{item.name} ({item.start})"
+                            }
+                        }
                     });
                 }
-            }
-        }
-        "EventView" => {
-            if let Some(period_id) = selected_life_period {
-                if let Some(period) = config.life_periods.iter().find(|p| p.id == period_id) {
-                    for event in &period.events {
-                        let color = hex_to_color32(&event.color);
-                        let (rect, response) = ui.allocate_exact_size(
-                            egui::vec2(ui.available_width(), legend_height),
-                            egui::Sense::click(),
-                        );
-                        ui.painter().rect_filled(rect, 0.0, color);
-                        ui.painter().text(
-                            rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            format!("{} ({})", event.name, event.start),
-                            egui::TextStyle::Body.resolve(ui.style()),
-                            egui::Color32::BLACK,
-                        );
-
-                        if response.clicked() {
-                            selected_item = Some(LegendItem {
+            },
+            "EventView" => {
+                if let Some(period_id) = app_state().selected_life_period {
+                    if let Some(period) = app_state().config.life_periods.iter().find(|p| p.id == period_id) {
+                        for event in &period.events {
+                            let item = LegendItem {
                                 id: event.id,
                                 name: event.name.clone(),
                                 start: event.start.clone(),
                                 color: event.color.clone(),
                                 is_event: true,
+                            };
+                            legend_items.push(rsx! {
+                                div {
+                                    key: "{item.id}",
+                                    class: "legend-item",
+                                    style: "display: flex; align-items: center; height: 20px; cursor: pointer; background-color: {item.color};",
+                                    onclick: move |_| app_state.write().selected_legend_item = Some(item.clone()),
+                                    div {
+                                        class: "legend-item-text",
+                                        style: "color: black; text-align: center; width: 100%;",
+                                        "{item.name} ({item.start})"
+                                    }
+                                }
                             });
                         }
                     }
                 }
-            }
+            },
+            _ => {}
         }
-        _ => {}
-    }
 
-    selected_item
+        legend_items
+    };
+
+    rsx! {
+        div {
+            class: "legend",
+            style: "display: flex; flex-direction: column; gap: 5px;",
+            { legend_items.into_iter() }
+        }
+    }
 }

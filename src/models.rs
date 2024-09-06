@@ -1,22 +1,10 @@
-#[cfg(target_arch = "wasm32")]
-use crate::config::DEFAULT_CONFIG_YAML;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CatppuccinTheme {
-    Frappe,
-    Latte,
-    Macchiato,
-    Mocha,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Default, Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct MyLifeApp {
     pub selected_life_period: Option<Uuid>,
-    pub temp_start_date: String,
-    pub theme: CatppuccinTheme,
     pub config: RuntimeConfig,
     pub view: String,
     #[cfg(not(target_arch = "wasm32"))]
@@ -29,15 +17,13 @@ pub struct MyLifeApp {
     pub selected_legend_item: Option<LegendItem>,
     #[serde(skip)]
     pub original_legend_item: Option<LegendItem>,
-    #[cfg(target_arch = "wasm32")]
     pub loaded_configs: Vec<(String, RuntimeConfig)>,
     #[cfg(target_arch = "wasm32")]
     pub selected_config_index: usize,
-    #[cfg(target_arch = "wasm32")]
-    pub loaded_app: Option<Box<MyLifeApp>>,
-    #[cfg(target_arch = "wasm32")]
-    pub loaded_config: Option<RuntimeConfig>,
     pub show_settings: bool,
+    pub hovered_period: Option<Uuid>,
+    pub item_state: Option<LegendItem>,
+    pub temp_start_date: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -71,7 +57,7 @@ pub struct LifePeriodEvent {
     pub start: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct RuntimeLifePeriod {
     pub id: Uuid,
     pub name: String,
@@ -80,7 +66,8 @@ pub struct RuntimeLifePeriod {
     #[serde(default)]
     pub events: Vec<RuntimeLifePeriodEvent>,
 }
-#[derive(Serialize, Deserialize, Clone, Debug)]
+
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct RuntimeLifePeriodEvent {
     pub id: Uuid,
     pub name: String,
@@ -95,33 +82,6 @@ pub struct LegendItem {
     pub start: String,
     pub color: String,
     pub is_event: bool,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Default for Config {
-    fn default() -> Self {
-        use log::{error, info};
-
-        info!("Attempting to create default Config");
-
-        match serde_yaml::from_str(DEFAULT_CONFIG_YAML) {
-            Ok(config) => {
-                info!("Successfully parsed DEFAULT_CONFIG_YAML");
-                info!("Parsed config: {:?}", config);
-                config
-            }
-            Err(e) => {
-                error!("Failed to parse DEFAULT_CONFIG_YAML: {:?}", e);
-                info!("Using fallback default config");
-                Config {
-                    name: "John Doe".to_string(),
-                    date_of_birth: "2000-01".to_string(),
-                    life_expectancy: 80,
-                    life_periods: vec![],
-                }
-            }
-        }
-    }
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -1,141 +1,189 @@
+use dioxus::prelude::*;
+use crate::models::{RuntimeConfig, MyLifeApp};
 use crate::config_manager::get_config_manager;
-use crate::models::CatppuccinTheme;
-use crate::MyLifeApp;
-use eframe::egui;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 
 #[cfg(target_arch = "wasm32")]
-use crate::utils::config_utils::load_config_async;
+use crate::config_manager::load_config_async;
 
-#[cfg(target_arch = "wasm32")]
-use crate::utils::wasm_config::NEW_CONFIG;
+#[cfg(not(target_arch = "wasm32"))]
+use dioxus_logger::tracing::{info, error, debug};
 
-pub fn draw_top_panel(app: &mut MyLifeApp, ctx: &egui::Context, top_height: f32) {
-    egui::TopBottomPanel::top("top_panel")
-        .exact_height(top_height)
-        .show(ctx, |ui| {
+#[component]
+pub fn TopPanel() -> Element {
+    let mut app_state = use_context::<Signal<MyLifeApp>>();
+    
+    info!("Current view: {:?}", app_state().view);
+    info!("Selected YAML: {:?}", app_state().selected_yaml);
 
-            ui.vertical(|ui| {
-                draw_top_row(app, ui);
-                draw_bottom_row(app, ctx, ui);
-            });
-        });
+    info!("Rendering TopPanel");
 
+    debug!("Context values in TopPanel:");
+    debug!("  config: {:?}", app_state().config);
+    debug!("  view: {:?}", app_state().view);
+    debug!("  selected_yaml: {:?}", app_state().selected_yaml);
+    debug!("  show_settings: {:?}", app_state().show_settings);
+    debug!("  loaded_configs: {:?}", app_state().loaded_configs);
 
-    // Settings modal (unchanged)
-    if app.show_settings {
-        egui::Window::new("Settings")
-            .collapsible(false)
-            .resizable(false)
-            .show(ctx, |ui| {
-                // Theme selector
-                egui::ComboBox::from_label("Theme")
-                    .selected_text(format!("{:?}", app.theme))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut app.theme, CatppuccinTheme::Frappe, "Frappe");
-                        ui.selectable_value(&mut app.theme, CatppuccinTheme::Latte, "Latte");
-                        ui.selectable_value(&mut app.theme, CatppuccinTheme::Macchiato, "Macchiato");
-                        ui.selectable_value(&mut app.theme, CatppuccinTheme::Mocha, "Mocha");
-                    });
+    #[cfg(target_arch = "wasm32")]
+    let mut selected_config_index = use_context::<Signal<usize>>();
 
-                // Life expectancy selector (only show in Lifetime view)
-                if app.view == "Lifetime" {
-                    egui::ComboBox::from_label("Life Expectancy")
-                        .selected_text(app.config.life_expectancy.to_string())
-                        .show_ui(ui, |ui| {
-                            for year in 60..=120 {
-                                ui.selectable_value(
-                                    &mut app.config.life_expectancy,
-                                    year,
-                                    year.to_string(),
-                                );
-                            }
-                        });
-                }
-
-                if ui.button("Close").clicked() {
-                    app.show_settings = false;
-                }
-            });
-    }
-}
-
-fn draw_top_row(app: &mut MyLifeApp, ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-
-        // Back button (only in EventView)
-        if app.view == "EventView" {
-            if ui.button("⬅").clicked() {
-                app.view = "Lifetime".to_string();
-                app.selected_life_period = None;
-            }
+    #[cfg(target_arch = "wasm32")]
+    let options = get_config_manager().get_available_configs().unwrap_or_default();
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    let options: Vec<String> = {
+        debug!("Creating options for config selector");
+        let mut config_names = Vec::new();
+        for (name, _) in app_state().loaded_configs.iter() {
+            config_names.push(name.clone());
         }
+        debug!("Available options: {:?}", config_names);
+        config_names
+    };
 
-        // Configuration selector
-        egui::ComboBox::from_label("Configuration")
-            .selected_text(&app.selected_yaml)
-            .show_ui(ui, |ui| {
-                #[cfg(not(target_arch = "wasm32"))]
-                for yaml_file in &app.yaml_files {
-                    if ui.selectable_value(&mut app.selected_yaml, yaml_file.clone(), yaml_file).changed() {
-                        app.config = get_config_manager()
-                            .load_config(&app.selected_yaml)
-                            .expect("Failed to load config");
-                    }
-                }
-                #[cfg(target_arch = "wasm32")]
-                for (index, (name, _)) in app.loaded_configs.iter().enumerate() {
-                    if ui.selectable_value(&mut app.selected_config_index, index, name).clicked() {
-                        app.config = app.loaded_configs[index].1.clone();
-                        app.selected_yaml = name.clone();
-                    }
-                }
-            });
-
-        // Push the settings button to the right
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.button("⚙").clicked() {
-                app.show_settings = true;
-            }
-        });
-    });
-}
-
-fn draw_bottom_row(app: &mut MyLifeApp, ctx: &egui::Context, ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
+    let buttons = {
         #[cfg(target_arch = "wasm32")]
-        {
-            if ui.button("Load YAML").clicked() {
-                let ctx = ctx.clone();
-                spawn_local(async move {
-                    match load_config_async().await {
-                        Some((name, new_config)) => {
-                            ctx.request_repaint();
-                            // Update the NEW_CONFIG
-                            *NEW_CONFIG.lock().unwrap() = Some((name, new_config));
+        rsx! {
+            button {
+                onclick: move |_| {
+                    spawn_local(async move {
+                        if let Some((name, new_config)) = load_config_async().await {
+                            app_state.write().config = new_config;
+                            app_state.write().selected_yaml = name;
+                        } else {
+                            error!("Failed to load YAML configuration");
                         }
-                        None => {
-                            let _ = rfd::MessageDialog::new()
-                                .set_title("Error")
-                                .set_description("Failed to load YAML configuration. Check the console for details.")
-                                .show();
-                        }
+                    });
+                },
+                "Load YAML"
+            }
+            button {
+                onclick: move |_| {
+                    if let Err(e) = get_config_manager().save_config(&app_state().config, &app_state().selected_yaml) {
+                        error!("Failed to save config: {}", e);
                     }
-                });
+                },
+                "Save YAML"
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        rsx! {
+            button {
+                onclick: move |_| {
+                    info!("Quit button clicked");
+                    std::process::exit(0);
+                },
+                "Quit"
+            }
+        }
+    };
+
+    info!("Rendering TopPanel RSX");
+
+    rsx! {
+        div {
+            class: "top-panel",
+            
+            div {
+
+                class: "top-row",
+                // Back button (only in EventView)
+                if app_state().view == "EventView" {
+                    button {
+                        onclick: move |_| {
+                            info!("Back button clicked, setting view to Lifetime");
+                            app_state.write().view = "Lifetime".to_string();
+                        },
+                        span { "⬅" },
+                    }
+                }
+                            
+
+                // Configuration selector
+                select {
+                    value: "{app_state().selected_yaml}",
+                    onchange: move |evt| {
+                        info!("Config selector changed to: {}", evt.value());
+                        app_state.write().selected_yaml = evt.value();
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            match get_config_manager().load_config(&evt.value()) {
+                                Ok(new_config) => {
+                                    app_state.write().config = new_config;
+                                },
+                                Err(e) => error!("Failed to load config: {:?}", e),
+                            }
+                        }
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            if let Some(index) = app_state().loaded_configs.iter().position(|(name, _)| name == &evt.value()) {
+                                selected_config_index.set(index);
+                                app_state.write().config = app_state().loaded_configs[index].1.clone();
+                            }
+                        }
+                    },
+
+                    // Directly generating options with a for loop
+                    for option in options.iter() {
+                        option { value: "{option}", "{option}" }
+                    }
+                }
+
+                // Settings button
+                button {
+                    class: "settings-button",
+                    onclick: move |_| {
+                        info!("Settings button clicked");
+                        app_state.write().show_settings = true;
+                    },
+                    "⚙"
+                }
             }
 
-            if ui.button("Save YAML").clicked() {
-                get_config_manager()
-                    .save_config(&app.config, &app.selected_yaml)
-                    .expect("Failed to save config");
+            div {
+                class: "bottom-row",
+                { buttons }
             }
         }
-        // Quit button (non-WASM only)
-        #[cfg(not(target_arch = "wasm32"))]
-        if ui.button("Quit").clicked() {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+
+        if app_state().show_settings {
+            div {
+                class: "settings-modal",
+                h2 { "Settings" }
+            
+                if app_state().view == "Lifetime" {
+                    select {
+                        value: "{app_state().config.life_expectancy}",
+                        onchange: move |evt| {
+                            if let Ok(value) = evt.value().parse() {
+                                info!("Life expectancy changed to: {}", value);
+                                app_state.write().config = RuntimeConfig {
+                                    life_expectancy: value,
+                                    ..app_state().config
+                                };
+                            } else {
+                                error!("Failed to parse life expectancy: {}", evt.value());
+                            }
+                        },
+                        
+                        for year in 60..=120 {
+                            option { value: "{year}", "{year}" }
+                        }
+                    }
+                }
+            
+                button {
+                    onclick: move |_| {
+                        info!("Settings modal closed");
+                        app_state.write().show_settings = false;
+                    },
+                    "Close"
+                }
+            }
         }
-    });
+    }
 }

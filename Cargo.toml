@@ -3,55 +3,36 @@ name = "mylife"
 version = "0.1.0"
 authors = ["Martin Schiller <hello@waozi.xyz>"]
 edition = "2021"
-rust-version = "1.80.1"
-include = ["LICENSE.md", "**/*.rs", "Cargo.toml"]
 
-[package.metadata.docs.rs]
-all-features = true
-targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
+
+[package.metadata.dioxus]
+[package.metadata.dioxus.web]
+asset-dir = "assets"
 
 [dependencies]
-egui = "0.28.1"
-eframe = { version = "0.28.1", default-features = false, features = [
-    "default_fonts", # Embed the default egui fonts.
-    "glow",          # Use the glow rendering backend. Alternative: "wgpu".
-    "persistence",   # Enable restoring app state when restarting the app.
-] }
-log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
+once_cell = "1.17.1"
+dioxus-logger = "0.5.1"
+log = "0.4.6"
+manganis = "0.2.2" 
+futures-util = "0.3"
 chrono = "0.4"
 cfg-if = "1.0"
 uuid = { version = "1.4", features = ["v4", "serde"] }
-catppuccin-egui = { version = "5.2.0", default-features = false, features = ["egui28"] }
 getrandom = { version = "0.2", features = ["js"] }
+rfd = "0.14.1"
 
-[features]
-default = ["desktop"]
-desktop = []
-
-# native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
+dioxus = { version = "0.5", features = ["desktop", "router"] }
+tokio = { version = "1.0", features = ["time"] }
 
-# web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
+dioxus = { version = "0.5", features = ["web", "router"] }
+wasm-logger = "0.2.0"
 console_error_panic_hook = "0.1.7"
-js-sys = "0.3"
-rfd = "0.14"
-futures = "0.3"
-once_cell = "1.8.0"
-
-# to access the DOM (to hide the loading text)
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3.4"
-features = ["File", "FileList", "FileReader", "Blob", "Url", "HtmlAnchorElement"]
-
-[profile.release]
-opt-level = 2 # fast and small wasm
-
-# Optimize all dependencies even in debug builds:
-[profile.dev.package."*"]
-opt-level = 2
+futures-channel = "0.3"
+web-sys = { version = "0.3", features = ["Window"] }
+wasm-bindgen = "0.2.93"
+wasm-bindgen-futures = "0.4.43"
+js-sys = "0.3.4"

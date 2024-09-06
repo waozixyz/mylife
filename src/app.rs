@@ -1,193 +1,85 @@
-use crate::models::{
-    CatppuccinTheme, LegendItem, MyLifeApp, RuntimeLifePeriod, RuntimeLifePeriodEvent
-};
-use crate::ui::{draw_bottom_panel, draw_central_panel, draw_top_panel};
-use crate::utils::color_utils::{color32_to_hex, hex_to_color32};
-use crate::utils::config_utils::{save_config, get_available_configs, get_config};
-use crate::utils::date_utils::is_valid_date;
-use crate::utils::wasm_config::NEW_CONFIG;
-use catppuccin_egui::{FRAPPE, LATTE, MACCHIATO, MOCHA};
-use eframe::egui;
+use dioxus::prelude::*;
+use crate::models::{MyLifeApp, RuntimeConfig};
+use uuid::Uuid;
+use crate::config_manager::get_config;
+use crate::ui::{TopPanel, BottomPanel, CentralPanel, EditLegendItem, SettingsWindow};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::config_manager::{get_config_manager, get_available_configs};
 
-impl Default for MyLifeApp {
-    fn default() -> Self {
+#[cfg(not(target_arch = "wasm32"))]
+use dioxus_logger::tracing::{Level, info, error, debug};
+
+#[component]
+pub fn App() -> Element {
+    let mut app_state = use_signal(|| MyLifeApp {
+        config: get_config(),
+        view: "Lifetime".to_string(),
+        selected_yaml: "default.yaml".to_string(),
+        selected_legend_item: None,
+        original_legend_item: None,
+        selected_life_period: None,
+        value: 0.0,
+        show_settings: false,
         #[cfg(not(target_arch = "wasm32"))]
-        let default_config = get_config();
+        yaml_files: get_available_configs(),
         #[cfg(target_arch = "wasm32")]
-        let default_config = get_config();
+        yaml_content: String::new(),
+        loaded_configs: Vec::new(),
+        #[cfg(target_arch = "wasm32")]
+        selected_config_index: 0,
+        hovered_period: None,
+        item_state: None,
+        temp_start_date: String::new(),
+    });
 
-        Self {
-            config: default_config.clone(),
-            view: "Lifetime".to_string(),
-            #[cfg(not(target_arch = "wasm32"))]
-            yaml_files: get_available_configs(),
-            #[cfg(not(target_arch = "wasm32"))]
-            selected_yaml: "default.yaml".to_string(),
-            #[cfg(target_arch = "wasm32")]
-            selected_yaml: "Default".to_string(),
-            selected_legend_item: None,
-            original_legend_item: None,
-            theme: CatppuccinTheme::Mocha,
-            #[cfg(target_arch = "wasm32")]
-            loaded_configs: get_available_configs(),
-            #[cfg(target_arch = "wasm32")]
-            selected_config_index: 0,
-            temp_start_date: "".to_string(),
-            selected_life_period: None,
-            value: 0.0,
-            #[cfg(target_arch = "wasm32")]
-            loaded_app: None,
-            #[cfg(target_arch = "wasm32")]
-            loaded_config: None,
-            #[cfg(target_arch = "wasm32")]
-            yaml_content: String::new(),
-            show_settings: false,
+    use_effect(move || {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let configs = get_config_manager().get_available_configs();
+            app_state.write().yaml_files = configs.unwrap_or_default();
+        }
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let loaded_configs = load_configs();
+            app_state.write().loaded_configs = loaded_configs;
+        }
+    });
+
+    use_context_provider(|| app_state);
+
+    rsx! {
+        style { {include_str!("../assets/main.css")} }
+        style { {include_str!("../assets/input.css")} }
+
+        div {
+            class: "app-container",
+            TopPanel {}
+            CentralPanel {}
+            BottomPanel {}
+            EditLegendItem {}
+            SettingsWindow {}
         }
     }
 }
 
-impl MyLifeApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
-        Default::default()
-    }
-
-    fn update_config_item(&mut self, item: &LegendItem) {
-        if item.is_event {
-            if let Some(period) = self.config.life_periods.iter_mut().find(|p| p.id == self.selected_life_period.unwrap()) {
-                if let Some(event) = period.events.iter_mut().find(|e| e.id == item.id) {
-                    event.name = item.name.clone();
-                    event.color = item.color.clone();
-                    event.start = item.start.clone();
-                } else {
-                    period.events.push(RuntimeLifePeriodEvent {
-                        id: item.id,
-                        name: item.name.clone(),
-                        color: item.color.clone(),
-                        start: item.start.clone(),
-                    });
-                }
-            }
-        } else if let Some(period) = self
-            .config
-            .life_periods
-            .iter_mut()
-            .find(|p| p.id == item.id)
-        {
-            period.name = item.name.clone();
-            period.start = item.start.clone();
-            period.color = item.color.clone();
-        } else {
-            self.config.life_periods.push(RuntimeLifePeriod {
-                id: item.id,
-                name: item.name.clone(),
-                start: item.start.clone(),
-                color: item.color.clone(),
-                events: Vec::new(),
-            });
-        }
-        save_config(&self.config, &self.selected_yaml);
-    }
-}
-
-impl eframe::App for MyLifeApp {
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some((name, config)) = NEW_CONFIG.lock().unwrap().take() {
-                self.config = config.clone();
-                self.selected_yaml = name.clone();
-                self.loaded_configs.push((name, config.clone()));
-                self.selected_config_index = self.loaded_configs.len() - 1;
-            }
-        }    
-
-        catppuccin_egui::set_theme(
-            ctx,
-            match self.theme {
-                CatppuccinTheme::Frappe => FRAPPE,
-                CatppuccinTheme::Latte => LATTE,
-                CatppuccinTheme::Macchiato => MACCHIATO,
-                CatppuccinTheme::Mocha => MOCHA,
-            },
-        );
-        let screen_rect = ctx.screen_rect();
-        let top_height = 50.0;
-        let bottom_height = screen_rect.height() * 0.2;
-
-        draw_top_panel(self, ctx, top_height);
-        draw_central_panel(self, ctx, top_height, bottom_height);
-        draw_bottom_panel(self, ctx, bottom_height);
-
-
-        if let Some(mut item) = self.selected_legend_item.clone() {
-            let mut should_close = false;
-            let mut changed = false;
-
-            if self.original_legend_item.is_none() {
-                self.original_legend_item = Some(item.clone());
-                self.temp_start_date = item.start.clone();
-            }
-
-            egui::Window::new("Edit Legend Item").show(ctx, |ui| {
-                ui.vertical(|ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Name:");
-                        if ui.text_edit_singleline(&mut item.name).changed() {
-                            changed = true;
-                        }
-                    });
-
-                    ui.horizontal(|ui| {
-                        ui.label("Start:");
-                        let response = ui.text_edit_singleline(&mut self.temp_start_date);
-
-                        if response.changed() || response.lost_focus() {
-                            if is_valid_date(&self.temp_start_date, !item.is_event) {
-                                item.start = self.temp_start_date.clone();
-                                changed = true;
-                            }
-                        }
-                    });
-
-                    ui.horizontal(|ui| {
-                        ui.label("Color:");
-                        let mut color = hex_to_color32(&item.color);
-                        if ui.color_edit_button_srgba(&mut color).changed() {
-                            item.color = color32_to_hex(color);
-                            changed = true;
-                        }
-                    });
-
-                    ui.horizontal(|ui| {
-                        if ui.button("Close").clicked() {
-                            should_close = true;
-                        }
-                    });
-                });
-            });
-
-            if changed {
-                self.update_config_item(&item);
-            }
-
-            if should_close {
-                if is_valid_date(&self.temp_start_date, !item.is_event) {
-                    item.start = self.temp_start_date.clone();
-                    self.update_config_item(&item);
-                }
-                self.selected_legend_item = None;
-                self.original_legend_item = None;
-                self.temp_start_date.clear();
-            } else {
-                self.selected_legend_item = Some(item);
-            }
-        }
-    }
+#[cfg(not(target_arch = "wasm32"))]
+fn load_configs() -> Vec<(String, RuntimeConfig)> {
+    let configs = get_config_manager().get_available_configs();
+    configs
+        .map(|configs| {
+            configs
+                .into_iter()
+                .filter_map(|name| {
+                    get_config_manager()
+                        .load_config(&name)
+                        .map_err(|e| {
+                            error!("Failed to load config {}: {:?}", name, e);
+                        })
+                        .ok()
+                        .map(|config| (name, config))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }

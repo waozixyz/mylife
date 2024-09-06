@@ -1,0 +1,153 @@
+:root {
+    --bg-color: #1a0f1f;
+    --text-color: #e0e0e0;
+    --primary-color: #8e24aa;
+    --secondary-color: #3d2a42;
+    --accent-color: #ff4081;
+    --panel-bg-color: #2d1f33;
+    --input-bg-color: #241a28;
+    --input-border-color: #4a3655;
+    --input-focus-color: #b039c9;
+    --button-hover-color: #b039c9;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Top Panel Styles */
+.top-panel {
+    background-color: var(--panel-bg-color);
+    padding: 16px 24px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.top-row, .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Central Panel Styles */
+.central-panel {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: var(--bg-color);
+}
+
+.central-content {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+/* Bottom Panel Styles */
+.bottom-panel {
+    background-color: var(--panel-bg-color);
+    padding: 16px 24px;
+    box-shadow: 0 -2px 4px var(--shadow-color);
+}
+
+/* Settings Window Styles */
+.settings-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--panel-bg-color);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    z-index: 1000;
+}
+
+/* Additional styles for better material design look */
+.ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple:after {
+    content: "";
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform .5s, opacity 1s;
+}
+
+.ripple:active:after {
+    transform: scale(0, 0);
+    opacity: .3;
+    transition: 0s;
+}
+
+.central-panel {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.central-content {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    width: 100%;
+    max-width: 1200px;
+    min-width: 600px;
+    height: 100%;
+}
+
+.lifetime-view {
+    display: grid;
+    grid-template-columns: repeat(48, 1fr);
+    width: 100%;
+    height: 100%;
+    gap: 1px;
+    background-color: gray;
+    padding: 1px;
+    border: 1px solid gray;
+}
+
+.lifetime-cell {
+    aspect-ratio: 1;
+    background-color: var(--bg-color);
+    border: 1px solid gray;
+    transition: all 0.3s ease;
+}
+
+.lifetime-cell:hover {
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.lifetime-cell.hovered {
+    border: 2px solid #c800c8;
+}

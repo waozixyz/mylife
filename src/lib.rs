@@ -1,7 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-mod config;
 mod config_manager;
 mod models;
 mod ui;

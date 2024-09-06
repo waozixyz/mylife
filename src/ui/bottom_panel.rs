@@ -1,53 +1,58 @@
-use crate::models::LegendItem;
-use crate::ui::draw_legend;
-use crate::MyLifeApp;
+use dioxus::prelude::*;
+use crate::models::{LegendItem, MyLifeApp};
 use chrono::{Datelike, Local};
-use eframe::egui;
 use uuid::Uuid;
+use crate::ui::Legend;
 
-pub fn draw_bottom_panel(app: &mut MyLifeApp, ctx: &egui::Context, bottom_height: f32) {
-    egui::TopBottomPanel::bottom("legend")
-        .min_height(bottom_height)
-        .resizable(true)
-        .show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.heading("Legend:");
-                    if ui.button("Add New Item").clicked() {
-                        let now = Local::now();
-                        let default_start = if app.view == "Lifetime" {
-                            format!("{}-{:02}", now.year(), now.month())
-                        } else {
-                            format!("{}-{:02}-{:02}", now.year(), now.month(), now.day())
-                        };
+#[component]
+pub fn BottomPanel() -> Element {
+    let mut app_state = use_context::<Signal<MyLifeApp>>();
 
-                        let new_item = if app.view == "Lifetime" {
-                            LegendItem {
-                                id: Uuid::new_v4(),
-                                name: "New Period".to_string(),
-                                start: default_start,
-                                color: "#000000".to_string(),
-                                is_event: false,
-                            }
-                        } else {
-                            LegendItem {
-                                id: Uuid::new_v4(),
-                                name: "New Event".to_string(),
-                                start: default_start,
-                                color: "#000000".to_string(),
-                                is_event: true,
-                            }
-                        };
+    let add_new_item = move |_| {
+        let now = Local::now();
+        let current_view = &app_state().view;
+        let default_start = if *current_view == "Lifetime" {
+            format!("{}-{:02}", now.year(), now.month())
+        } else {
+            format!("{}-{:02}-{:02}", now.year(), now.month(), now.day())
+        };
 
-                        app.selected_legend_item = Some(new_item);
-                    }
-                });
+        let new_item = if *current_view == "Lifetime" {
+            LegendItem {
+                id: Uuid::new_v4(),
+                name: "New Period".to_string(),
+                start: default_start,
+                color: "#000000".to_string(),
+                is_event: false,
+            }
+        } else {
+            LegendItem {
+                id: Uuid::new_v4(),
+                name: "New Event".to_string(),
+                start: default_start,
+                color: "#000000".to_string(),
+                is_event: true,
+            }
+        };
 
-                ui.add_space(5.0);
+        app_state.write().selected_legend_item = Some(new_item);
+    };
 
-                if let Some(legend_item) = draw_legend(ui, &app.config, &app.view, app.selected_life_period) {
-                    app.selected_legend_item = Some(legend_item);
+    rsx! {
+        div {
+            class: "bottom-panel",
+            div {
+                class: "legend-header",
+                h3 { "Legend:" }
+                button {
+                    onclick: add_new_item,
+                    "Add New Item"
                 }
-            });
-        });
+            }
+            div {
+                class: "legend-items",
+                Legend {}
+            }
+        }
+    }
 }
