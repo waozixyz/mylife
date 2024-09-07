@@ -160,3 +160,31 @@ body {
     font-style: italic;
     color: var(--text-color);
 }
+
+
+.add-new-item {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    width: 100%;
+    text-align: left;
+}
+
+.add-new-item .legend-color {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+    font-weight: bold;
+    color: white;
+}
+
+.add-new-item .legend-name {
+    font-size: 14px;
+}

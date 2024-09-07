@@ -16,12 +16,12 @@ pub fn BottomPanel() -> Element {
         } else {
             format!("{}-{:02}-{:02}", now.year(), now.month(), now.day())
         };
-
+    
         let new_item = if *current_view == "Lifetime" {
             LegendItem {
                 id: Uuid::new_v4(),
                 name: "New Period".to_string(),
-                start: default_start,
+                start: default_start.clone(),
                 color: "#000000".to_string(),
                 is_event: false,
             }
@@ -29,34 +29,43 @@ pub fn BottomPanel() -> Element {
             LegendItem {
                 id: Uuid::new_v4(),
                 name: "New Event".to_string(),
-                start: default_start,
+                start: default_start.clone(),
                 color: "#000000".to_string(),
                 is_event: true,
             }
         };
-
-        app_state.write().selected_legend_item = Some(new_item);
+    
+        app_state.write().item_state = Some(new_item);
+        app_state.write().temp_start_date = default_start;
     };
-
     rsx! {
         div {
             class: "bottom-panel",
             div {
                 class: "legend-header",
-                h3 { "Legend:" }
                 button {
+                    class: "legend-item add-new-item",
                     onclick: add_new_item,
-                    "Add New Item"
+                    span {
+                        class: "legend-color",
+                        style: "background-color: #000000;",
+                        "+"
+                    }
+                    span {
+                        class: "legend-name",
+                        "Add New Item"
+                    }
                 }
+            
+                div {
+                    class: "legend-items",
+                    Legend {}
+                }
+                // Add this block to render the EditLegendItem component
+                {app_state().item_state.is_some().then(|| rsx!{
+                    EditLegendItem {}
+                })}
             }
-            div {
-                class: "legend-items",
-                Legend {}
-            }
-            // Add this block to render the EditLegendItem component
-            {app_state().item_state.is_some().then(|| rsx!{
-                EditLegendItem {}
-            })}
         }
     }
 }
