@@ -17,12 +17,8 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let mut hovered_period = use_signal(|| None::<Uuid>);
 
     let years = app_state().config.life_expectancy;
-    let rows: u32 = (years + 3) / 4;
-    let cols: u32 = 48;
-
-    let cell_size: u32 = 16; 
-    let width: u32 = cols * cell_size;
-    let height: u32 = rows * cell_size;
+    let cols = 48;
+    let rows = (years + 3) / 4; 
 
     let cell_data = use_memo(move || {
         let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
@@ -30,7 +26,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         
         let current_date = Local::now().date_naive();
 
-        (0..rows * cols).map(|index| {
+        (0..years * 12).map(|index| {
             let year = index / 12;
             let month = index % 12;
             let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
@@ -53,48 +49,48 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     };
 
     rsx! {
-        svg {
-            width: "{width}",
-            height: "{height}",
-            view_box: "0 0 {width} {height}",
-            onmouseleave: handle_mouse_leave,
+        div {
+            class: "lifetime-view-container",
+            svg {
+                class: "lifetime-view-svg",
+                preserve_aspect_ratio: "xMidYMid meet",
+                view_box: "0 0 {cols} {rows}",
+                onmouseleave: handle_mouse_leave,
 
-            {cell_data().iter().enumerate().map(|(index, cell)| {
-                let index = index as u32;
-                let row = index / cols;
-                let col = index % cols;
-                let x = col * cell_size;
-                let y = row * cell_size;
-                let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
+                {cell_data().iter().enumerate().map(|(index, cell)| {
+                    let row = index / cols;
+                    let col = index % cols;
+                    let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
 
-                rsx! {
-                    rect {
-                        key: "{cell.date}",
-                        x: "{x}",
-                        y: "{y}",
-                        width: "{cell_size}",
-                        height: "{cell_size}",
-                        fill: "{cell.color}",
-                        stroke: if is_hovered { "#c800c8" } else { "gray" },
-                        stroke_width: if is_hovered { "2" } else { "1" },
-                        onclick: {
-                            let period = cell.period.clone();
-                            let on_period_click = on_period_click.clone();
-                            move |_| {
-                                if let Some(period) = &period {
-                                    if !period.events.is_empty() {
-                                        on_period_click.call(period.id);
+                    rsx! {
+                        rect {
+                            key: "{cell.date}",
+                            x: "{col}",
+                            y: "{row}",
+                            width: "1",
+                            height: "1",
+                            fill: "{cell.color}",
+                            stroke: if is_hovered { "#c800c8" } else { "gray" },
+                            stroke_width: if is_hovered { "0.05" } else { "0.02" },
+                            onclick: {
+                                let period = cell.period.clone();
+                                let on_period_click = on_period_click.clone();
+                                move |_| {
+                                    if let Some(period) = &period {
+                                        if !period.events.is_empty() {
+                                            on_period_click.call(period.id);
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        onmouseenter: {
-                            let period_id = cell.period.as_ref().map(|p| p.id);
-                            move |_| hovered_period.set(period_id)
-                        },
+                            },
+                            onmouseenter: {
+                                let period_id = cell.period.as_ref().map(|p| p.id);
+                                move |_| hovered_period.set(period_id)
+                            },
+                        }
                     }
-                }
-            })}
+                })}
+            }
         }
     }
 }

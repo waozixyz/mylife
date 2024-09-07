@@ -125,32 +125,20 @@ body {
     height: 100%;
 }
 
-.lifetime-view {
-    display: grid;
-    grid-template-columns: repeat(48, 1fr);
+
+.lifetime-view-container {
     width: 100%;
-    height: 100%;
-    gap: 1px;
-    background-color: gray;
-    padding: 1px;
-    border: 1px solid gray;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.lifetime-cell {
-    aspect-ratio: 1;
-    background-color: var(--bg-color);
-    border: 1px solid gray;
-    transition: all 0.3s ease;
+.lifetime-view-svg {
+    width: 100%;
+    height: auto;
+    max-width: 1200px;
 }
 
-.lifetime-cell:hover {
-    transform: scale(1.1);
-    z-index: 1;
-}
-
-.lifetime-cell.hovered {
-    border: 2px solid #c800c8;
-}
 
 .event-view {
     display: grid;

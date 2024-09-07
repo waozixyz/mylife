@@ -56,7 +56,9 @@ pub fn EditLegendItem() -> Element {
                         placeholder: "Name",
                         value: "{item.name}",
                         oninput: move |evt| {
-                            app_state().item_state.unwrap().name = evt.value().to_string();
+                            if let Some(mut item) = app_state.write().item_state.as_mut() {
+                                item.name = evt.value().to_string();
+                            }
                         }
                     }
                     input {
@@ -65,15 +67,20 @@ pub fn EditLegendItem() -> Element {
                         oninput: move |evt| {
                             app_state.write().temp_start_date = evt.value().to_string();
                             if is_valid_date(&evt.value(), !item.is_event) {
-                                app_state().item_state.unwrap().start = evt.value().to_string();
+                                if let Some(mut item) = app_state.write().item_state.as_mut() {
+                                    item.start = evt.value().to_string();
+                                }
                             }
                         }
                     }
                     // Color picker would go here
-                    // You might need to implement a custom color picker component for Dioxus
                     button {
                         onclick: update_config_item,
-                        "Close"
+                        "Save"
+                    }
+                    button {
+                        onclick: move |_| app_state.write().item_state = None,
+                        "Cancel"
                     }
                 }
             }
