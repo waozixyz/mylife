@@ -1,7 +1,6 @@
-on: [push, pull_request, workflow_dispatch]
-
-
 name: CI
+
+on: [push, pull_request, workflow_dispatch]
 
 permissions:
   contents: write
@@ -75,63 +74,54 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-  trunk:
-    name: trunk
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - name: Download and install Trunk binary
-        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-      - name: Build
-        run: ./trunk build
-
-  build:
+  dioxus_build:
+    name: Dioxus Build
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-        - os: ubuntu-latest
-          TARGET: aarch64-unknown-linux-gnu
-        - os: ubuntu-latest
-          TARGET: armv7-unknown-linux-gnueabihf
-        - os: ubuntu-latest
-          TARGET: x86_64-unknown-linux-gnu
-          
+          - os: ubuntu-latest
+            TARGET: web
+          - os: ubuntu-latest
+            TARGET: desktop
+          - os: macos-latest
+            TARGET: desktop
+          - os: windows-latest
+            TARGET: desktop
     steps:
-    - name: Building ${{ matrix.TARGET }}
-      run: echo "${{ matrix.TARGET }}"
-
-    - uses: actions/checkout@v4
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: ${{ matrix.TARGET }}
-
-    - name: Install cross
-      run: cargo install cross --git https://github.com/cross-rs/cross
-
-    - name: Build
-      run: cross build --verbose --release --target=${{ matrix.TARGET }}
-
-    - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/mylife${{ matrix.EXTENSION }} mylife-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-
-    - uses: actions/upload-artifact@v3
-      with:
-        name: mylife-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        path: mylife-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-
-    - uses: svenstaro/upload-release-action@v2
-      name: Upload binaries to release
-      if: ${{ github.event_name == 'push' }}
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: mylife-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        asset_name: mylife-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        tag: ${{ github.ref }}
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        overwrite: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli
+      - name: Build for ${{ matrix.TARGET }}
+        run: dioxus build --release --platform ${{ matrix.TARGET }}
+      - name: Rename and package
+        shell: bash
+        run: |
+          if [ "${{ matrix.TARGET }}" = "web" ]; then
+            tar -czvf mylife-web.tar.gz dist
+          elif [ "${{ matrix.OS }}" = "windows-latest" ]; then
+            mv target/release/mylife.exe mylife-windows.exe
+          elif [ "${{ matrix.OS }}" = "macos-latest" ]; then
+            mv target/release/mylife mylife-macos
+          else
+            mv target/release/mylife mylife-linux
+          fi
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
+          path: |
+            mylife-*
+            *.tar.gz
+      - uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: mylife-*
+          file_glob: true
+          tag: ${{ github.ref }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          overwrite: true
