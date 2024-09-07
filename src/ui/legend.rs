@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LegendItem, RuntimeConfig};
+use crate::models::{MyLifeApp, LegendItem, Config};
 use uuid::Uuid;
 
 #[component]
@@ -12,7 +12,6 @@ pub fn Legend() -> Element {
         let mut legend_items = Vec::new();
         match app_state().view.as_str() {
             "Lifetime" => {
-                
                 let mut sorted_periods = app_state().config.life_periods.clone();
                 sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
 

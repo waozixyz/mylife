@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LegendItem, RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
+use crate::models::{MyLifeApp, LegendItem, Config, LifePeriod, LifePeriodEvent};
 use crate::utils::date_utils::is_valid_date;
 use crate::config_manager::save_config;
 use uuid::Uuid;
@@ -18,7 +18,7 @@ pub fn EditLegendItem() -> Element {
                         event.color = item.color.clone();
                         event.start = item.start.clone();
                     } else {
-                        period.events.push(RuntimeLifePeriodEvent {
+                        period.events.push(LifePeriodEvent {
                             id: item.id,
                             name: item.name.clone(),
                             color: item.color.clone(),
@@ -31,7 +31,7 @@ pub fn EditLegendItem() -> Element {
                 period.start = item.start.clone();
                 period.color = item.color.clone();
             } else {
-                new_config.life_periods.push(RuntimeLifePeriod {
+                new_config.life_periods.push(LifePeriod {
                     id: item.id,
                     name: item.name.clone(),
                     start: item.start.clone(),

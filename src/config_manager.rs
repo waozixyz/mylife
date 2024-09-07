@@ -1,8 +1,6 @@
-use crate::models::{Config, RuntimeConfig, RuntimeLifePeriod, RuntimeLifePeriodEvent};
+use crate::models::Config;
 use std::io;
 use uuid::Uuid;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::models::{LifePeriodEvent, LifePeriod};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
@@ -23,8 +21,8 @@ use rfd;
 const DEFAULT_CONFIG: &str = include_str!("../data/default.yaml");
 
 pub trait ConfigManager {
-    fn load_config(&self, yaml_file: &str) -> io::Result<RuntimeConfig>;
-    fn save_config(&self, config: &RuntimeConfig, yaml_file: &str) -> io::Result<()>;
+    fn load_config(&self, yaml_file: &str) -> io::Result<Config>;
+    fn save_config(&self, config: &Config, yaml_file: &str) -> io::Result<()>;
     fn get_available_configs(&self) -> io::Result<Vec<String>>;
 }
 
@@ -42,16 +40,15 @@ impl NativeConfigManager {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl ConfigManager for NativeConfigManager {
-    fn load_config(&self, yaml_file: &str) -> io::Result<RuntimeConfig> {
+    fn load_config(&self, yaml_file: &str) -> io::Result<Config> {
         let yaml_path = std::path::Path::new(&self.data_folder).join(yaml_file);
         let yaml_content = std::fs::read_to_string(yaml_path)?;
         let config: Config = serde_yaml::from_str(&yaml_content)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        Ok(config_to_runtime_config(config))
+        Ok(config)
     }
 
-    fn save_config(&self, config: &RuntimeConfig, yaml_file: &str) -> io::Result<()> {
-        let config = runtime_config_to_config(config);
+    fn save_config(&self, config: &Config, yaml_file: &str) -> io::Result<()> {
         let yaml_content = serde_yaml::to_string(&config)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let yaml_path = std::path::Path::new(&self.data_folder).join(yaml_file);
@@ -79,12 +76,12 @@ pub struct WasmConfigManager;
 
 #[cfg(target_arch = "wasm32")]
 impl ConfigManager for WasmConfigManager {
-    fn load_config(&self, _yaml_file: &str) -> io::Result<RuntimeConfig> {
+    fn load_config(&self, _yaml_file: &str) -> io::Result<Config> {
         // For WASM, we'll always return the default config
         Ok(get_default_config())
     }
 
-    fn save_config(&self, config: &RuntimeConfig, _yaml_file: &str) -> io::Result<()> {
+    fn save_config(&self, config: &Config, _yaml_file: &str) -> io::Result<()> {
         let yaml_content = serde_yaml::to_string(&config)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
@@ -119,7 +116,6 @@ impl ConfigManager for WasmConfigManager {
     }
 }
 
-
 pub fn get_config_manager() -> Box<dyn ConfigManager> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -131,72 +127,20 @@ pub fn get_config_manager() -> Box<dyn ConfigManager> {
     }
 }
 
-pub fn config_to_runtime_config(config: Config) -> RuntimeConfig {
-    RuntimeConfig {
-        name: config.name,
-        date_of_birth: config.date_of_birth,
-        life_expectancy: config.life_expectancy,
-        life_periods: config.life_periods
-            .into_iter()
-            .map(|period| RuntimeLifePeriod {
-                id: Uuid::new_v4(),
-                name: period.name,
-                start: period.start,
-                color: period.color,
-                events: period.events
-                    .into_iter()
-                    .map(|event| RuntimeLifePeriodEvent {
-                        id: Uuid::new_v4(),
-                        name: event.name,
-                        color: event.color,
-                        start: event.start,
-                    })
-                    .collect(),
-            })
-            .collect(),
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn runtime_config_to_config(runtime_config: &RuntimeConfig) -> Config {
-    Config {
-        name: runtime_config.name.clone(),
-        date_of_birth: runtime_config.date_of_birth.clone(),
-        life_expectancy: runtime_config.life_expectancy,
-        life_periods: runtime_config
-            .life_periods
-            .iter()
-            .map(|p| LifePeriod {
-                name: p.name.clone(),
-                start: p.start.clone(),
-                color: p.color.clone(),
-                events: p.events
-                    .iter()
-                    .map(|e| LifePeriodEvent {
-                        name: e.name.clone(),
-                        color: e.color.clone(),
-                        start: e.start.clone(),
-                    })
-                    .collect(),
-            })
-            .collect(),
-    }
-}
-
 #[cfg(target_arch = "wasm32")]
-pub fn get_default_config() -> RuntimeConfig {
+pub fn get_default_config() -> Config {
     load_config_from_yaml(DEFAULT_CONFIG).expect("Failed to load default config")
 }
 
+
 #[cfg(target_arch = "wasm32")]
-pub fn load_config_from_yaml(yaml_content: &str) -> Result<RuntimeConfig, String> {
-    let config: Config = serde_yaml::from_str(yaml_content)
-        .map_err(|e| format!("Failed to parse YAML: {:?}", e))?;
-    Ok(config_to_runtime_config(config))
+pub fn load_config_from_yaml(yaml_content: &str) -> Result<Config, String> {
+    serde_yaml::from_str(yaml_content)
+        .map_err(|e| format!("Failed to parse YAML: {:?}", e))
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn load_config_async() -> Option<(String, RuntimeConfig)> {
+pub async fn load_config_async() -> Option<(String, Config)> {
     let file = rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
@@ -223,14 +167,13 @@ pub async fn load_config_async() -> Option<(String, RuntimeConfig)> {
     }
 }
 
-pub fn get_config() -> RuntimeConfig {
+pub fn get_config() -> Config {
     get_config_manager()
         .load_config("default.yaml")
         .expect("Failed to load config")
 }
 
-
-pub fn save_config(config: &RuntimeConfig, yaml_file: &str) -> Result<(), String> {
+pub fn save_config(config: &Config, yaml_file: &str) -> Result<(), String> {
     get_config_manager()
         .save_config(config, yaml_file)
         .map_err(|e| format!("Failed to save config: {:?}", e))

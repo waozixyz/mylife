@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{RuntimeConfig, MyLifeApp};
+use crate::models::{Config, MyLifeApp};
 use crate::config_manager::get_config_manager;
 
 #[cfg(target_arch = "wasm32")]
@@ -106,7 +106,6 @@ pub fn TopPanel() -> Element {
                         }
                     },
 
-                    // Directly generating options with a for loop
 
 
                     for option in options.iter() {
@@ -140,7 +139,7 @@ pub fn TopPanel() -> Element {
                         value: "{app_state().config.life_expectancy}",
                         onchange: move |evt| {
                             if let Ok(value) = evt.value().parse() {
-                                app_state.write().config = RuntimeConfig {
+                                app_state.write().config = Config {
                                     life_expectancy: value,
                                     ..app_state().config
                                 };

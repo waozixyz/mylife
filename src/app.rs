@@ -1,13 +1,12 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, RuntimeConfig};
-use uuid::Uuid;
+use crate::models::{MyLifeApp, Config};
 use crate::config_manager::get_config;
 use crate::ui::{TopPanel, BottomPanel, CentralPanel, EditLegendItem, SettingsWindow};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::config_manager::{get_config_manager, get_available_configs};
 
 #[cfg(not(target_arch = "wasm32"))]
-use dioxus_logger::tracing::{Level, info, error, debug};
+use dioxus_logger::tracing::error;
 
 #[component]
 pub fn App() -> Element {
@@ -62,7 +61,7 @@ pub fn App() -> Element {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn load_configs() -> Vec<(String, RuntimeConfig)> {
+fn load_configs() -> Vec<(String, Config)> {
     let configs = get_config_manager().get_available_configs();
     configs
         .map(|configs| {

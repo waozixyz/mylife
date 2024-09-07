@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, RuntimeConfig, RuntimeLifePeriodEvent};
+use crate::models::{MyLifeApp, Config, LifePeriodEvent};
 use chrono::{NaiveDate, Datelike, Duration, Local};
 use uuid::Uuid;
 
@@ -68,7 +68,7 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
     }
 }
 
-fn get_color_for_event(date: &NaiveDate, events: &[RuntimeLifePeriodEvent], period_end: &NaiveDate) -> String {
+fn get_color_for_event(date: &NaiveDate, events: &[LifePeriodEvent], period_end: &NaiveDate) -> String {
     for (i, event) in events.iter().enumerate() {
         let event_start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d")
             .expect("Invalid start date format in event");

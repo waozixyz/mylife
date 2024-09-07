@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, RuntimeLifePeriod};
+use crate::models::{MyLifeApp, LifePeriod};
 use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
 use dioxus_logger::tracing::{info, error, debug};
@@ -7,7 +7,7 @@ use dioxus_logger::tracing::{info, error, debug};
 #[derive(PartialEq, Clone)]
 struct CellData {
     color: String,
-    period: Option<RuntimeLifePeriod>,
+    period: Option<LifePeriod>,
     date: NaiveDate,
 }
 
@@ -16,13 +16,18 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let app_state = use_context::<Signal<MyLifeApp>>();
     let mut hovered_period = use_signal(|| None::<Uuid>);
 
+    let years = app_state().config.life_expectancy;
+    let rows: u32 = (years + 3) / 4;
+    let cols: u32 = 48;
+
+    let cell_size: u32 = 16; 
+    let width: u32 = cols * cell_size;
+    let height: u32 = rows * cell_size;
+
     let cell_data = use_memo(move || {
         let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
             .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
         
-        let years = app_state().config.life_expectancy;
-        let cols = 48;
-        let rows = (years + 3) / 4;
         let current_date = Local::now().date_naive();
 
         (0..rows * cols).map(|index| {
@@ -39,21 +44,42 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         }).collect::<Vec<_>>()
     });
 
-    rsx! {
-        div {
-            class: "lifetime-view",
+    let mut handle_mouse_enter = move |period_id: Option<Uuid>| {
+        hovered_period.set(period_id);
+    };
 
-            {cell_data().iter().map(|cell| {
+    let mut handle_mouse_leave = move |_| {
+        hovered_period.set(None);
+    };
+
+    rsx! {
+        svg {
+            width: "{width}",
+            height: "{height}",
+            view_box: "0 0 {width} {height}",
+            onmouseleave: handle_mouse_leave,
+
+            {cell_data().iter().enumerate().map(|(index, cell)| {
+                let index = index as u32;
+                let row = index / cols;
+                let col = index % cols;
+                let x = col * cell_size;
+                let y = row * cell_size;
                 let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
-                let cell_class = if is_hovered { "lifetime-cell hovered" } else { "lifetime-cell" };
 
                 rsx! {
-                    div {
+                    rect {
                         key: "{cell.date}",
-                        class: "{cell_class}",
-                        style: "background-color: {cell.color};",
+                        x: "{x}",
+                        y: "{y}",
+                        width: "{cell_size}",
+                        height: "{cell_size}",
+                        fill: "{cell.color}",
+                        stroke: if is_hovered { "#c800c8" } else { "gray" },
+                        stroke_width: if is_hovered { "2" } else { "1" },
                         onclick: {
                             let period = cell.period.clone();
+                            let on_period_click = on_period_click.clone();
                             move |_| {
                                 if let Some(period) = &period {
                                     if !period.events.is_empty() {
@@ -63,16 +89,9 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                             }
                         },
                         onmouseenter: {
-                            let period = cell.period.clone();
-                            move |_|  {
-                                if let Some(period) = &period {
-                                    if !period.events.is_empty() {
-                                        hovered_period.set(Some(period.id));
-                                    }
-                                }
-                            }
+                            let period_id = cell.period.as_ref().map(|p| p.id);
+                            move |_| hovered_period.set(period_id)
                         },
-                        onmouseleave: move |_| hovered_period.set(None),
                     }
                 }
             })}
@@ -80,7 +99,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     }
 }
 
-fn get_color_and_period_for_date(date: NaiveDate, life_periods: &[RuntimeLifePeriod], current_date: NaiveDate) -> (String, Option<RuntimeLifePeriod>) {
+fn get_color_and_period_for_date(date: NaiveDate, life_periods: &[LifePeriod], current_date: NaiveDate) -> (String, Option<LifePeriod>) {
     debug!("Searching for period for date: {}", date);
 
     for (index, period) in life_periods.iter().rev().enumerate() {
@@ -105,7 +124,6 @@ fn get_color_and_period_for_date(date: NaiveDate, life_periods: &[RuntimeLifePer
                 }
             }
         };
-        
         
         if date >= period_start && date < period_end {
             debug!("Found matching period: start={}, end={}, color={}", period_start, period_end, period.color);
