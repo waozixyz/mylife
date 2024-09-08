@@ -1,6 +1,6 @@
+use crate::models::{LifePeriodEvent, MyLifeApp};
+use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LifePeriodEvent};
-use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
 
 #[component]
@@ -8,7 +8,9 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
     let app_state = use_context::<Signal<MyLifeApp>>();
 
     let life_period = use_memo(move || {
-        app_state().yaml.life_periods
+        app_state()
+            .yaml
+            .life_periods
             .iter()
             .find(|p| p.id == selected_life_period_id)
             .cloned()
@@ -27,16 +29,23 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
                 };
             }
 
-            let start_date = events.iter()
+            let start_date = events
+                .iter()
                 .filter_map(|event| NaiveDate::parse_from_str(&event.start, "%Y-%m-%d").ok())
                 .min()
                 .unwrap_or_else(|| {
-                    NaiveDate::parse_from_str(&period.start, "%Y-%m").unwrap_or(Local::now().date_naive())
+                    NaiveDate::parse_from_str(&period.start, "%Y-%m")
+                        .unwrap_or(Local::now().date_naive())
                 });
 
-            let end_date = app_state().yaml.life_periods.iter()
+            let end_date = app_state()
+                .yaml
+                .life_periods
+                .iter()
                 .find(|p| p.start > period.start)
-                .and_then(|next_period| NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d").ok())
+                .and_then(|next_period| {
+                    NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d").ok()
+                })
                 .unwrap_or_else(|| Local::now().date_naive());
 
             let total_days = (end_date - start_date).num_days() as usize;
@@ -60,16 +69,20 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
                     })}
                 }
             }
-        },
+        }
         None => rsx! {
             div { class: "event-view-not-found",
                 "Selected life period not found."
             }
-        }
+        },
     }
 }
 
-fn get_color_for_event(date: &NaiveDate, events: &[LifePeriodEvent], period_end: &NaiveDate) -> String {
+fn get_color_for_event(
+    date: &NaiveDate,
+    events: &[LifePeriodEvent],
+    period_end: &NaiveDate,
+) -> String {
     for (i, event) in events.iter().enumerate() {
         let event_start = NaiveDate::parse_from_str(&event.start, "%Y-%m-%d")
             .expect("Invalid start date format in event");

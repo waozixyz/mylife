@@ -7,19 +7,18 @@ use std::fs;
 use std::path::Path;
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
+use js_sys;
 #[cfg(target_arch = "wasm32")]
-use web_sys::{Blob, HtmlAnchorElement, Url, FileReader};
+use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
-use js_sys;
+use web_sys::{Blob, FileReader, HtmlAnchorElement, Url};
 
-use dioxus::prelude::*;
 use crate::models::MyLifeApp;
+use dioxus::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
-
 
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
@@ -98,13 +97,16 @@ impl YamlManager for WasmYamlManager {
 
         let window = web_sys::window()
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
-        let document = window.document()
+        let document = window
+            .document()
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get document"))?;
         let anchor: HtmlAnchorElement = document
             .create_element("a")
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to create anchor element"))?
             .dyn_into()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to cast to HtmlAnchorElement"))?;
+            .map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "Failed to cast to HtmlAnchorElement")
+            })?;
 
         anchor.set_href(&url);
         anchor.set_download("config.yaml");
@@ -228,20 +230,20 @@ pub fn import_yaml() -> Option<(String, Yaml)> {
             let file_name = file_path.file_name()?.to_str()?.to_string();
             let content = fs::read_to_string(&file_path).ok()?;
             let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
-            
+
             let data_folder_string = app_state.read().data_folder.clone();
             let data_folder = Path::new(&data_folder_string);
-            
+
             let mut new_file_name = file_name.clone();
             let mut counter = 1;
-            
+
             while data_folder.join(&new_file_name).exists() {
                 new_file_name = format!("{}-{}.yaml", file_name.trim_end_matches(".yaml"), counter);
                 counter += 1;
             }
-            
+
             fs::copy(file_path, data_folder.join(&new_file_name)).ok()?;
-            
+
             Some((new_file_name, yaml))
         } else {
             None
@@ -252,9 +254,9 @@ pub fn import_yaml() -> Option<(String, Yaml)> {
     {
         // For WASM, we'll use the load_yaml_async function
         use wasm_bindgen_futures::spawn_local;
-        
+
         let (tx, rx) = std::sync::mpsc::channel();
-        
+
         spawn_local(async move {
             if let Some((name, yaml)) = load_yaml_async().await {
                 tx.send(Some((name, yaml))).unwrap();

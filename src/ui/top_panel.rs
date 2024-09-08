@@ -1,13 +1,13 @@
-use dioxus::prelude::*;
 use crate::models::MyLifeApp;
-use crate::yaml_manager::{get_yaml_manager, save_yaml, get_available_yamls};
+use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
+use dioxus::prelude::*;
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::spawn_local;
-#[cfg(target_arch = "wasm32")]
-use crate::yaml_manager::load_yaml_async;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::yaml_manager::import_yaml;
+#[cfg(target_arch = "wasm32")]
+use crate::yaml_manager::load_yaml_async;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::spawn_local;
 
 use dioxus_logger::tracing::error;
 
@@ -47,13 +47,13 @@ pub fn TopPanel() -> Element {
                     let current_url = web_sys::window().unwrap().location().href().unwrap();
                     let base_url = web_sys::Url::new(&current_url).unwrap();
                     let share_url = format!("{}?yaml={}", base_url.origin(), encoded_yaml);
-                    
+
                     web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
                 },
                 "📤 Share"
             }
         }
-    
+
         #[cfg(not(target_arch = "wasm32"))]
         rsx! {
             button {
@@ -96,7 +96,7 @@ pub fn TopPanel() -> Element {
                     span { "⬅" },
                 }
             }
-                        
+
             // Configuration selector and Life Expectancy (only in Lifetime view)
             if app_state().view == "Lifetime" {
                 div {
@@ -120,7 +120,7 @@ pub fn TopPanel() -> Element {
                             }
                         }
                     }
-                    
+
                     select {
                         value: "{app_state().yaml.life_expectancy}",
                         onchange: move |evt| {

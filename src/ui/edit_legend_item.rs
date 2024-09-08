@@ -1,8 +1,8 @@
-use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LifePeriod, LifePeriodEvent};
+use crate::models::{LifePeriod, LifePeriodEvent, MyLifeApp};
 use crate::utils::date_utils::is_valid_date;
 use crate::yaml_manager::save_yaml;
-use chrono::{NaiveDate, Local};
+use chrono::{Local, NaiveDate};
+use dioxus::prelude::*;
 use dioxus_logger::tracing::{debug, warn};
 
 fn is_valid_hex_color(color: &str) -> bool {
@@ -19,11 +19,27 @@ pub fn EditLegendItem() -> Element {
     let (min_date, max_date) = use_memo(move || {
         if let Some(item) = &app_state().item_state {
             if item.is_event {
-                if let Some(period) = app_state().yaml.life_periods.iter().find(|p| p.id == app_state().selected_life_period.unwrap()) {
-                    let period_start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d").unwrap_or_default();
-                    let period_end = app_state().yaml.life_periods.iter()
+                if let Some(period) = app_state()
+                    .yaml
+                    .life_periods
+                    .iter()
+                    .find(|p| p.id == app_state().selected_life_period.unwrap())
+                {
+                    let period_start =
+                        NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
+                            .unwrap_or_default();
+                    let period_end = app_state()
+                        .yaml
+                        .life_periods
+                        .iter()
                         .find(|p| p.start > period.start)
-                        .map(|next_period| NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d").unwrap_or_default())
+                        .map(|next_period| {
+                            NaiveDate::parse_from_str(
+                                &format!("{}-01", next_period.start),
+                                "%Y-%m-%d",
+                            )
+                            .unwrap_or_default()
+                        })
                         .unwrap_or_else(|| chrono::Local::now().date_naive());
                     return (Some(period_start), Some(period_end));
                 }
@@ -40,18 +56,37 @@ pub fn EditLegendItem() -> Element {
             } else {
                 let default_date = if item.is_event {
                     debug!("Getting default date for new event");
-                    if let Some(period) = app_state().yaml.life_periods.iter().find(|p| p.id == app_state().selected_life_period.unwrap()) {
-                        let period_start = NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d").unwrap_or_default();
-                        let period_end = app_state().yaml.life_periods.iter()
+                    if let Some(period) = app_state()
+                        .yaml
+                        .life_periods
+                        .iter()
+                        .find(|p| p.id == app_state().selected_life_period.unwrap())
+                    {
+                        let period_start =
+                            NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
+                                .unwrap_or_default();
+                        let period_end = app_state()
+                            .yaml
+                            .life_periods
+                            .iter()
                             .find(|p| p.start > period.start)
-                            .map(|next_period| NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d").unwrap_or_default())
+                            .map(|next_period| {
+                                NaiveDate::parse_from_str(
+                                    &format!("{}-01", next_period.start),
+                                    "%Y-%m-%d",
+                                )
+                                .unwrap_or_default()
+                            })
                             .unwrap_or_else(|| chrono::Local::now().date_naive());
-                        
+
                         // Choose a date in the middle of the period
                         let days_in_period = (period_end - period_start).num_days();
                         let middle_date = period_start + chrono::Duration::days(days_in_period / 2);
-                        
-                        debug!("Found period start date: {}, end date: {}, chosen date: {}", period_start, period_end, middle_date);
+
+                        debug!(
+                            "Found period start date: {}, end date: {}, chosen date: {}",
+                            period_start, period_end, middle_date
+                        );
                         Some(middle_date.format("%Y-%m-%d").to_string())
                     } else {
                         None
@@ -65,25 +100,30 @@ pub fn EditLegendItem() -> Element {
                     String::new()
                 })
             };
-    
+
             debug!("Initial date set to: {}", initial_date);
             current_date.set(initial_date.clone());
-    
+
             // Check if the initial date is valid
             let is_event = item.is_event;
             if is_valid_date(&initial_date, !is_event) {
                 if is_event {
                     if let (Some(min), Some(max)) = (min_date, max_date) {
-                        let input_date = NaiveDate::parse_from_str(&initial_date, "%Y-%m-%d").unwrap();
+                        let input_date =
+                            NaiveDate::parse_from_str(&initial_date, "%Y-%m-%d").unwrap();
                         if input_date < min || input_date >= max {
-                            date_error.set(format!("Date must be between {} and {}", min.format("%Y-%m-%d"), max.format("%Y-%m-%d")));
+                            date_error.set(format!(
+                                "Date must be between {} and {}",
+                                min.format("%Y-%m-%d"),
+                                max.format("%Y-%m-%d")
+                            ));
                         }
                     }
                 }
             } else {
                 date_error.set("Invalid date format".to_string());
             }
-    
+
             color_input.set(item.color.clone());
         } else {
             debug!("No item state");
@@ -97,7 +137,11 @@ pub fn EditLegendItem() -> Element {
                 debug!("Updating item: {:?}", item);
                 let mut new_yaml = app_state().yaml.clone();
                 if item.is_event {
-                    if let Some(period) = new_yaml.life_periods.iter_mut().find(|p| p.id == app_state().selected_life_period.unwrap()) {
+                    if let Some(period) = new_yaml
+                        .life_periods
+                        .iter_mut()
+                        .find(|p| p.id == app_state().selected_life_period.unwrap())
+                    {
                         if let Some(event) = period.events.iter_mut().find(|e| e.id == item.id) {
                             event.name = item.name.clone();
                             event.color = item.color.clone();
@@ -113,7 +157,8 @@ pub fn EditLegendItem() -> Element {
                         period.events.sort_by(|a, b| a.start.cmp(&b.start));
                     }
                 } else {
-                    if let Some(period) = new_yaml.life_periods.iter_mut().find(|p| p.id == item.id) {
+                    if let Some(period) = new_yaml.life_periods.iter_mut().find(|p| p.id == item.id)
+                    {
                         period.name = item.name.clone();
                         period.start = item.start.clone();
                         period.color = item.color.clone();
@@ -160,8 +205,11 @@ pub fn EditLegendItem() -> Element {
         let new_date = evt.value().to_string();
         debug!("Updating date: {}", new_date);
         current_date.set(new_date.clone());
-        
-        let is_event = app_state().item_state.as_ref().map_or(false, |item| item.is_event);
+
+        let is_event = app_state()
+            .item_state
+            .as_ref()
+            .map_or(false, |item| item.is_event);
         if is_valid_date(&new_date, !is_event) {
             if is_event {
                 if let (Some(min), Some(max)) = (min_date, max_date) {
@@ -174,7 +222,11 @@ pub fn EditLegendItem() -> Element {
                         date_error.set(String::new());
                         debug!("Valid event date set");
                     } else {
-                        date_error.set(format!("Date must be between {} and {}", min.format("%Y-%m-%d"), max.format("%Y-%m-%d")));
+                        date_error.set(format!(
+                            "Date must be between {} and {}",
+                            min.format("%Y-%m-%d"),
+                            max.format("%Y-%m-%d")
+                        ));
                         warn!("Invalid event date: {}", new_date);
                     }
                 }
@@ -196,7 +248,10 @@ pub fn EditLegendItem() -> Element {
         if is_valid_hex_color(&color_input()) {
             color_input().to_string()
         } else {
-            app_state().item_state.as_ref().map_or("#000000".to_string(), |item| item.color.clone())
+            app_state()
+                .item_state
+                .as_ref()
+                .map_or("#000000".to_string(), |item| item.color.clone())
         }
     };
 
@@ -204,7 +259,11 @@ pub fn EditLegendItem() -> Element {
         if let Some(item) = app_state().item_state {
             let mut new_yaml = app_state().yaml.clone();
             if item.is_event {
-                if let Some(period) = new_yaml.life_periods.iter_mut().find(|p| p.id == app_state().selected_life_period.unwrap()) {
+                if let Some(period) = new_yaml
+                    .life_periods
+                    .iter_mut()
+                    .find(|p| p.id == app_state().selected_life_period.unwrap())
+                {
                     period.events.retain(|e| e.id != item.id);
                 }
             } else {

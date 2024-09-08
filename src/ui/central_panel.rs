@@ -1,7 +1,7 @@
-use dioxus::prelude::*;
-use crate::ui::{LifetimeView, EventView};
-use uuid::Uuid;
 use crate::models::MyLifeApp;
+use crate::ui::{EventView, LifetimeView};
+use dioxus::prelude::*;
+use uuid::Uuid;
 
 #[component]
 pub fn CentralPanel() -> Element {

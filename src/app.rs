@@ -1,9 +1,9 @@
-use dioxus::prelude::*;
 use crate::models::{MyLifeApp, Yaml};
+use crate::ui::{BottomPanel, CentralPanel, TopPanel};
 use crate::yaml_manager::get_yaml;
-use crate::ui::{TopPanel, BottomPanel, CentralPanel};
 #[cfg(not(target_arch = "wasm32"))]
-use crate::yaml_manager::{get_yaml_manager, get_available_yamls};
+use crate::yaml_manager::{get_available_yamls, get_yaml_manager};
+use dioxus::prelude::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus_logger::tracing::error;
@@ -36,14 +36,12 @@ pub fn App() -> Element {
             let yamls = get_yaml_manager().get_available_yamls();
             app_state.write().yaml_files = yamls.unwrap_or_default();
         }
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         {
             let loaded_yamls = load_yamls();
             app_state.write().loaded_yamls = loaded_yamls;
         }
-
-        
     });
 
     use_context_provider(|| app_state);
