@@ -13,8 +13,8 @@ fn is_valid_hex_color(color: &str) -> bool {
 pub fn EditLegendItem() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
     let mut color_input = use_signal(String::new);
-    let mut date_error = use_signal(|| String::new());
-    let mut current_date = use_signal(|| String::new());
+    let mut date_error = use_signal(String::new);
+    let mut current_date = use_signal(String::new);
 
     let (min_date, max_date) = use_memo(move || {
         if let Some(item) = &app_state().item_state {

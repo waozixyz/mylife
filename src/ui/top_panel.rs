@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{Yaml, MyLifeApp};
+use crate::models::MyLifeApp;
 use crate::yaml_manager::{get_yaml_manager, save_yaml, get_available_yamls};
 
 #[cfg(target_arch = "wasm32")]
@@ -115,7 +115,7 @@ pub fn TopPanel() -> Element {
                         for option in options.iter() {
                             option {
                                 value: "{option}",
-                                selected: if *option == app_state().selected_yaml { true } else { false },
+                                selected: *option == app_state().selected_yaml,
                                 "{option}"
                             }
                         }
@@ -133,7 +133,7 @@ pub fn TopPanel() -> Element {
                         for year in 60..=120 {
                             option {
                                 value: "{year}",
-                                selected: if year == app_state().yaml.life_expectancy { true } else { false },
+                                selected: year == app_state().yaml.life_expectancy,
                                 "{year}"
                             }
                         }

@@ -40,10 +40,6 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         }).collect::<Vec<_>>()
     });
 
-    let handle_mouse_enter = move |period_id: Option<Uuid>| {
-        hovered_period.set(period_id);
-    };
-
     let handle_mouse_leave = move |_| {
         hovered_period.set(None);
     };

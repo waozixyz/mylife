@@ -17,6 +17,7 @@ use js_sys;
 
 use dioxus::prelude::*;
 use crate::models::MyLifeApp;
+#[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
 
@@ -25,6 +26,7 @@ const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
 
 pub trait YamlManager {
     fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml>;
+    #[cfg(target_arch = "wasm32")]
     fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
     fn get_available_yamls(&self) -> io::Result<Vec<String>>;
 }
@@ -50,12 +52,14 @@ impl YamlManager for NativeYamlManager {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
+    #[cfg(target_arch = "wasm32")]
     fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
         let yaml_content = serde_yaml::to_string(yaml)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let yaml_path = Path::new(&self.data_folder).join(yaml_file);
         fs::write(yaml_path, yaml_content)
     }
+
     fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         let data_folder = Path::new(&self.data_folder);
         let yamls = fs::read_dir(data_folder)?
@@ -133,6 +137,7 @@ pub fn get_default_yaml() -> Yaml {
     serde_yaml::from_str(DEFAULT_YAML).expect("Failed to load default yaml")
 }
 
+#[cfg(target_arch = "wasm32")]
 pub async fn load_yaml_async() -> Option<(String, Yaml)> {
     #[cfg(target_arch = "wasm32")]
     {

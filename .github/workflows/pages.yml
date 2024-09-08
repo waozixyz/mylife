@@ -31,7 +31,7 @@ jobs:
         run: cargo install dioxus-cli
       
       - name: Build
-        run: dioxus build --release --platform web
+        run: dx build --release --platform web
         env:
           PUBLIC_URL: "https://mylife.waozi.xyz"
       

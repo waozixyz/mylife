@@ -97,7 +97,7 @@ jobs:
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli
       - name: Build for ${{ matrix.TARGET }}
-        run: dioxus build --release --platform ${{ matrix.TARGET }}
+        run: dx build --release --platform ${{ matrix.TARGET }}
       - name: Rename and package
         shell: bash
         run: |
