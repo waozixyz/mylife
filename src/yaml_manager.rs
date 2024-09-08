@@ -28,6 +28,9 @@ pub trait YamlManager {
     #[cfg(target_arch = "wasm32")]
     fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
     fn get_available_yamls(&self) -> io::Result<Vec<String>>;
+
+    #[cfg(target_arch = "wasm32")]
+    fn update_yaml_in_storage(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,13 +54,6 @@ impl YamlManager for NativeYamlManager {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
-    #[cfg(target_arch = "wasm32")]
-    fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
-        let yaml_content = serde_yaml::to_string(yaml)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        let yaml_path = Path::new(&self.data_folder).join(yaml_file);
-        fs::write(yaml_path, yaml_content)
-    }
 
     fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         let data_folder = Path::new(&self.data_folder);
@@ -75,6 +71,7 @@ impl YamlManager for NativeYamlManager {
             .collect::<Vec<String>>();
         Ok(yamls)
     }
+
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -83,7 +80,19 @@ pub struct WasmYamlManager;
 #[cfg(target_arch = "wasm32")]
 impl YamlManager for WasmYamlManager {
     fn load_yaml(&self, _yaml_file: &str) -> io::Result<Yaml> {
-        Ok(get_default_yaml())
+        let window = web_sys::window()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
+        let storage = window
+            .local_storage()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
+
+        if let Ok(Some(yaml_content)) = storage.get_item("current_yaml") {
+            serde_yaml::from_str(&yaml_content)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        } else {
+            Ok(get_default_yaml())
+        }
     }
 
     fn save_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> io::Result<()> {
@@ -120,6 +129,25 @@ impl YamlManager for WasmYamlManager {
 
     fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         Ok(vec!["Default".to_string()])
+    }
+
+
+    fn update_yaml_in_storage(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
+        let yaml_content = serde_yaml::to_string(yaml)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let window = web_sys::window()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
+        let storage = window
+            .local_storage()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
+
+        storage
+            .set_item(yaml_file, &yaml_content)
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to set item in localStorage"))?;
+
+        Ok(())
     }
 }
 
@@ -218,6 +246,19 @@ pub fn get_available_yamls() -> Vec<String> {
         .expect("Failed to get available yamls")
 }
 
+pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        save_yaml(yaml, yaml_file)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        get_yaml_manager()
+            .update_yaml_in_storage(yaml, yaml_file)
+            .map_err(|e| format!("Failed to update yaml in storage: {:?}", e))
+    }
+}
 pub fn import_yaml() -> Option<(String, Yaml)> {
     #[cfg(not(target_arch = "wasm32"))]
     {

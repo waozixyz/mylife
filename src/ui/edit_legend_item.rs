@@ -1,6 +1,6 @@
 use crate::models::{LifePeriod, LifePeriodEvent, MyLifeApp};
 use crate::utils::date_utils::is_valid_date;
-use crate::yaml_manager::save_yaml;
+use crate::yaml_manager::update_yaml;
 use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{debug, warn};
@@ -174,7 +174,8 @@ pub fn EditLegendItem() -> Element {
                     new_yaml.life_periods.sort_by(|a, b| a.start.cmp(&b.start));
                 }
                 app_state.write().yaml = new_yaml;
-                let _ = save_yaml(&app_state().yaml, &app_state().selected_yaml);
+
+                let _ = update_yaml(&app_state().yaml, &app_state().selected_yaml);
                 debug!("Yaml updated successfully");
             } else {
                 warn!("Attempted to update yaml with no item state");
@@ -270,7 +271,7 @@ pub fn EditLegendItem() -> Element {
                 new_yaml.life_periods.retain(|p| p.id != item.id);
             }
             app_state.write().yaml = new_yaml;
-            let _ = save_yaml(&app_state().yaml, &app_state().selected_yaml);
+            let _ = update_yaml(&app_state().yaml, &app_state().selected_yaml);
         }
         app_state.write().item_state = None;
         app_state.write().temp_start_date = String::new();
