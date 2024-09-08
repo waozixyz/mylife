@@ -54,7 +54,11 @@ fn Home(yaml: String) -> Element {
     });
 
     let app_state = use_signal(|| {
+        #[cfg(target_arch = "wasm32")]
         let mut state = initialize_app_state();
+        #[cfg(not(target_arch = "wasm32"))]
+        let state = initialize_app_state();
+
         #[cfg(target_arch = "wasm32")]
         if !yaml.is_empty() {
             state.selected_yaml = "Shared YAML".to_string();

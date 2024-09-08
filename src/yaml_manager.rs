@@ -1,4 +1,8 @@
 use crate::models::Yaml;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::models::MyLifeApp;
+#[cfg(not(target_arch = "wasm32"))]
+use dioxus::prelude::*;
 use std::io;
 
 #[cfg(not(target_arch = "wasm32"))]
