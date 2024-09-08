@@ -68,7 +68,7 @@ life_periods:
     color: '#3F51B5'
     start: 2024-01-08
   - id: 951982fc-c310-4f46-8cc1-818da7a0cb90
-    name: Learning New Skills
+    name: Learning New Skill
     color: '#CDDC39'
     start: 2024-04-01
   - id: 383bebfb-fb5d-4a5e-9642-eb7d98d27369
@@ -84,6 +84,11 @@ life_periods:
     color: '#F44336'
     start: 2024-11-25
 - id: d1339a3a-e4f5-4c13-853c-afd525b670e2
+  name: New Period
+  start: 2024-07
+  color: '#922252'
+  events: []
+- id: 2a6aa897-94c7-4e72-acc6-237ded3f53a0
   name: New Period
   start: 2024-09
   color: '#000000'

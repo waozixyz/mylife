@@ -7,6 +7,11 @@ pub fn Legend() -> Element {
     // Fetch signals from context
     let mut app_state = use_context::<Signal<MyLifeApp>>();
 
+    let mut open_edit_modal = move |item: LegendItem| {
+        app_state.write().item_state = Some(item.clone());
+        app_state.write().temp_start_date = item.start.clone();
+    };
+
     // Directly handle rendering without `legend_items` variable
     let legend_items = {
         let mut legend_items = Vec::new();
@@ -28,7 +33,7 @@ pub fn Legend() -> Element {
                             key: "{item.id}",
                             class: "legend-item",
                             style: "display: flex; align-items: center; height: 20px; cursor: pointer; background-color: {item.color};",
-                            onclick: move |_| app_state.write().selected_legend_item = Some(item.clone()),
+                            onclick: move |_| open_edit_modal(item.clone()),
                             div {
                                 class: "legend-item-text",
                                 style: "color: black; text-align: center; width: 100%;",
@@ -54,7 +59,7 @@ pub fn Legend() -> Element {
                                     key: "{item.id}",
                                     class: "legend-item",
                                     style: "display: flex; align-items: center; height: 20px; cursor: pointer; background-color: {item.color};",
-                                    onclick: move |_| app_state.write().selected_legend_item = Some(item.clone()),
+                                    onclick: move |_| open_edit_modal(item.clone()),
                                     div {
                                         class: "legend-item-text",
                                         style: "color: black; text-align: center; width: 100%;",

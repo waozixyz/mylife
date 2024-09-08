@@ -61,11 +61,8 @@ pub fn BottomPanel() -> Element {
                     class: "legend-items",
                     Legend {}
                 }
-                // Add this block to render the EditLegendItem component
-                {app_state().item_state.is_some().then(|| rsx!{
-                    EditLegendItem {}
-                })}
             }
+            EditLegendItem {}
         }
     }
 }
