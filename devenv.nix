@@ -3,7 +3,7 @@
   languages.rust = {
     enable = true;
     channel = "stable";
-    targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown"];
+    targets = [ "x86_64-unknown-linux-gnu" "wasm32-unknown-unknown" "aarch64-linux-android" "armv7-linux-androideabi" "i686-linux-android" "x86_64-linux-android"];
     components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
   };
   packages = with pkgs; [

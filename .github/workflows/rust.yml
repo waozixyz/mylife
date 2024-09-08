@@ -8,6 +8,7 @@ permissions:
 env:
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
+  PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -64,11 +65,16 @@ jobs:
             libcairo2-dev \
             libgdk-pixbuf2.0-dev \
             libwayland-dev \
-            libxkbcommon-dev
+            libxkbcommon-dev \
+            libjavascriptcoregtk-4.1-dev
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli
       - name: Build for ${{ matrix.TARGET }}
-        run: dx build --release --platform ${{ matrix.TARGET }}
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig
+          fi
+          dx build --release --platform ${{ matrix.TARGET }}
       - name: Rename and package
         shell: bash
         run: |
