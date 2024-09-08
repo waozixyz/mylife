@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 pub fn Legend() -> Element {
     // Fetch signals from context
     let mut app_state = use_context::<Signal<MyLifeApp>>();
-    let mut yaml_state = use_context::<Signal<Yaml>>();
+    let yaml_state = use_context::<Signal<Yaml>>();
 
     let mut open_edit_modal = move |item: LegendItem| {
         app_state.write().item_state = Some(item.clone());

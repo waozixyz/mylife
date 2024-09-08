@@ -6,8 +6,6 @@ use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
-use crate::models::MyLifeApp;
-use dioxus::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
@@ -15,7 +13,7 @@ use rfd::FileDialog;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::{JsFuture, spawn_local};
+use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Blob, FileReader, HtmlAnchorElement, Url, File, HtmlInputElement};
 #[cfg(target_arch = "wasm32")]

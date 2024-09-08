@@ -3,10 +3,6 @@ use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
 use dioxus::prelude::*;
 
 use crate::yaml_manager::import_yaml;
-#[cfg(target_arch = "wasm32")]
-use crate::yaml_manager::load_yaml_async;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::spawn_local;
 
 use dioxus_logger::tracing::{error, info};
 
@@ -47,8 +43,6 @@ pub fn TopPanel() -> Element {
 
     let buttons = {
         #[cfg(target_arch = "wasm32")]
-        let app_state_clone = app_state.clone();
-        let yaml_state_clone = yaml_state.clone();
         rsx! {
             button {
                 onclick: load_yaml,
@@ -79,14 +73,7 @@ pub fn TopPanel() -> Element {
         #[cfg(not(target_arch = "wasm32"))]
         rsx! {
             button {
-                onclick: move |_| {
-                    if let Some((name, new_yaml)) = import_yaml() {
-                        yaml_state.set(new_yaml);
-                        app_state.write().selected_yaml = name;
-                    } else {
-                        error!("Failed to import YAML configuration");
-                    }
-                },
+                onclick: load_yaml,
                 "📥 Load YAML"
             }
             button {

@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LifePeriod, Yaml};
+use crate::models::{LifePeriod, Yaml};
 use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
 use dioxus_logger::tracing::{error, debug};
@@ -13,7 +13,6 @@ struct CellData {
 
 #[component]
 pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
-    let app_state = use_context::<Signal<MyLifeApp>>();
     let yaml_state = use_context::<Signal<Yaml>>();
     let mut hovered_period = use_signal(|| None::<Uuid>);
 

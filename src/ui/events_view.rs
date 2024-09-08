@@ -1,11 +1,10 @@
-use crate::models::{LifePeriodEvent, MyLifeApp, Yaml};
+use crate::models::{LifePeriodEvent, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
 #[component]
 pub fn EventView(selected_life_period_id: Uuid) -> Element {
-    let app_state = use_context::<Signal<MyLifeApp>>();
     let yaml_state = use_context::<Signal<Yaml>>();
 
     let life_period = use_memo(move || {
