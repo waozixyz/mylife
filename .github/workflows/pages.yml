@@ -1,45 +1,13 @@
-name: Github Pages
+name: github pages
 
 on:
   push:
     branches:
       - main
-# Uncomment below for release-based deployment
-# on:
-#   release:
-#     types:
-#       - published
-
-permissions:
-  contents: write # for committing to gh-pages branch.
 
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-      
-      - name: Install Dioxus CLI
-        run: cargo install dioxus-cli
-      
-      - name: Build
-        run: dx build --release --platform web
-        env:
-          PUBLIC_URL: "https://mylife.waozi.xyz"
-      
-      - name: Create CNAME file
-        run: echo "mylife.waozi.xyz" > dist/CNAME
-      
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: dist
-          single-commit: true
+      - name: "Dioxus Deploy"
+        uses: DioxusLabs/deploy-action@0.1.2

@@ -1,4 +1,4 @@
-name: CI
+name: Dioxus Builds
 
 on: [push, pull_request, workflow_dispatch]
 
@@ -8,6 +8,10 @@ permissions:
 env:
   RUSTFLAGS: -D warnings
   RUSTDOCFLAGS: -D warnings
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
@@ -21,7 +25,20 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libgdk3.0-cil-dev libglib2.0-dev libatk1.0-dev libpango1.0-dev libcairo2-dev
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libsoup2.4-dev \
+            libglib2.0-dev \
+            libatk1.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libgdk-pixbuf2.0-dev \
+            libwayland-dev \
+            libxkbcommon-dev
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -49,7 +66,24 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libgdk3.0-cil-dev libglib2.0-dev libatk1.0-dev libpango1.0-dev libcairo2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libsoup2.4-dev \
+            libglib2.0-dev \
+            libatk1.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libgdk-pixbuf2.0-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libssl-dev
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -79,7 +113,20 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libgdk3.0-cil-dev libglib2.0-dev libatk1.0-dev libpango1.0-dev libcairo2-dev
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libsoup2.4-dev \
+            libglib2.0-dev \
+            libatk1.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libgdk-pixbuf2.0-dev \
+            libwayland-dev \
+            libxkbcommon-dev
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -109,7 +156,20 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libgdk3.0-cil-dev libglib2.0-dev libatk1.0-dev libpango1.0-dev libcairo2-dev
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libsoup2.4-dev \
+            libglib2.0-dev \
+            libatk1.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libgdk-pixbuf2.0-dev \
+            libwayland-dev \
+            libxkbcommon-dev
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli
       - name: Build for ${{ matrix.TARGET }}
