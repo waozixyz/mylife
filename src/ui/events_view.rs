@@ -8,7 +8,7 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
     let app_state = use_context::<Signal<MyLifeApp>>();
 
     let life_period = use_memo(move || {
-        app_state().config.life_periods
+        app_state().yaml.life_periods
             .iter()
             .find(|p| p.id == selected_life_period_id)
             .cloned()
@@ -34,7 +34,7 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
                     NaiveDate::parse_from_str(&period.start, "%Y-%m").unwrap_or(Local::now().date_naive())
                 });
 
-            let end_date = app_state().config.life_periods.iter()
+            let end_date = app_state().yaml.life_periods.iter()
                 .find(|p| p.start > period.start)
                 .and_then(|next_period| NaiveDate::parse_from_str(&format!("{}-01", next_period.start), "%Y-%m-%d").ok())
                 .unwrap_or_else(|| Local::now().date_naive());

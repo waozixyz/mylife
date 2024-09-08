@@ -59,17 +59,3 @@
 .modal-buttons button.delete-button:hover {
     background-color: #b71c1c;
 }
-
-
-/* Settings Window Styles */
-.settings-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: var(--panel-bg-color);
-    padding: 24px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px var(--shadow-color);
-    z-index: 1000;
-}

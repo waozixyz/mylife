@@ -5,7 +5,6 @@ mod lifetime_view;
 mod top_panel;
 mod events_view;
 mod edit_legend_item;
-mod settings_window;
 
 pub use bottom_panel::BottomPanel;
 pub use central_panel::CentralPanel;

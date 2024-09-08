@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 mod app;
 mod utils;
 mod ui;
-mod config_manager;
+mod yaml_manager;
 mod models;
 
 fn main() {

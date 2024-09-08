@@ -1,4 +1,4 @@
-use crate::models::Config;
+use crate::models::Yaml;
 use std::io;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
@@ -16,45 +16,48 @@ use js_sys;
 #[cfg(target_arch = "wasm32")]
 use rfd;
 
-#[cfg(target_arch = "wasm32")]
-const DEFAULT_CONFIG: &str = include_str!("../data/default.yaml");
+use dioxus::prelude::*;
+use crate::models::MyLifeApp;
 
-pub trait ConfigManager {
-    fn load_config(&self, yaml_file: &str) -> io::Result<Config>;
-    fn save_config(&self, config: &Config, yaml_file: &str) -> io::Result<()>;
-    fn get_available_configs(&self) -> io::Result<Vec<String>>;
+#[cfg(target_arch = "wasm32")]
+const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
+
+pub trait YamlManager {
+    fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml>;
+    fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
+    fn get_available_yamls(&self) -> io::Result<Vec<String>>;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub struct NativeConfigManager {
+pub struct NativeYamlManager {
     data_folder: String,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl NativeConfigManager {
+impl NativeYamlManager {
     pub fn new(data_folder: String) -> Self {
         Self { data_folder }
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl ConfigManager for NativeConfigManager {
-    fn load_config(&self, yaml_file: &str) -> io::Result<Config> {
+impl YamlManager for NativeYamlManager {
+    fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml> {
         let yaml_path = std::path::Path::new(&self.data_folder).join(yaml_file);
         let yaml_content = std::fs::read_to_string(yaml_path)?;
-        let config: Config = serde_yaml::from_str(&yaml_content)
+        let yaml: Yaml = serde_yaml::from_str(&yaml_content)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        Ok(config)
+        Ok(yaml)
     }
 
-    fn save_config(&self, config: &Config, yaml_file: &str) -> io::Result<()> {
-        let yaml_content = serde_yaml::to_string(&config)
+    fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
+        let yaml_content = serde_yaml::to_string(&yaml)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         let yaml_path = std::path::Path::new(&self.data_folder).join(yaml_file);
         std::fs::write(yaml_path, yaml_content)
     }
 
-    fn get_available_configs(&self) -> io::Result<Vec<String>> {
+    fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         let data_folder = Path::new(&self.data_folder);
         Ok(fs::read_dir(data_folder)?
             .filter_map(|entry| {
@@ -71,17 +74,16 @@ impl ConfigManager for NativeConfigManager {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub struct WasmConfigManager;
+pub struct WasmYamlManager;
 
 #[cfg(target_arch = "wasm32")]
-impl ConfigManager for WasmConfigManager {
-    fn load_config(&self, _yaml_file: &str) -> io::Result<Config> {
-        // For WASM, we'll always return the default config
-        Ok(get_default_config())
+impl YamlManager for WasmYamlManager {
+    fn load_yaml(&self, _yaml_file: &str) -> io::Result<Yaml> {
+        Ok(get_default_yaml())
     }
 
-    fn save_config(&self, config: &Config, _yaml_file: &str) -> io::Result<()> {
-        let yaml_content = serde_yaml::to_string(&config)
+    fn save_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> io::Result<()> {
+        let yaml_content = serde_yaml::to_string(&yaml)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
@@ -109,37 +111,35 @@ impl ConfigManager for WasmConfigManager {
         Ok(())
     }
 
-    fn get_available_configs(&self) -> io::Result<Vec<String>> {
-        // For WASM, we'll always return a single default config
+    fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         Ok(vec!["Default".to_string()])
     }
 }
 
-pub fn get_config_manager() -> Box<dyn ConfigManager> {
+pub fn get_yaml_manager() -> Box<dyn YamlManager> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        Box::new(NativeConfigManager::new("data".to_string()))
+        Box::new(NativeYamlManager::new("data".to_string()))
     }
     #[cfg(target_arch = "wasm32")]
     {
-        Box::new(WasmConfigManager)
+        Box::new(WasmYamlManager)
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn get_default_config() -> Config {
-    load_config_from_yaml(DEFAULT_CONFIG).expect("Failed to load default config")
+pub fn get_default_yaml() -> Yaml {
+    load_yaml_from_yaml_content(DEFAULT_YAML).expect("Failed to load default yaml")
 }
 
-
 #[cfg(target_arch = "wasm32")]
-pub fn load_config_from_yaml(yaml_content: &str) -> Result<Config, String> {
+pub fn load_yaml_from_yaml_content(yaml_content: &str) -> Result<Yaml, String> {
     serde_yaml::from_str(yaml_content)
         .map_err(|e| format!("Failed to parse YAML: {:?}", e))
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn load_config_async() -> Option<(String, Config)> {
+pub async fn load_yaml_async() -> Option<(String, Yaml)> {
     let file = rfd::AsyncFileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
@@ -157,29 +157,60 @@ pub async fn load_config_async() -> Option<(String, Config)> {
     let promise = js_sys::Promise::resolve(&reader.result().unwrap());
     let content = JsFuture::from(promise).await.ok()?.as_string().unwrap();
 
-    match load_config_from_yaml(&content) {
-        Ok(config) => Some((file_name, config)),
+    match load_yaml_from_yaml_content(&content) {
+        Ok(yaml) => Some((file_name, yaml)),
         Err(e) => {
-            log::error!("Failed to load config from YAML: {:?}", e);
+            log::error!("Failed to load yaml from YAML: {:?}", e);
             None
         }
     }
 }
 
-pub fn get_config() -> Config {
-    get_config_manager()
-        .load_config("default.yaml")
-        .expect("Failed to load config")
+pub fn get_yaml() -> Yaml {
+    get_yaml_manager()
+        .load_yaml("default.yaml")
+        .expect("Failed to load yaml")
 }
 
-pub fn save_config(config: &Config, yaml_file: &str) -> Result<(), String> {
-    get_config_manager()
-        .save_config(config, yaml_file)
-        .map_err(|e| format!("Failed to save config: {:?}", e))
+pub fn save_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+    get_yaml_manager()
+        .save_yaml(yaml, yaml_file)
+        .map_err(|e| format!("Failed to save yaml: {:?}", e))
 }
 
-pub fn get_available_configs() -> Vec<String> {
-    get_config_manager()
-        .get_available_configs()
-        .expect("Failed to get available configs")
+pub fn get_available_yamls() -> Vec<String> {
+    get_yaml_manager()
+        .get_available_yamls()
+        .expect("Failed to get available yamls")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn import_yaml() -> Option<(String, Yaml)> {
+    let app_state = use_context::<Signal<MyLifeApp>>();
+
+    if let Some(file_path) = rfd::FileDialog::new()
+        .add_filter("YAML", &["yaml", "yml"])
+        .pick_file()
+    {
+        let file_name = file_path.file_name()?.to_str()?.to_string();
+        let content = fs::read_to_string(&file_path).ok()?;
+        let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
+        
+        let data_folder_string = app_state.read().data_folder.clone();
+        let data_folder = Path::new(&data_folder_string);
+        
+        let mut new_file_name = file_name.clone();
+        let mut counter = 1;
+        
+        while data_folder.join(&new_file_name).exists() {
+            new_file_name = format!("{}-{}.yaml", file_name.trim_end_matches(".yaml"), counter);
+            counter += 1;
+        }
+        
+        fs::copy(file_path, data_folder.join(&new_file_name)).ok()?;
+        
+        Some((new_file_name, yaml))
+    } else {
+        None
+    }
 }

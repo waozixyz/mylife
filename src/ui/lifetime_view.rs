@@ -16,13 +16,13 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let app_state = use_context::<Signal<MyLifeApp>>();
     let mut hovered_period = use_signal(|| None::<Uuid>);
 
-    let years = app_state().config.life_expectancy;
+    let years = app_state().yaml.life_expectancy;
     let cols = 48;
     let rows = (years + 3) / 4; 
 
     let cell_data = use_memo(move || {
-        let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().config.date_of_birth), "%Y-%m-%d")
-            .expect("Invalid date_of_birth format in config. Expected YYYY-MM");
+        let dob = NaiveDate::parse_from_str(&format!("{}-01", app_state().yaml.date_of_birth), "%Y-%m-%d")
+            .expect("Invalid date_of_birth format in yaml. Expected YYYY-MM");
         
         let current_date = Local::now().date_naive();
 
@@ -30,7 +30,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
             let year = index / 12;
             let month = index % 12;
             let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
-            let (color, period) = get_color_and_period_for_date(cell_date, &app_state().config.life_periods, current_date);
+            let (color, period) = get_color_and_period_for_date(cell_date, &app_state().yaml.life_periods, current_date);
             
             CellData {
                 color,

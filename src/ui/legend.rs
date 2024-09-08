@@ -16,7 +16,7 @@ pub fn Legend() -> Element {
         let mut legend_items = Vec::new();
         match app_state().view.as_str() {
             "Lifetime" => {
-                let mut sorted_periods = app_state().config.life_periods.clone();
+                let mut sorted_periods = app_state().yaml.life_periods.clone();
                 sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
 
                 for period in sorted_periods {
@@ -44,7 +44,7 @@ pub fn Legend() -> Element {
             },
             "EventView" => {
                 if let Some(period_id) = app_state().selected_life_period {
-                    if let Some(period) = app_state().config.life_periods.iter().find(|p| p.id == period_id) {
+                    if let Some(period) = app_state().yaml.life_periods.iter().find(|p| p.id == period_id) {
                         for event in &period.events {
                             let item = LegendItem {
                                 id: event.id,

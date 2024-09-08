@@ -5,7 +5,7 @@ use uuid::Uuid;
 #[serde(default)]
 pub struct MyLifeApp {
     pub selected_life_period: Option<Uuid>,
-    pub config: Config,
+    pub yaml: Yaml,
     pub view: String,
     #[cfg(not(target_arch = "wasm32"))]
     pub yaml_files: Vec<String>,
@@ -17,16 +17,16 @@ pub struct MyLifeApp {
     pub selected_legend_item: Option<LegendItem>,
     #[serde(skip)]
     pub original_legend_item: Option<LegendItem>,
-    pub loaded_configs: Vec<(String, Config)>,
+    pub loaded_yamls: Vec<(String, Yaml)>,
     #[cfg(target_arch = "wasm32")]
-    pub selected_config_index: usize,
-    pub show_settings: bool,
+    pub selected_yaml_index: usize,
     pub item_state: Option<LegendItem>,
     pub temp_start_date: String,
+    pub data_folder: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Config {
+pub struct Yaml {
     pub name: String,
     pub date_of_birth: String,
     pub life_expectancy: u32,

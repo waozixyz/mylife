@@ -1,6 +1,6 @@
 name: John Doe
 date_of_birth: 2000-01
-life_expectancy: 80
+life_expectancy: 92
 life_periods:
 - id: 12ff9e73-b460-4054-bbc4-d57a3bef71a4
   name: Childhood
@@ -19,24 +19,12 @@ life_periods:
   name: Teenage Years
   start: 2013-01
   color: '#00FF77'
-  events:
-  - id: 4774081c-dbd2-48b5-be77-8372d2d1df5b
-    name: New Event
-    color: '#000000'
-    start: 2013-01-01
-  - id: 2227923f-366f-4844-89fe-fd0ca58af161
-    name: New Event
-    color: '#6495ED'
-    start: 2013-02-01
+  events: []
 - id: 77b997ae-985a-4471-8e1c-43c248eaadd2
   name: University
   start: 2018-01
   color: '#00BEFF'
-  events:
-  - id: 8c793ef4-ca51-4ad4-8c4c-e49fe98b8e6c
-    name: New Event
-    color: '#000000'
-    start: 2018-01-01
+  events: []
 - id: 70c24bf1-468d-4886-a9bb-da14aab619d9
   name: Career Growth
   start: 2022-01

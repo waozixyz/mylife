@@ -61,4 +61,4 @@ devenv.local.nix
 .envrc
 
 data
-!data/config.yaml
+!data/default.yaml

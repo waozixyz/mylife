@@ -41,6 +41,9 @@ body {
     align-items: center;
     margin-bottom: 12px;
 }
+.flex {
+    display: flex;
+}
 
 /* Central Panel Styles */
 .central-panel {
@@ -111,117 +114,3 @@ body {
     height: 100%;
 }
 
-
-.lifetime-view-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.lifetime-view-svg {
-    width: 100%;
-    height: auto;
-    max-width: 1200px;
-}
-
-
-.event-view {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-}
-
-.event-cell {
-    aspect-ratio: 1;
-    border: 1px solid gray;
-}
-
-.event-view-empty, .event-view-not-found {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    font-style: italic;
-    color: var(--text-color);
-}
-
-
-.add-new-item {
-    display: flex;
-    align-items: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    width: 100%;
-    text-align: left;
-}
-
-.add-new-item .legend-color {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    margin-right: 10px;
-    font-weight: bold;
-    color: white;
-}
-
-.add-new-item .legend-name {
-    font-size: 14px;
-}
-
-.edit-legend-item h2 {
-    margin-top: 0;
-    margin-bottom: 16px;
-    color: var(--text-color);
-}
-
-.edit-legend-item input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 16px;
-    background-color: var(--input-bg-color);
-    border: 1px solid var(--input-border-color);
-    border-radius: 4px;
-    color: var(--text-color);
-}
-
-.edit-legend-item input:focus {
-    outline: none;
-    border-color: var(--input-focus-color);
-}
-
-.color-picker {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-    justify-content: space-between;
-}
-
-.color-picker label {
-    margin-right: 10px;
-}
-
-
-.color-picker input {
-    margin-top: 15px;
-    width: 90%;
-    background-color: var(--input-bg-color);
-    border: 1px solid var(--input-border-color);
-    border-radius: 4px;
-    color: var(--text-color);
-}
-
-.color-preview {
-    margin-left: 10px;
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-}

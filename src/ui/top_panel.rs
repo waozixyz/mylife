@@ -1,32 +1,20 @@
 use dioxus::prelude::*;
-use crate::models::{Config, MyLifeApp};
-use crate::config_manager::get_config_manager;
+use crate::models::{Yaml, MyLifeApp};
+use crate::yaml_manager::{get_yaml_manager, save_yaml, get_available_yamls};
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
-
 #[cfg(target_arch = "wasm32")]
-use crate::config_manager::load_config_async;
+use crate::yaml_manager::load_yaml_async;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::yaml_manager::import_yaml;
 
 use dioxus_logger::tracing::error;
-
 
 #[component]
 pub fn TopPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
-
-
-    #[cfg(target_arch = "wasm32")]
-    let options = get_config_manager().get_available_configs().unwrap_or_default();
-    
-    #[cfg(not(target_arch = "wasm32"))]
-    let options: Vec<String> = {
-        let mut config_names = Vec::new();
-        for (name, _) in app_state().loaded_configs.iter() {
-            config_names.push(name.clone());
-        }
-        config_names
-    };
+    let options = get_available_yamls();
 
     let buttons = {
         #[cfg(target_arch = "wasm32")]
@@ -34,33 +22,64 @@ pub fn TopPanel() -> Element {
             button {
                 onclick: move |_| {
                     spawn_local(async move {
-                        if let Some((name, new_config)) = load_config_async().await {
-                            app_state.write().config = new_config;
+                        if let Some((name, new_yaml)) = load_yaml_async().await {
+                            app_state.write().yaml = new_yaml;
                             app_state.write().selected_yaml = name;
                         } else {
                             error!("Failed to load YAML configuration");
                         }
                     });
                 },
-                "Load YAML"
+                "📥 Load YAML"
             }
             button {
                 onclick: move |_| {
-                    if let Err(e) = get_config_manager().save_config(&app_state().config, &app_state().selected_yaml) {
-                        error!("Failed to save config: {}", e);
+                    if let Err(e) = save_yaml(&app_state().yaml, &app_state().selected_yaml) {
+                        error!("Failed to save YAML: {}", e);
                     }
                 },
-                "Save YAML"
+                "💾 Save YAML"
+            }
+            button {
+                onclick: move |_| {
+                    let yaml_content = serde_yaml::to_string(&app_state().yaml).unwrap_or_default();
+                    let encoded_yaml = js_sys::encode_uri_component(&yaml_content);
+                    let current_url = web_sys::window().unwrap().location().href().unwrap();
+                    let base_url = web_sys::Url::new(&current_url).unwrap();
+                    let share_url = format!("{}?yaml={}", base_url.origin(), encoded_yaml);
+                    
+                    web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
+                },
+                "📤 Share"
             }
         }
-
+    
         #[cfg(not(target_arch = "wasm32"))]
         rsx! {
             button {
                 onclick: move |_| {
+                    if let Some((name, new_yaml)) = import_yaml() {
+                        app_state.write().yaml = new_yaml;
+                        app_state.write().selected_yaml = name;
+                    } else {
+                        error!("Failed to import YAML configuration");
+                    }
+                },
+                "📥 Load YAML"
+            }
+            button {
+                onclick: move |_| {
+                    if let Err(e) = save_yaml(&app_state().yaml, &app_state().selected_yaml) {
+                        error!("Failed to save YAML: {}", e);
+                    }
+                },
+                "💾 Save YAML"
+            }
+            button {
+                onclick: move |_| {
                     std::process::exit(0);
                 },
-                "Quit"
+                "🚪 Quit"
             }
         }
     };
@@ -68,97 +87,52 @@ pub fn TopPanel() -> Element {
     rsx! {
         div {
             class: "top-panel",
-            
-            div {
-
-                class: "top-row",
-                // Back button (only in EventView)
-                if app_state().view == "EventView" {
-                    button {
-                        onclick: move |_| {
-                            app_state.write().view = "Lifetime".to_string();
-                        },
-                        span { "⬅" },
-                    }
-                }
-                            
-
-                // Configuration selector
-                select {
-                    value: "{app_state().selected_yaml}",
-                    onchange: move |evt| {
-                        app_state.write().selected_yaml = evt.value();
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            match get_config_manager().load_config(&evt.value()) {
-                                Ok(new_config) => {
-                                    app_state.write().config = new_config;
-                                },
-                                Err(e) => error!("Failed to load config: {:?}", e),
-                            }
-                        }
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            if let Some(index) = app_state().loaded_configs.iter().position(|(name, _)| name == &evt.value()) {
-                                app_state.write().selected_config_index = index;
-                                app_state.write().config = app_state().loaded_configs[index].1.clone();
-                            }
-                        }
-                    },
-
-
-
-                    for option in options.iter() {
-                        option { value: "{option}", "{option}" }
-                    }
-                }
-
-                // Settings button
+            // Back button (only in EventView)
+            if app_state().view == "EventView" {
                 button {
-                    class: "settings-button",
                     onclick: move |_| {
-                        app_state.write().show_settings = true;
+                        app_state.write().view = "Lifetime".to_string();
                     },
-                    "⚙"
+                    span { "⬅" },
                 }
             }
-
-            div {
-                class: "bottom-row",
-                { buttons }
-            }
-        }
-
-        if app_state().show_settings {
-            div {
-                class: "settings-modal",
-                h2 { "Settings" }
-            
-                if app_state().view == "Lifetime" {
+                        
+            // Configuration selector and Life Expectancy (only in Lifetime view)
+            if app_state().view == "Lifetime" {
+                div {
+                    class: "flex",
                     select {
-                        value: "{app_state().config.life_expectancy}",
+                        value: "{app_state().selected_yaml}",
+                        onchange: move |evt| {
+                            app_state.write().selected_yaml = evt.value();
+                            if let Ok(new_yaml) = get_yaml_manager().load_yaml(&evt.value()) {
+                                app_state.write().yaml = new_yaml;
+                            } else {
+                                error!("Failed to load yaml: {}", evt.value());
+                            }
+                        },
+                        for option in options.iter() {
+                            option { value: "{option}", "{option}" }
+                        }
+                    }
+                    
+                    label { "Life Expectancy: " }
+                    select {
+                        value: "{app_state().yaml.life_expectancy}",
                         onchange: move |evt| {
                             if let Ok(value) = evt.value().parse() {
-                                app_state.write().config = Config {
-                                    life_expectancy: value,
-                                    ..app_state().config
-                                };
+                                app_state.write().yaml.life_expectancy = value;
                             } else {
                                 error!("Failed to parse life expectancy: {}", evt.value());
                             }
                         },
-                        
                         for year in 60..=120 {
                             option { value: "{year}", "{year}" }
                         }
                     }
                 }
-            
-                button {
-                    onclick: move |_| {
-                        app_state.write().show_settings = false;
-                    },
-                    "Close"
+                div {
+                    { buttons }
                 }
             }
         }
