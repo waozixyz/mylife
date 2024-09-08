@@ -1,4 +1,4 @@
-use crate::models::{LegendItem, MyLifeApp};
+use crate::models::{LegendItem, MyLifeApp, Yaml};
 use crate::ui::{EditLegendItem, Legend};
 use chrono::{Datelike, Local};
 use dioxus::prelude::*;
@@ -7,6 +7,8 @@ use uuid::Uuid;
 #[component]
 pub fn BottomPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
+    let yaml_state = use_context::<Signal<Yaml>>();
+
     let add_new_item = move |_| {
         let current_view = &app_state().view;
         let default_start = if *current_view == "Lifetime" {
@@ -15,8 +17,7 @@ pub fn BottomPanel() -> Element {
         } else {
             // For EventView, use the start date of the selected life period
             if let Some(period_id) = app_state().selected_life_period {
-                if let Some(period) = app_state()
-                    .yaml
+                if let Some(period) = yaml_state()
                     .life_periods
                     .iter()
                     .find(|p| p.id == period_id)

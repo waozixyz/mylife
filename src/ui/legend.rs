@@ -1,10 +1,11 @@
-use crate::models::{LegendItem, MyLifeApp};
+use crate::models::{LegendItem, MyLifeApp, Yaml};
 use dioxus::prelude::*;
 
 #[component]
 pub fn Legend() -> Element {
     // Fetch signals from context
     let mut app_state = use_context::<Signal<MyLifeApp>>();
+    let mut yaml_state = use_context::<Signal<Yaml>>();
 
     let mut open_edit_modal = move |item: LegendItem| {
         app_state.write().item_state = Some(item.clone());
@@ -16,7 +17,7 @@ pub fn Legend() -> Element {
         let mut legend_items = Vec::new();
         match app_state().view.as_str() {
             "Lifetime" => {
-                let mut sorted_periods = app_state().yaml.life_periods.clone();
+                let mut sorted_periods = yaml_state().life_periods.clone();
                 sorted_periods.sort_by(|a, b| a.start.cmp(&b.start));
 
                 for period in sorted_periods {
@@ -44,8 +45,7 @@ pub fn Legend() -> Element {
             }
             "EventView" => {
                 if let Some(period_id) = app_state().selected_life_period {
-                    if let Some(period) = app_state()
-                        .yaml
+                    if let Some(period) = yaml_state()
                         .life_periods
                         .iter()
                         .find(|p| p.id == period_id)

@@ -6,22 +6,28 @@ use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
-#[cfg(target_arch = "wasm32")]
-use js_sys;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::JsFuture;
-#[cfg(target_arch = "wasm32")]
-use web_sys::{Blob, FileReader, HtmlAnchorElement, Url};
-
 use crate::models::MyLifeApp;
 use dioxus::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
+
+#[cfg(target_arch = "wasm32")]
+use js_sys;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::{JsFuture, spawn_local};
+#[cfg(target_arch = "wasm32")]
+use web_sys::{Blob, FileReader, HtmlAnchorElement, Url, File, HtmlInputElement};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::closure::Closure;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::{JsValue, JsCast};
+
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
+
+use dioxus_logger::tracing::{info, warn, error};
+
 
 pub trait YamlManager {
     fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml>;
@@ -126,11 +132,23 @@ impl YamlManager for WasmYamlManager {
 
         Ok(())
     }
-
     fn get_available_yamls(&self) -> io::Result<Vec<String>> {
-        Ok(vec!["Default".to_string()])
-    }
+        let window = web_sys::window()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
+        let storage = window
+            .local_storage()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
 
+        let keys = js_sys::Object::keys(&storage);
+        let yamls: Vec<String> = keys
+            .iter()
+            .filter_map(|key| key.as_string())
+            .filter(|key| key.ends_with(".yaml") || key.ends_with(".yml"))
+            .collect();
+
+        Ok(yamls)
+    }
 
     fn update_yaml_in_storage(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
         let yaml_content = serde_yaml::to_string(yaml)
@@ -169,41 +187,73 @@ pub fn get_default_yaml() -> Yaml {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_yaml_async() -> Option<(String, Yaml)> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let file = rfd::AsyncFileDialog::new()
-            .add_filter("YAML", &["yaml", "yml"])
-            .pick_file()
-            .await?;
+    info!("Starting load_yaml_async");
+    let window = web_sys::window()?;
+    let document = window.document()?;
 
-        let file_name = file.file_name();
-        let content = String::from_utf8(file.read().await).ok()?;
+    let input: HtmlInputElement = document
+        .create_element("input")
+        .ok()?
+        .dyn_into()
+        .ok()?;
 
-        serde_yaml::from_str(&content)
-            .map(|yaml| Some((file_name, yaml)))
-            .unwrap_or_else(|e| {
-                log::error!("Failed to load yaml from YAML: {:?}", e);
-                None
-            })
-    }
+    input.set_type("file");
+    input.set_accept(".yaml,.yml");
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use tokio::fs;
+    let promise = js_sys::Promise::new(&mut |resolve, _| {
+        let on_change = Closure::once(Box::new(move |_event: web_sys::Event| {
+            resolve.call0(&JsValue::NULL).unwrap();
+        }));
+        input.set_onchange(Some(on_change.as_ref().unchecked_ref()));
+        on_change.forget();
+    });
 
-        let file = rfd::FileDialog::new()
-            .add_filter("YAML", &["yaml", "yml"])
-            .pick_file()?;
+    input.click();
+    JsFuture::from(promise).await.ok()?;
 
-        let file_name = file.file_name()?.to_string_lossy().into_owned();
-        let content = fs::read_to_string(&file).await.ok()?;
+    let file: File = input.files()?.get(0)?;
+    let file_name = file.name();
 
-        serde_yaml::from_str(&content)
-            .map(|yaml| Some((file_name, yaml)))
-            .unwrap_or_else(|e| {
-                log::error!("Failed to load yaml from YAML: {:?}", e);
-                None
-            })
+    let reader = FileReader::new().ok()?;
+    
+    let reader_promise = js_sys::Promise::new(&mut |resolve, reject| {
+        let onload = Closure::once(Box::new(move |_event: web_sys::Event| {
+            resolve.call0(&JsValue::NULL).unwrap();
+        }));
+        let onerror = Closure::once(Box::new(move |_event: web_sys::Event| {
+            reject.call0(&JsValue::NULL).unwrap();
+        }));
+        reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+        reader.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+        onload.forget();
+        onerror.forget();
+    });
+
+    reader.read_as_text(&file).ok()?;
+    JsFuture::from(reader_promise).await.ok()?;
+
+    let content = reader.result().ok()?;
+    let content_string = content.as_string()?;
+
+    match serde_yaml::from_str(&content_string) {
+        Ok(yaml) => {
+            info!("YAML parsed successfully");
+            
+            // Store the loaded YAML in local storage
+            if let Some(storage) = window.local_storage().ok().flatten() {
+                if let Err(e) = storage.set_item(&file_name, &content_string) {
+                    warn!("Failed to store YAML in local storage: {:?}", e);
+                } else {
+                    info!("YAML stored in local storage");
+                }
+            }
+
+            Some((file_name, yaml))
+        }
+        Err(e) => {
+            error!("Failed to parse YAML: {:?}", e);
+            None
+        }
     }
 }
 
@@ -259,53 +309,38 @@ pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
             .map_err(|e| format!("Failed to update yaml in storage: {:?}", e))
     }
 }
+#[cfg(not(target_arch = "wasm32"))]
 pub fn import_yaml() -> Option<(String, Yaml)> {
-    #[cfg(not(target_arch = "wasm32"))]
+    let app_state = use_context::<Signal<MyLifeApp>>();
+
+    if let Some(file_path) = rfd::FileDialog::new()
+        .add_filter("YAML", &["yaml", "yml"])
+        .pick_file()
     {
-        let app_state = use_context::<Signal<MyLifeApp>>();
+        let file_name = file_path.file_name()?.to_str()?.to_string();
+        let content = fs::read_to_string(&file_path).ok()?;
+        let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
 
-        if let Some(file_path) = rfd::FileDialog::new()
-            .add_filter("YAML", &["yaml", "yml"])
-            .pick_file()
-        {
-            let file_name = file_path.file_name()?.to_str()?.to_string();
-            let content = fs::read_to_string(&file_path).ok()?;
-            let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
+        let data_folder_string = app_state.read().data_folder.clone();
+        let data_folder = Path::new(&data_folder_string);
 
-            let data_folder_string = app_state.read().data_folder.clone();
-            let data_folder = Path::new(&data_folder_string);
+        let mut new_file_name = file_name.clone();
+        let mut counter = 1;
 
-            let mut new_file_name = file_name.clone();
-            let mut counter = 1;
-
-            while data_folder.join(&new_file_name).exists() {
-                new_file_name = format!("{}-{}.yaml", file_name.trim_end_matches(".yaml"), counter);
-                counter += 1;
-            }
-
-            fs::copy(file_path, data_folder.join(&new_file_name)).ok()?;
-
-            Some((new_file_name, yaml))
-        } else {
-            None
+        while data_folder.join(&new_file_name).exists() {
+            new_file_name = format!("{}-{}.yaml", file_name.trim_end_matches(".yaml"), counter);
+            counter += 1;
         }
+
+        fs::copy(file_path, data_folder.join(&new_file_name)).ok()?;
+
+        Some((new_file_name, yaml))
+    } else {
+        None
     }
+}
 
-    #[cfg(target_arch = "wasm32")]
-    {
-        // For WASM, we'll use the load_yaml_async function
-        use wasm_bindgen_futures::spawn_local;
-
-        let (tx, rx) = std::sync::mpsc::channel();
-
-        spawn_local(async move {
-            if let Some((name, yaml)) = load_yaml_async().await {
-                tx.send(Some((name, yaml))).unwrap();
-            } else {
-                tx.send(None).unwrap();
-            }
-        });
-
-        rx.recv().unwrap()
-    }
+#[cfg(target_arch = "wasm32")]
+pub async fn import_yaml() -> Option<(String, Yaml)> {
+    load_yaml_async().await
 }

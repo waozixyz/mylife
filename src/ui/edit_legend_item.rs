@@ -1,4 +1,4 @@
-use crate::models::{LifePeriod, LifePeriodEvent, MyLifeApp};
+use crate::models::{LifePeriod, LifePeriodEvent, MyLifeApp, Yaml};
 use crate::utils::date_utils::is_valid_date;
 use crate::yaml_manager::update_yaml;
 use chrono::{Local, NaiveDate};
@@ -12,6 +12,7 @@ fn is_valid_hex_color(color: &str) -> bool {
 #[component]
 pub fn EditLegendItem() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
+    let mut yaml_state = use_context::<Signal<Yaml>>();
     let mut color_input = use_signal(String::new);
     let mut date_error = use_signal(String::new);
     let mut current_date = use_signal(String::new);
@@ -19,8 +20,7 @@ pub fn EditLegendItem() -> Element {
     let (min_date, max_date) = use_memo(move || {
         if let Some(item) = &app_state().item_state {
             if item.is_event {
-                if let Some(period) = app_state()
-                    .yaml
+                if let Some(period) = yaml_state()
                     .life_periods
                     .iter()
                     .find(|p| p.id == app_state().selected_life_period.unwrap())
@@ -28,8 +28,7 @@ pub fn EditLegendItem() -> Element {
                     let period_start =
                         NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
                             .unwrap_or_default();
-                    let period_end = app_state()
-                        .yaml
+                    let period_end = yaml_state()
                         .life_periods
                         .iter()
                         .find(|p| p.start > period.start)
@@ -56,8 +55,7 @@ pub fn EditLegendItem() -> Element {
             } else {
                 let default_date = if item.is_event {
                     debug!("Getting default date for new event");
-                    if let Some(period) = app_state()
-                        .yaml
+                    if let Some(period) = yaml_state()
                         .life_periods
                         .iter()
                         .find(|p| p.id == app_state().selected_life_period.unwrap())
@@ -65,8 +63,7 @@ pub fn EditLegendItem() -> Element {
                         let period_start =
                             NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
                                 .unwrap_or_default();
-                        let period_end = app_state()
-                            .yaml
+                        let period_end = yaml_state()
                             .life_periods
                             .iter()
                             .find(|p| p.start > period.start)
@@ -134,8 +131,9 @@ pub fn EditLegendItem() -> Element {
         debug!("Attempting to update yaml item");
         if date_error().is_empty() {
             if let Some(item) = app_state().item_state {
+                let mut new_yaml = yaml_state();
+
                 debug!("Updating item: {:?}", item);
-                let mut new_yaml = app_state().yaml.clone();
                 if item.is_event {
                     if let Some(period) = new_yaml
                         .life_periods
@@ -173,9 +171,9 @@ pub fn EditLegendItem() -> Element {
                     }
                     new_yaml.life_periods.sort_by(|a, b| a.start.cmp(&b.start));
                 }
-                app_state.write().yaml = new_yaml;
+                yaml_state.set(new_yaml);
 
-                let _ = update_yaml(&app_state().yaml, &app_state().selected_yaml);
+                let _ = update_yaml(&yaml_state(), &app_state().selected_yaml);
                 debug!("Yaml updated successfully");
             } else {
                 warn!("Attempted to update yaml with no item state");
@@ -258,7 +256,7 @@ pub fn EditLegendItem() -> Element {
 
     let delete_item = move |_| {
         if let Some(item) = app_state().item_state {
-            let mut new_yaml = app_state().yaml.clone();
+            let mut new_yaml = yaml_state();
             if item.is_event {
                 if let Some(period) = new_yaml
                     .life_periods
@@ -270,8 +268,8 @@ pub fn EditLegendItem() -> Element {
             } else {
                 new_yaml.life_periods.retain(|p| p.id != item.id);
             }
-            app_state.write().yaml = new_yaml;
-            let _ = update_yaml(&app_state().yaml, &app_state().selected_yaml);
+            yaml_state.set(new_yaml);
+            let _ = update_yaml(&yaml_state(), &app_state().selected_yaml);
         }
         app_state.write().item_state = None;
         app_state.write().temp_start_date = String::new();

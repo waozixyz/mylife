@@ -1,40 +1,62 @@
-use crate::models::MyLifeApp;
+use crate::models::{MyLifeApp, Yaml};
 use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
 use dioxus::prelude::*;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::yaml_manager::import_yaml;
 #[cfg(target_arch = "wasm32")]
 use crate::yaml_manager::load_yaml_async;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local;
 
-use dioxus_logger::tracing::error;
+use dioxus_logger::tracing::{error, info};
 
 #[component]
 pub fn TopPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
+    let mut yaml_state = use_context::<Signal<Yaml>>();
+
     let options = get_available_yamls();
+
+    let load_yaml = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use_future(move || async move {
+                if let Some((name, new_yaml)) = import_yaml().await {
+                    yaml_state.set(new_yaml.clone());
+                    app_state.write().selected_yaml = name.clone();
+                    app_state.write().loaded_yamls.push((name, new_yaml));
+                    info!("YAML loaded and state updated");
+                } else {
+                    error!("Failed to import YAML");
+                }
+            });
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some((name, new_yaml)) = import_yaml() {
+                yaml_state.set(new_yaml.clone());
+                app_state.write().selected_yaml = name.clone();
+                app_state.write().loaded_yamls.push((name, new_yaml));
+                info!("YAML loaded and state updated");
+            } else {
+                error!("Failed to import YAML");
+            }
+        }
+    };
 
     let buttons = {
         #[cfg(target_arch = "wasm32")]
+        let app_state_clone = app_state.clone();
+        let yaml_state_clone = yaml_state.clone();
         rsx! {
             button {
-                onclick: move |_| {
-                    spawn_local(async move {
-                        if let Some((name, new_yaml)) = load_yaml_async().await {
-                            app_state.write().yaml = new_yaml;
-                            app_state.write().selected_yaml = name;
-                        } else {
-                            error!("Failed to load YAML configuration");
-                        }
-                    });
-                },
+                onclick: load_yaml,
                 "📥 Load YAML"
             }
             button {
                 onclick: move |_| {
-                    if let Err(e) = save_yaml(&app_state().yaml, &app_state().selected_yaml) {
+                    if let Err(e) = save_yaml(&yaml_state(), &app_state().selected_yaml) {
                         error!("Failed to save YAML: {}", e);
                     }
                 },
@@ -42,7 +64,7 @@ pub fn TopPanel() -> Element {
             }
             button {
                 onclick: move |_| {
-                    let yaml_content = serde_yaml::to_string(&app_state().yaml).unwrap_or_default();
+                    let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
                     let encoded_yaml = js_sys::encode_uri_component(&yaml_content);
                     let current_url = web_sys::window().unwrap().location().href().unwrap();
                     let base_url = web_sys::Url::new(&current_url).unwrap();
@@ -59,7 +81,7 @@ pub fn TopPanel() -> Element {
             button {
                 onclick: move |_| {
                     if let Some((name, new_yaml)) = import_yaml() {
-                        app_state.write().yaml = new_yaml;
+                        yaml_state.set(new_yaml);
                         app_state.write().selected_yaml = name;
                     } else {
                         error!("Failed to import YAML configuration");
@@ -69,7 +91,7 @@ pub fn TopPanel() -> Element {
             }
             button {
                 onclick: move |_| {
-                    if let Err(e) = save_yaml(&app_state().yaml, &app_state().selected_yaml) {
+                    if let Err(e) = save_yaml(&yaml_state(), &app_state().selected_yaml) {
                         error!("Failed to save YAML: {}", e);
                     }
                 },
@@ -107,7 +129,7 @@ pub fn TopPanel() -> Element {
                             let selected_yaml = evt.value().to_string();
                             app_state.write().selected_yaml = selected_yaml.clone();
                             if let Ok(new_yaml) = get_yaml_manager().load_yaml(&selected_yaml) {
-                                app_state.write().yaml = new_yaml;
+                                yaml_state.set(new_yaml);
                             } else {
                                 error!("Failed to load yaml: {}", selected_yaml);
                             }
@@ -122,10 +144,10 @@ pub fn TopPanel() -> Element {
                     }
 
                     select {
-                        value: "{app_state().yaml.life_expectancy}",
+                        value: "{yaml_state().life_expectancy}",
                         onchange: move |evt| {
                             if let Ok(value) = evt.value().parse() {
-                                app_state.write().yaml.life_expectancy = value;
+                                yaml_state().life_expectancy = value;
                             } else {
                                 error!("Failed to parse life expectancy: {}", evt.value());
                             }
@@ -133,7 +155,7 @@ pub fn TopPanel() -> Element {
                         for year in 60..=120 {
                             option {
                                 value: "{year}",
-                                selected: year == app_state().yaml.life_expectancy,
+                                selected: year == yaml_state().life_expectancy,
                                 "{year}"
                             }
                         }
