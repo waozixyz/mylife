@@ -17,11 +17,12 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
     match life_period() {
         Some(period) => {
             let events = &period.events;
-            
             if events.is_empty() {
                 return rsx! {
                     div { class: "event-view-empty",
-                        "No events in this life period."
+                        h2 { "No events in this life period" }
+                        p { "This life period from {period.start} currently has no events." }
+                        p { "You can add events to this period to track important moments or milestones." }
                     }
                 };
             }

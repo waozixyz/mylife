@@ -47,8 +47,9 @@ pub fn App() -> Element {
     use_context_provider(|| app_state);
 
     rsx! {
-        style { {include_str!("../assets/main.css")} }
         style { {include_str!("../assets/input.css")} }
+        style { {include_str!("../assets/modal.css")} }
+        style { {include_str!("../assets/main.css")} }
 
         div {
             class: "app-container",

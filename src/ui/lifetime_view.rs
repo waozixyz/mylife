@@ -77,9 +77,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                                 let on_period_click = on_period_click;
                                 move |_| {
                                     if let Some(period) = &period {
-                                        if !period.events.is_empty() {
-                                            on_period_click.call(period.id);
-                                        }
+                                        on_period_click.call(period.id);
                                     }
                                 }
                             },

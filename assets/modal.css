@@ -1,0 +1,75 @@
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--panel-bg-color);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    max-width: 400px;
+    width: 100%;
+}
+
+
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.modal-buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.modal-buttons button:first-child {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.modal-buttons button.delete-button {
+    background-color: #d32f2f;
+    color: white;
+}
+
+.modal-buttons button:last-child {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+}
+
+.modal-buttons button:hover {
+    background-color: var(--button-hover-color);
+}
+
+.modal-buttons button.delete-button:hover {
+    background-color: #b71c1c;
+}
+
+
+/* Settings Window Styles */
+.settings-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--panel-bg-color);
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px var(--shadow-color);
+    z-index: 1000;
+}
