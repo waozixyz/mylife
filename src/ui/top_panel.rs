@@ -104,19 +104,23 @@ pub fn TopPanel() -> Element {
                     select {
                         value: "{app_state().selected_yaml}",
                         onchange: move |evt| {
-                            app_state.write().selected_yaml = evt.value();
-                            if let Ok(new_yaml) = get_yaml_manager().load_yaml(&evt.value()) {
+                            let selected_yaml = evt.value().to_string();
+                            app_state.write().selected_yaml = selected_yaml.clone();
+                            if let Ok(new_yaml) = get_yaml_manager().load_yaml(&selected_yaml) {
                                 app_state.write().yaml = new_yaml;
                             } else {
-                                error!("Failed to load yaml: {}", evt.value());
+                                error!("Failed to load yaml: {}", selected_yaml);
                             }
                         },
                         for option in options.iter() {
-                            option { value: "{option}", "{option}" }
+                            option {
+                                value: "{option}",
+                                selected: if *option == app_state().selected_yaml { true } else { false },
+                                "{option}"
+                            }
                         }
                     }
                     
-                    label { "Life Expectancy: " }
                     select {
                         value: "{app_state().yaml.life_expectancy}",
                         onchange: move |evt| {
@@ -127,7 +131,11 @@ pub fn TopPanel() -> Element {
                             }
                         },
                         for year in 60..=120 {
-                            option { value: "{year}", "{year}" }
+                            option {
+                                value: "{year}",
+                                selected: if year == app_state().yaml.life_expectancy { true } else { false },
+                                "{year}"
+                            }
                         }
                     }
                 }

@@ -42,6 +42,8 @@ pub fn App() -> Element {
             let loaded_yamls = load_yamls();
             app_state.write().loaded_yamls = loaded_yamls;
         }
+
+        
     });
 
     use_context_provider(|| app_state);
