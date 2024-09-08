@@ -12,7 +12,7 @@ A Rust-based application for visualizing life events on a timeline, with both na
 
 ## Development Setup
 
-This project uses `devenv` to manage dependencies and `trunk` for web builds.
+This project uses `devenv` to manage dependencies and `dioxus-cli` for building and testing.
 
 ### Prerequisites
 
@@ -30,58 +30,19 @@ cd mylife
 ```
 devenv shell
 ```
-3. Build and run the project:
-- For native:
+3. Run with live reloading:
+- For desktop:
 ```
-cargo run
+dx serve --platform desktop
 ```
 - For web:
 ```
-trunk serve
+dx serve
 ```
 
 ## Configuration Format
+See files in the [data](/data) folder
 
-```yaml
-name: John Doe
-date_of_birth: 2000-01
-life_expectancy: 80
-life_periods:
-- name: Childhood
- start: 2000-01
- color: "#FFB3BA"
-- name: Teenage Years
- start: 2013-01
- color: "#BAFFC9"
- events:
-  - name: Winter Internship
-    start: 2022-01-03
-    color: "#4CAF50"
-  - name: Spring Semester
-    start: 2022-03-21
-    color: "#2196F3"
-```
-
-## Native Version
-### Requirements
-All requirements are managed by devenv and specified in the devenv.nix file.
-
-### Usage
-```cargo run```
-
-
-## Web Version
-### Requirements
-
-- Trunk (installed via devenv)
-- wasm32-unknown-unknown target (automatically added by devenv)
-
-### Usage
-Start the development server:
-
-```trunk serve```
-
-Open the provided URL in a web browser (usually http://127.0.0.1:8080)
 
 ## Development
 ### Adding Dependencies
@@ -90,14 +51,14 @@ To add new dependencies, modify the Cargo.toml file and update the devenv.nix fi
 ## Building for Release
 
 - Native:
-```cargo build --release```
+```dx build --release --platform desktop```
 
 - Web:
-```trunk build --release```
+```dx build --release --platform web```
 
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE.md file for details.
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
