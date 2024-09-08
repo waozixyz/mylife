@@ -1,6 +1,5 @@
 use crate::models::Config;
 use std::io;
-use uuid::Uuid;
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 #[cfg(not(target_arch = "wasm32"))]

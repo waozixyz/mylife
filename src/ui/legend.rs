@@ -1,6 +1,5 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LegendItem, Config};
-use uuid::Uuid;
+use crate::models::{MyLifeApp, LegendItem};
 
 #[component]
 pub fn Legend() -> Element {

@@ -1,18 +1,17 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, LegendItem, Config, LifePeriod, LifePeriodEvent};
+use crate::models::{MyLifeApp, LifePeriod, LifePeriodEvent};
 use crate::utils::date_utils::is_valid_date;
 use crate::config_manager::save_config;
-use uuid::Uuid;
 
 fn is_valid_hex_color(color: &str) -> bool {
-    color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_digit(16))
+    color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
 
 #[component]
 pub fn EditLegendItem() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
-    let mut color_input = use_signal(|| String::new());
+    let mut color_input = use_signal(String::new);
 
     let update_config_item = move |_| {
         if let Some(item) = app_state().item_state {
@@ -32,20 +31,18 @@ pub fn EditLegendItem() -> Element {
                         });
                     }
                 }
+            } else if let Some(period) = new_config.life_periods.iter_mut().find(|p| p.id == item.id) {
+                period.name = item.name.clone();
+                period.start = item.start.clone();
+                period.color = item.color.clone();
             } else {
-                if let Some(period) = new_config.life_periods.iter_mut().find(|p| p.id == item.id) {
-                    period.name = item.name.clone();
-                    period.start = item.start.clone();
-                    period.color = item.color.clone();
-                } else {
-                    new_config.life_periods.push(LifePeriod {
-                        id: item.id,
-                        name: item.name.clone(),
-                        start: item.start.clone(),
-                        color: item.color.clone(),
-                        events: Vec::new(),
-                    });
-                }
+                new_config.life_periods.push(LifePeriod {
+                    id: item.id,
+                    name: item.name.clone(),
+                    start: item.start.clone(),
+                    color: item.color.clone(),
+                    events: Vec::new(),
+                });
             }
             app_state.write().config = new_config;
             let _ = save_config(&app_state().config, &app_state().selected_yaml);
@@ -64,7 +61,7 @@ pub fn EditLegendItem() -> Element {
         let new_color = evt.value().to_string();
         color_input.set(new_color.clone());
         if is_valid_hex_color(&new_color) {
-            if let Some(mut item) = app_state.write().item_state.as_mut() {
+            if let Some(item) = app_state.write().item_state.as_mut() {
                 item.color = new_color;
             }
         }
@@ -90,7 +87,7 @@ pub fn EditLegendItem() -> Element {
                         placeholder: "Name",
                         value: "{app_state().item_state.as_ref().unwrap().name}",
                         oninput: move |evt| {
-                            if let Some(mut item) = app_state.write().item_state.as_mut() {
+                            if let Some(item) = app_state.write().item_state.as_mut() {
                                 item.name = evt.value().to_string();
                             }
                         }
@@ -101,7 +98,7 @@ pub fn EditLegendItem() -> Element {
                         oninput: move |evt| {
                             app_state.write().temp_start_date = evt.value().to_string();
                             if is_valid_date(&evt.value(), !app_state().item_state.as_ref().unwrap().is_event) {
-                                if let Some(mut item) = app_state.write().item_state.as_mut() {
+                                if let Some(item) = app_state.write().item_state.as_mut() {
                                     item.start = evt.value().to_string();
                                 }
                             }

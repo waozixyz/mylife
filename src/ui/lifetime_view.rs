@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::models::{MyLifeApp, LifePeriod};
 use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
-use dioxus_logger::tracing::{info, error, debug};
+use dioxus_logger::tracing::{error, debug};
 
 #[derive(PartialEq, Clone)]
 struct CellData {
@@ -40,11 +40,11 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         }).collect::<Vec<_>>()
     });
 
-    let mut handle_mouse_enter = move |period_id: Option<Uuid>| {
+    let handle_mouse_enter = move |period_id: Option<Uuid>| {
         hovered_period.set(period_id);
     };
 
-    let mut handle_mouse_leave = move |_| {
+    let handle_mouse_leave = move |_| {
         hovered_period.set(None);
     };
 
@@ -74,7 +74,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                             stroke_width: if is_hovered { "0.05" } else { "0.02" },
                             onclick: {
                                 let period = cell.period.clone();
-                                let on_period_click = on_period_click.clone();
+                                let on_period_click = on_period_click;
                                 move |_| {
                                     if let Some(period) = &period {
                                         if !period.events.is_empty() {

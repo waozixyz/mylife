@@ -1,6 +1,5 @@
 
 use dioxus::prelude::*;
-use crate::config_manager::get_config_manager;
 use crate::models::MyLifeApp;
 
 #[component]

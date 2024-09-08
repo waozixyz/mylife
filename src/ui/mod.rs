@@ -14,4 +14,3 @@ pub use lifetime_view::LifetimeView;
 pub use top_panel::TopPanel;
 pub use events_view::EventView;
 pub use edit_legend_item::EditLegendItem;
-pub use settings_window::SettingsWindow;

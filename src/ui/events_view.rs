@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
-use crate::models::{MyLifeApp, Config, LifePeriodEvent};
-use chrono::{NaiveDate, Datelike, Duration, Local};
+use crate::models::{MyLifeApp, LifePeriodEvent};
+use chrono::{NaiveDate, Duration, Local};
 use uuid::Uuid;
 
 #[component]
