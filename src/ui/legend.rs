@@ -45,10 +45,8 @@ pub fn Legend() -> Element {
             }
             "EventView" => {
                 if let Some(period_id) = app_state().selected_life_period {
-                    if let Some(period) = yaml_state()
-                        .life_periods
-                        .iter()
-                        .find(|p| p.id == period_id)
+                    if let Some(period) =
+                        yaml_state().life_periods.iter().find(|p| p.id == period_id)
                     {
                         for event in &period.events {
                             let item = LegendItem {

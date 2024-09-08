@@ -1,6 +1,6 @@
-use crate::models::Yaml;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::models::MyLifeApp;
+use crate::models::Yaml;
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::*;
 use std::io;
@@ -13,23 +13,19 @@ use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
-
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::JsFuture;
-#[cfg(target_arch = "wasm32")]
-use web_sys::{Blob, FileReader, HtmlAnchorElement, Url, File, HtmlInputElement};
-#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::closure::Closure;
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::{JsValue, JsCast};
+use wasm_bindgen::{JsCast, JsValue};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::JsFuture;
+#[cfg(target_arch = "wasm32")]
+use web_sys::{Blob, File, FileReader, HtmlAnchorElement, HtmlInputElement, Url};
 
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
-
-use dioxus_logger::tracing::{info, warn, error};
-
 
 pub trait YamlManager {
     fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml>;
@@ -62,7 +58,6 @@ impl YamlManager for NativeYamlManager {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
-
     fn get_available_yamls(&self) -> io::Result<Vec<String>> {
         let data_folder = Path::new(&self.data_folder);
         let yamls = fs::read_dir(data_folder)?
@@ -79,7 +74,6 @@ impl YamlManager for NativeYamlManager {
             .collect::<Vec<String>>();
         Ok(yamls)
     }
-
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -163,9 +157,9 @@ impl YamlManager for WasmYamlManager {
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
 
-        storage
-            .set_item(yaml_file, &yaml_content)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to set item in localStorage"))?;
+        storage.set_item(yaml_file, &yaml_content).map_err(|_| {
+            io::Error::new(io::ErrorKind::Other, "Failed to set item in localStorage")
+        })?;
 
         Ok(())
     }
@@ -189,15 +183,10 @@ pub fn get_default_yaml() -> Yaml {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_yaml_async() -> Option<(String, Yaml)> {
-    info!("Starting load_yaml_async");
     let window = web_sys::window()?;
     let document = window.document()?;
 
-    let input: HtmlInputElement = document
-        .create_element("input")
-        .ok()?
-        .dyn_into()
-        .ok()?;
+    let input: HtmlInputElement = document.create_element("input").ok()?.dyn_into().ok()?;
 
     input.set_type("file");
     input.set_accept(".yaml,.yml");
@@ -217,7 +206,7 @@ pub async fn load_yaml_async() -> Option<(String, Yaml)> {
     let file_name = file.name();
 
     let reader = FileReader::new().ok()?;
-    
+
     let reader_promise = js_sys::Promise::new(&mut |resolve, reject| {
         let onload = Closure::once(Box::new(move |_event: web_sys::Event| {
             resolve.call0(&JsValue::NULL).unwrap();
@@ -239,23 +228,14 @@ pub async fn load_yaml_async() -> Option<(String, Yaml)> {
 
     match serde_yaml::from_str(&content_string) {
         Ok(yaml) => {
-            info!("YAML parsed successfully");
-            
             // Store the loaded YAML in local storage
             if let Some(storage) = window.local_storage().ok().flatten() {
-                if let Err(e) = storage.set_item(&file_name, &content_string) {
-                    warn!("Failed to store YAML in local storage: {:?}", e);
-                } else {
-                    info!("YAML stored in local storage");
-                }
+                let _ = storage.set_item(&file_name, &content_string);
             }
 
             Some((file_name, yaml))
         }
-        Err(e) => {
-            error!("Failed to parse YAML: {:?}", e);
-            None
-        }
+        Err(_e) => None,
     }
 }
 

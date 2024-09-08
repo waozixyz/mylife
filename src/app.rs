@@ -8,7 +8,6 @@ use dioxus_logger::tracing::{error, info};
 #[cfg(target_arch = "wasm32")]
 use js_sys;
 
-
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
     #[route("/?:yaml")]
@@ -37,7 +36,9 @@ fn Home(yaml: String) -> Element {
                 info!("Received YAML parameter: {}", yaml);
                 if let Ok(decoded_yaml) = js_sys::decode_uri_component(&yaml) {
                     info!("Decoded YAML: {}", decoded_yaml);
-                    if let Ok(new_yaml) = serde_yaml::from_str(&decoded_yaml.as_string().unwrap_or_default()) {
+                    if let Ok(new_yaml) =
+                        serde_yaml::from_str(&decoded_yaml.as_string().unwrap_or_default())
+                    {
                         info!("Successfully parsed YAML");
                         return new_yaml;
                     } else {
@@ -48,7 +49,7 @@ fn Home(yaml: String) -> Element {
                 }
             }
         }
-        
+
         info!("Using default YAML");
         get_yaml()
     });
@@ -82,7 +83,6 @@ fn Home(yaml: String) -> Element {
     }
 }
 
-
 fn initialize_app_state() -> MyLifeApp {
     let loaded_yamls = load_yamls();
 
@@ -112,7 +112,7 @@ fn load_yamls() -> Vec<(String, Yaml)> {
                     #[cfg(not(target_arch = "wasm32"))]
                     error!("Failed to load yaml {}: {:?}", name, e);
                     #[cfg(target_arch = "wasm32")]
-                    log::error!("Failed to load yaml {}: {:?}", name, e);
+                    error!("Failed to load yaml {}: {:?}", name, e);
                 })
                 .ok()
                 .map(|yaml| (name, yaml))
