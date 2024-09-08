@@ -19,12 +19,24 @@ life_periods:
   name: Teenage Years
   start: 2013-01
   color: '#00FF77'
-  events: []
+  events:
+  - id: 4774081c-dbd2-48b5-be77-8372d2d1df5b
+    name: New Event
+    color: '#000000'
+    start: 2013-01-01
+  - id: 2227923f-366f-4844-89fe-fd0ca58af161
+    name: New Event
+    color: '#6495ED'
+    start: 2013-02-01
 - id: 77b997ae-985a-4471-8e1c-43c248eaadd2
   name: University
   start: 2018-01
   color: '#00BEFF'
-  events: []
+  events:
+  - id: 8c793ef4-ca51-4ad4-8c4c-e49fe98b8e6c
+    name: New Event
+    color: '#000000'
+    start: 2018-01-01
 - id: 70c24bf1-468d-4886-a9bb-da14aab619d9
   name: Career Growth
   start: 2022-01
@@ -90,4 +102,4 @@ life_periods:
   - id: 04845770-f78a-4749-8f73-29c9e56170a5
     name: Holiday Season
     color: '#F44336'
-    start: 2024-11-25
+    start: 2024-08-25
