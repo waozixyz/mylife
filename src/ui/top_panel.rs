@@ -3,9 +3,9 @@ use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
 use dioxus::prelude::*;
 
 use crate::yaml_manager::import_yaml;
-
-use dioxus_logger::tracing::{error, info};
+#[cfg(target_arch = "wasm32")]
 use crate::utils::compression::compress_and_encode;
+use dioxus_logger::tracing::{error, info};
 
 #[component]
 pub fn TopPanel() -> Element {
@@ -60,7 +60,7 @@ pub fn TopPanel() -> Element {
             button {
                 onclick: move |_| {
                     let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
-                    
+
                     info!("Original YAML content: {}", yaml_content);
                     let encoded_yaml = compress_and_encode(&yaml_content);
                     info!("Compressed and encoded YAML: {}", encoded_yaml);
@@ -70,7 +70,7 @@ pub fn TopPanel() -> Element {
                     let base_url = web_sys::Url::new(&current_url).unwrap();
                     let share_url = format!("{}?y={}", base_url.origin(), encoded_yaml);
                     let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
-                    
+
 
                     web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
                 },

@@ -2,9 +2,9 @@ use crate::models::{MyLifeApp, Yaml};
 use crate::ui::{BottomPanel, CentralPanel, TopPanel};
 use crate::yaml_manager::{get_yaml, get_yaml_manager};
 use dioxus::prelude::*;
-
-use dioxus_logger::tracing::{error, info};
+#[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
+use dioxus_logger::tracing::{error, info};
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
@@ -33,18 +33,28 @@ fn Home(y: String) -> Element {
             if !y.is_empty() {
                 info!("Received compressed YAML parameter");
                 if let Some(decompressed_str) = decode_and_decompress(&y) {
-                    info!("Successfully decompressed YAML. Length: {}", decompressed_str.len());
-                    info!("First 100 characters of decompressed YAML: {}", &decompressed_str[..100.min(decompressed_str.len())]);
-                    
+                    info!(
+                        "Successfully decompressed YAML. Length: {}",
+                        decompressed_str.len()
+                    );
+                    info!(
+                        "First 100 characters of decompressed YAML: {}",
+                        &decompressed_str[..100.min(decompressed_str.len())]
+                    );
+
                     match serde_yaml::from_str::<Yaml>(&decompressed_str) {
                         Ok(new_yaml) => {
                             info!("Successfully parsed YAML");
                             return new_yaml;
-                        },
+                        }
                         Err(e) => {
                             error!("Failed to parse YAML: {}", e);
                             // Log the first few lines of the YAML for context
-                            let context = decompressed_str.lines().take(5).collect::<Vec<_>>().join("\n");
+                            let context = decompressed_str
+                                .lines()
+                                .take(5)
+                                .collect::<Vec<_>>()
+                                .join("\n");
                             error!("YAML parsing error context:\n{}", context);
                         }
                     }
