@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use crate::yaml_manager::import_yaml;
 
 use dioxus_logger::tracing::{error, info};
+use crate::utils::compression::compress_and_encode;
 
 #[component]
 pub fn TopPanel() -> Element {
@@ -59,10 +60,17 @@ pub fn TopPanel() -> Element {
             button {
                 onclick: move |_| {
                     let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
-                    let encoded_yaml = js_sys::encode_uri_component(&yaml_content);
+                    
+                    info!("Original YAML content: {}", yaml_content);
+                    let encoded_yaml = compress_and_encode(&yaml_content);
+                    info!("Compressed and encoded YAML: {}", encoded_yaml);
+
+
                     let current_url = web_sys::window().unwrap().location().href().unwrap();
                     let base_url = web_sys::Url::new(&current_url).unwrap();
-                    let share_url = format!("{}?yaml={}", base_url.origin(), encoded_yaml);
+                    let share_url = format!("{}?y={}", base_url.origin(), encoded_yaml);
+                    let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
+                    
 
                     web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
                 },

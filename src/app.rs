@@ -4,14 +4,12 @@ use crate::yaml_manager::{get_yaml, get_yaml_manager};
 use dioxus::prelude::*;
 
 use dioxus_logger::tracing::{error, info};
-
-#[cfg(target_arch = "wasm32")]
-use js_sys;
+use crate::utils::compression::decode_and_decompress;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {
-    #[route("/?:yaml")]
-    Home { yaml: String },
+    #[route("/?:y")]
+    Home { y: String },
 }
 
 #[component]
@@ -28,24 +26,30 @@ pub fn App() -> Element {
 }
 
 #[component]
-fn Home(yaml: String) -> Element {
+fn Home(y: String) -> Element {
     let yaml_state = use_signal(|| {
         #[cfg(target_arch = "wasm32")]
         {
-            if !yaml.is_empty() {
-                info!("Received YAML parameter: {}", yaml);
-                if let Ok(decoded_yaml) = js_sys::decode_uri_component(&yaml) {
-                    info!("Decoded YAML: {}", decoded_yaml);
-                    if let Ok(new_yaml) =
-                        serde_yaml::from_str(&decoded_yaml.as_string().unwrap_or_default())
-                    {
-                        info!("Successfully parsed YAML");
-                        return new_yaml;
-                    } else {
-                        info!("Failed to parse YAML");
+            if !y.is_empty() {
+                info!("Received compressed YAML parameter");
+                if let Some(decompressed_str) = decode_and_decompress(&y) {
+                    info!("Successfully decompressed YAML. Length: {}", decompressed_str.len());
+                    info!("First 100 characters of decompressed YAML: {}", &decompressed_str[..100.min(decompressed_str.len())]);
+                    
+                    match serde_yaml::from_str::<Yaml>(&decompressed_str) {
+                        Ok(new_yaml) => {
+                            info!("Successfully parsed YAML");
+                            return new_yaml;
+                        },
+                        Err(e) => {
+                            error!("Failed to parse YAML: {}", e);
+                            // Log the first few lines of the YAML for context
+                            let context = decompressed_str.lines().take(5).collect::<Vec<_>>().join("\n");
+                            error!("YAML parsing error context:\n{}", context);
+                        }
                     }
                 } else {
-                    info!("Failed to decode YAML");
+                    error!("Failed to decompress YAML");
                 }
             }
         }
@@ -61,7 +65,7 @@ fn Home(yaml: String) -> Element {
         let state = initialize_app_state();
 
         #[cfg(target_arch = "wasm32")]
-        if !yaml.is_empty() {
+        if !y.is_empty() {
             state.selected_yaml = "Shared YAML".to_string();
             info!("Initialized app state with Shared YAML");
         } else {
