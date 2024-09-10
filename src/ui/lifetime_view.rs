@@ -51,6 +51,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         hovered_period.set(None);
     };
 
+
     rsx! {
         div {
             class: "lifetime-view-container",
@@ -94,6 +95,59 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
             }
         }
     }
+}
+pub fn generate_svg_content(yaml: &Yaml) -> String {
+    let years = yaml.life_expectancy;
+    let cols = 48;
+    let rows = (years + 3) / 4;
+
+    let dob = NaiveDate::parse_from_str(&format!("{}-01", yaml.date_of_birth), "%Y-%m-%d")
+        .expect("Invalid date_of_birth format in yaml. Expected YYYY-MM");
+
+    let current_date = Local::now().date_naive();
+
+    let cell_data: Vec<CellData> = (0..years * 12)
+        .map(|index| {
+            let year = index / 12;
+            let month = index % 12;
+            let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
+            let (color, period) = get_color_and_period_for_date(
+                cell_date,
+                &yaml.life_periods,
+                current_date,
+            );
+
+            CellData {
+                color,
+                period,
+                date: cell_date,
+            }
+        })
+        .collect();
+
+    let mut svg = format!(
+        r#"<svg class="lifetime-view-svg" preserveAspectRatio="xMidYMid meet" viewBox="0 0 {cols} {rows}">"#
+    );
+
+    for (index, cell) in cell_data.iter().enumerate() {
+        let row = index / cols;
+        let col = index % cols;
+        
+        svg.push_str(&format!(
+            r#"<rect x="{col}" y="{row}" width="1" height="1" fill="{color}" stroke="gray" stroke-width="0.02"/>"#,
+            color = cell.color
+        ));
+    }
+
+    svg.push_str("</svg>");
+    svg
+}
+
+// Modify this function to use the new generate_svg_content function
+pub fn get_svg_content() -> Option<String> {
+    let yaml_state = use_context::<Signal<Yaml>>();
+    let yaml = yaml_state();
+    Some(generate_svg_content(&yaml))
 }
 
 fn get_color_and_period_for_date(

@@ -117,6 +117,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "askama_escape"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "619743e34b5ba4e9703bba34deac3427c72507c7159f5fd030aea8cac0cfe341"
+
+[[package]]
 name = "async-broadcast"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1261,6 +1267,25 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "rustc-hash",
+ "tracing",
+]
+
+[[package]]
+name = "dioxus-ssr"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "753b1eb29372bb3afcdbc0ac603893802a8b7b70fa94b86a1641408e2b87173b"
+dependencies = [
+ "askama_escape",
+ "async-trait",
+ "dioxus-core",
+ "dioxus-html",
+ "generational-box",
+ "http 1.1.0",
+ "lru",
+ "rustc-hash",
+ "serde_json",
+ "thiserror",
  "tracing",
 ]
 
@@ -3126,6 +3151,7 @@ dependencies = [
  "dioxus",
  "dioxus-desktop",
  "dioxus-logger",
+ "dioxus-ssr",
  "futures-channel",
  "futures-util",
  "getrandom 0.2.15",

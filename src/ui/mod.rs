@@ -13,3 +13,4 @@ pub use events_view::EventView;
 pub use legend::Legend;
 pub use lifetime_view::LifetimeView;
 pub use top_panel::TopPanel;
+pub use lifetime_view::get_svg_content;
