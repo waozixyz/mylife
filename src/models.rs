@@ -16,6 +16,7 @@ pub struct MyLifeApp {
     pub item_state: Option<LegendItem>,
     pub temp_start_date: String,
     pub data_folder: String,
+    pub screenshot_data: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]

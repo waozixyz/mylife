@@ -1,11 +1,11 @@
-use base64::{decode_config, encode_config, URL_SAFE_NO_PAD};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use brotli::enc::BrotliEncoderParams;
 use brotli::Decompressor;
 use dioxus_logger::tracing::{error, info};
 use serde_json;
 use serde_yaml;
-use std::io::Read;
 use uuid::Uuid;
+use std::io::Read;
 
 pub fn compress_and_encode(yaml_data: &str) -> String {
     // Convert YAML to JSON
@@ -19,7 +19,7 @@ pub fn compress_and_encode(yaml_data: &str) -> String {
     let mut compressed = Vec::new();
     let params = BrotliEncoderParams::default();
     brotli::BrotliCompress(&mut json.as_bytes(), &mut compressed, &params).unwrap();
-    encode_config(&compressed, URL_SAFE_NO_PAD)
+    URL_SAFE_NO_PAD.encode(&compressed)
 }
 
 fn remove_ids(value: &mut serde_yaml::Value) {
@@ -46,7 +46,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
     );
 
     // Step 1: Base64 decoding
-    let decoded_base64 = match decode_config(encoded_data, URL_SAFE_NO_PAD) {
+    let decoded_base64 = match URL_SAFE_NO_PAD.decode(encoded_data) {
         Ok(decoded) => {
             info!(
                 "Successfully decoded base64. Decoded length: {}",
@@ -59,6 +59,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
             return None;
         }
     };
+
 
     // Step 2: Brotli decompression
     let mut decompressed = Vec::new();

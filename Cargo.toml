@@ -24,7 +24,11 @@ uuid = { version = "1.4", features = ["v4", "serde"] }
 getrandom = { version = "0.2", features = ["js"] }
 rfd = "0.14.1"
 brotli = "3.4"
-base64 = "0.13"
+base64 = "0.21.0"
+gloo-timers = "0.3.0"
+usvg = "0.43.0"
+resvg = "0.43.0"
+tiny-skia = "0.11.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dioxus = { version = "0.5", features = ["desktop", "router"] }
@@ -36,7 +40,7 @@ dioxus = { version = "0.5", features = ["web", "router"] }
 wasm-logger = "0.2.0"
 console_error_panic_hook = "0.1.7"
 futures-channel = "0.3"
-web-sys = { version = "0.3", features = ["Window"] }
+web-sys = { version = "0.3", features = ["Window", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlCanvasElement", "Element", "SvgElement"] }
 wasm-bindgen = "0.2.93"
 wasm-bindgen-futures = "0.4.43"
 js-sys = "0.3.4"

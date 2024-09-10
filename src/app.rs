@@ -111,6 +111,7 @@ fn initialize_app_state() -> MyLifeApp {
         item_state: None,
         temp_start_date: String::new(),
         data_folder: "data".to_string(),
+        screenshot_data: None,
     }
 }
 
