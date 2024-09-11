@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{error, info};
+use dioxus_logger::tracing::info;
 use resvg::render;
 use resvg::usvg::{Options, Tree};
 use tiny_skia::{Pixmap, Transform};
@@ -13,6 +13,8 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorElement, Navigator};
+#[cfg(target_arch = "wasm32")]
+use dioxus_logger::tracing::error;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
