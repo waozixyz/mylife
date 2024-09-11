@@ -3202,6 +3202,7 @@ dependencies = [
  "manganis",
  "once_cell",
  "open",
+ "rand 0.8.5",
  "resvg",
  "rfd",
  "screenshots",
