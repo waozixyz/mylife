@@ -1,4 +1,4 @@
-use crate::models::{MyLifeApp, Yaml};
+use crate::models::{MyLifeApp, Yaml, SizeInfo};
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
 use crate::yaml_manager::{get_available_yamls, get_yaml_manager, import_yaml, export_yaml};
 use dioxus::prelude::*;
@@ -15,12 +15,14 @@ pub fn TopPanel() -> Element {
     let mut yaml_state = use_context::<Signal<Yaml>>();
     let mut show_screenshot_modal = use_signal(|| false);
     let mut screenshot_data = use_signal(String::new);
+    let mut size_info = use_context::<Signal<SizeInfo>>();
 
     let options = get_available_yamls();
 
     let take_screenshot = move |_| {
         info!("Screenshot button clicked");
-        match take_screenshot() {
+        let is_landscape = size_info().window_width > size_info().window_height;
+        match take_screenshot(is_landscape) {
             Ok(data) => {
                 screenshot_data.set(data);
                 show_screenshot_modal.set(true);

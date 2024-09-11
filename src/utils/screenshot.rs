@@ -4,6 +4,11 @@ use dioxus_logger::tracing::info;
 use resvg::render;
 use resvg::usvg::{Options, Tree};
 use tiny_skia::{Pixmap, Transform};
+use dioxus_logger::tracing::error;
+use image::{DynamicImage, ImageBuffer, Rgba};
+
+use image::codecs::webp::WebPEncoder;
+
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Array, Object, Promise};
@@ -13,8 +18,6 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorElement, Navigator};
-#[cfg(target_arch = "wasm32")]
-use dioxus_logger::tracing::error;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
@@ -23,8 +26,6 @@ use std::io::Write;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ui::get_svg_content;
-
-const SCALE_FACTOR: f32 = 24.0;
 
 fn process_svg_content(svg_content: String) -> Result<String, String> {
     info!("SVG content length: {}", svg_content.len());
@@ -41,32 +42,46 @@ fn process_svg_content(svg_content: String) -> Result<String, String> {
     Ok(svg_with_namespace)
 }
 
-fn render_svg_to_png(svg_content: &str) -> Result<String, String> {
+fn render_svg_to_image(svg_content: &str, is_landscape: bool) -> Result<Vec<u8>, String> {
     let opt = Options::default();
-    let tree =
-        Tree::from_str(svg_content, &opt).map_err(|e| format!("Failed to parse SVG: {:?}", e))?;
+    let tree = Tree::from_str(svg_content, &opt).map_err(|e| format!("Failed to parse SVG: {:?}", e))?;
 
     let size = tree.size();
-    let pixmap_width = (size.width() * SCALE_FACTOR).round() as u32;
-    let pixmap_height = (size.height() * SCALE_FACTOR).round() as u32;
-    info!("Scaled pixmap size: {}x{}", pixmap_width, pixmap_height);
+    let aspect_ratio = size.width() / size.height();
+
+    let (pixmap_width, pixmap_height) = if is_landscape {
+        (800, (800.0 / aspect_ratio).round() as u32)
+    } else {
+        ((800.0 * aspect_ratio).round() as u32, 800)
+    };
+
+    let scale_x = pixmap_width as f32 / size.width();
+    let scale_y = pixmap_height as f32 / size.height();
+
+    info!("Scaled image size: {}x{}", pixmap_width, pixmap_height);
 
     let mut pixmap = Pixmap::new(pixmap_width, pixmap_height).ok_or("Failed to create Pixmap")?;
 
-    let transform = Transform::from_scale(SCALE_FACTOR, SCALE_FACTOR);
+    let transform = Transform::from_scale(scale_x, scale_y);
     render(&tree, transform, &mut pixmap.as_mut());
 
-    let png_data = pixmap
-        .encode_png()
-        .map_err(|e| format!("Failed to encode PNG: {:?}", e))?;
+    // Convert Pixmap to image::RgbaImage
+    let image = image::RgbaImage::from_raw(
+        pixmap_width,
+        pixmap_height,
+        pixmap.data().to_vec()
+    ).ok_or("Failed to create RgbaImage")?;
 
-    let base64_png = general_purpose::STANDARD.encode(&png_data);
-    info!("Base64 encoded PNG length: {}", base64_png.len());
+    // Encode to WebP
+    let mut webp_data = Vec::new();
+    WebPEncoder::new(&mut webp_data)
+        .encode(&image, pixmap_width, pixmap_height, image::ColorType::Rgba8)
+        .map_err(|e| format!("Failed to encode WebP: {:?}", e))?;
 
-    Ok(format!("data:image/png;base64,{}", base64_png))
+    Ok(webp_data)
 }
 
-pub fn take_screenshot() -> Result<String, String> {
+pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     #[cfg(target_arch = "wasm32")]
     let svg_content = get_svg_content_wasm()?;
 
@@ -74,8 +89,12 @@ pub fn take_screenshot() -> Result<String, String> {
     let svg_content = get_svg_content().ok_or_else(|| "Yaml context not found".to_string())?;
 
     let processed_svg = process_svg_content(svg_content)?;
-    render_svg_to_png(&processed_svg)
+    let image_data = render_svg_to_image(&processed_svg, is_landscape)?;
+
+    let base64_image = general_purpose::STANDARD.encode(&image_data);
+    Ok(format!("data:image/webp;base64,{}", base64_image))
 }
+
 
 #[cfg(target_arch = "wasm32")]
 fn get_svg_content_wasm() -> Result<String, String> {
@@ -90,6 +109,7 @@ fn get_svg_content_wasm() -> Result<String, String> {
 
     Ok(svg.outer_html())
 }
+
 
 #[cfg(target_arch = "wasm32")]
 pub fn save_screenshot(data: &Signal<String>) {
@@ -107,17 +127,44 @@ pub fn save_screenshot(data: &Signal<String>) {
     a.click();
     document.body().unwrap().remove_child(&a).unwrap();
 }
-
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_screenshot(data: &Signal<String>) {
+    use std::path::PathBuf;
+    use chrono::Local;
+    use rfd::FileDialog;
+    use image::io::Reader as ImageReader;
+    use std::io::Cursor;
+
     let binding = data();
-    let png_data = binding.strip_prefix("data:image/png;base64,").unwrap_or("");
-    let decoded = general_purpose::STANDARD.decode(png_data).unwrap();
+    let image_data = binding.strip_prefix("data:image/webp;base64,").unwrap_or("");
+    let decoded = general_purpose::STANDARD.decode(image_data).unwrap();
 
-    let mut file = File::create("lifetime_screenshot.png").unwrap();
-    file.write_all(&decoded).unwrap();
+    let current_date = Local::now().format("%Y-%m-%d").to_string();
+    let default_filename = format!("mylifetimeline_{}.webp", current_date);
 
-    info!("Screenshot saved as lifetime_screenshot.png");
+    if let Some(path) = FileDialog::new()
+        .set_file_name(&default_filename)
+        .add_filter("WebP Image", &["webp"])
+        .add_filter("JPEG Image", &["jpg", "jpeg"])
+        .save_file() {
+        let mut file = std::fs::File::create(&path).unwrap();
+        
+        if path.extension().and_then(|ext| ext.to_str()) == Some("webp") {
+            file.write_all(&decoded).unwrap();
+        } else {
+            // Convert WebP to JPEG if user chose JPEG
+            let image = ImageReader::new(Cursor::new(decoded))
+                .with_guessed_format()
+                .unwrap()
+                .decode()
+                .unwrap();
+            image.write_to(&mut file, image::ImageFormat::Jpeg).unwrap();
+        }
+        
+        info!("Screenshot saved as {}", path.file_name().unwrap().to_string_lossy());
+    } else {
+        error!("Screenshot save cancelled or failed");
+    }
 }
 #[cfg(target_arch = "wasm32")]
 pub fn share_screenshot(data: &Signal<String>) {

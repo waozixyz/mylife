@@ -68,7 +68,7 @@ fn generate_lifetime_data(yaml: &Yaml, size_info: &SizeInfo) -> (Vec<CellData>, 
 pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let yaml_state = use_context::<Signal<Yaml>>();
     let mut hovered_period = use_signal(|| None::<Uuid>);
-    let mut size_info = use_context::<Signal<SizeInfo>>();
+    let size_info = use_context::<Signal<SizeInfo>>();
 
 
     let (cell_data, cols, rows, cell_size, gap, total_width, total_height) = 

@@ -14,7 +14,7 @@ fn calculate_size_info(size: PhysicalSize<u32>) -> SizeInfo {
 
 #[component]
 pub fn WindowSizeManager() -> Element {
-    let mut size_info = use_context::<Signal<SizeInfo>>();
+    let size_info = use_context::<Signal<SizeInfo>>();
 
     use_effect(move || {
         to_owned![size_info];
