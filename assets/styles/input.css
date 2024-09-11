@@ -192,3 +192,85 @@ button:active {
     gap: 10px;
 }
 
+
+
+
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="color"],
+    input[type="search"],
+    textarea,
+    select {
+        padding: 8px 12px;
+        font-size: 14px;
+        max-width: 250px;
+        margin-bottom: 12px;
+    }
+
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+        margin-right: 8px;
+    }
+
+    .settings-button {
+        padding: 6px 12px;
+        font-size: 1em;
+    }
+
+    .back-button,
+    .quit-button {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    .action-buttons {
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .config-selectors {
+        gap: 8px;
+    }
+}
+
+/* For even smaller screens */
+@media screen and (max-width: 480px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="color"],
+    input[type="search"],
+    textarea,
+    select {
+        padding: 6px 10px;
+        font-size: 12px;
+        max-width: 200px;
+        margin-bottom: 10px;
+    }
+
+    button {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin-right: 6px;
+    }
+
+}

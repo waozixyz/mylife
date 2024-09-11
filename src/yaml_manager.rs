@@ -1,40 +1,28 @@
-#[cfg(not(target_arch = "wasm32"))]
-use crate::models::MyLifeApp;
-use crate::models::Yaml;
-#[cfg(not(target_arch = "wasm32"))]
+use crate::models::{MyLifeApp, Yaml};
 use dioxus::prelude::*;
 use std::io;
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::fs;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
-
+use std::{fs, path::Path};
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 
 #[cfg(target_arch = "wasm32")]
-use js_sys;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::closure::Closure;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::{JsCast, JsValue};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::JsFuture;
-#[cfg(target_arch = "wasm32")]
-use web_sys::{Blob, File, FileReader, HtmlAnchorElement, HtmlInputElement, Url};
+use {
+    js_sys,
+    wasm_bindgen::{closure::Closure, JsCast, JsValue},
+    wasm_bindgen_futures::JsFuture,
+    web_sys::{Blob, File, FileReader, HtmlAnchorElement, HtmlInputElement, Url},
+};
 
 #[cfg(target_arch = "wasm32")]
 const DEFAULT_YAML: &str = include_str!("../data/default.yaml");
 
 pub trait YamlManager {
-    fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml>;
-    #[cfg(target_arch = "wasm32")]
-    fn save_yaml(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
-    fn get_available_yamls(&self) -> io::Result<Vec<String>>;
-
-    #[cfg(target_arch = "wasm32")]
-    fn update_yaml_in_storage(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()>;
+    fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String>;
+    fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String>;
+    fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String>;
+    fn get_available_yamls(&self) -> Result<Vec<String>, String>;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,16 +39,42 @@ impl NativeYamlManager {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl YamlManager for NativeYamlManager {
-    fn load_yaml(&self, yaml_file: &str) -> io::Result<Yaml> {
+    fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String> {
         let yaml_path = Path::new(&self.data_folder).join(yaml_file);
-        let yaml_content = fs::read_to_string(yaml_path)?;
+        let yaml_content = fs::read_to_string(yaml_path)
+            .map_err(|e| format!("Failed to read YAML file: {:?}", e))?;
         serde_yaml::from_str(&yaml_content)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+            .map_err(|e| format!("Failed to parse YAML: {:?}", e))
     }
 
-    fn get_available_yamls(&self) -> io::Result<Vec<String>> {
+    fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+        let yaml_content = serde_yaml::to_string(yaml)
+            .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
+
+        if let Some(path) = FileDialog::new()
+            .set_file_name(yaml_file)
+            .add_filter("YAML File", &["yaml", "yml"])
+            .save_file()
+        {
+            fs::write(path, yaml_content)
+                .map_err(|e| format!("Failed to save YAML file: {:?}", e))?;
+            Ok(())
+        } else {
+            Err("File save cancelled".to_string())
+        }
+    }
+
+    fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+        let yaml_content = serde_yaml::to_string(yaml)
+            .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
+        let file_path = Path::new(&self.data_folder).join(yaml_file);
+        fs::write(file_path, yaml_content)
+            .map_err(|e| format!("Failed to update YAML file: {:?}", e))
+    }
+    fn get_available_yamls(&self) -> Result<Vec<String>, String> {
         let data_folder = Path::new(&self.data_folder);
-        let yamls = fs::read_dir(data_folder)?
+        let yamls = fs::read_dir(data_folder)
+            .map_err(|e| format!("Failed to read data folder: {:?}", e))?
             .filter_map(|entry| {
                 entry.ok().and_then(|e| {
                     let path = e.path();
@@ -81,87 +95,77 @@ pub struct WasmYamlManager;
 
 #[cfg(target_arch = "wasm32")]
 impl YamlManager for WasmYamlManager {
-    fn load_yaml(&self, _yaml_file: &str) -> io::Result<Yaml> {
+    fn load_yaml(&self, _yaml_file: &str) -> Result<Yaml, String> {
         let window = web_sys::window()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
+            .ok_or_else(|| "Failed to get window".to_string())?;
         let storage = window
             .local_storage()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
+            .map_err(|_| "Failed to get localStorage".to_string())?
+            .ok_or_else(|| "localStorage not available".to_string())?;
 
         if let Ok(Some(yaml_content)) = storage.get_item("current_yaml") {
             serde_yaml::from_str(&yaml_content)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+                .map_err(|e| format!("Failed to parse YAML: {:?}", e))
         } else {
             Ok(get_default_yaml())
         }
     }
 
-    fn save_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> io::Result<()> {
+    fn export_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> Result<(), String> {
         let yaml_content = serde_yaml::to_string(yaml)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
+            .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
         let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to create Blob"))?;
+            .map_err(|_| "Failed to create Blob".to_string())?;
         let url = Url::create_object_url_with_blob(&blob)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to create object URL"))?;
+            .map_err(|_| "Failed to create object URL".to_string())?;
 
         let window = web_sys::window()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
-        let document = window
-            .document()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get document"))?;
-        let anchor: HtmlAnchorElement = document
-            .create_element("a")
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to create anchor element"))?
+            .ok_or_else(|| "Failed to get window".to_string())?;
+        let document = window.document()
+            .ok_or_else(|| "Failed to get document".to_string())?;
+        let anchor: HtmlAnchorElement = document.create_element("a")
+            .map_err(|_| "Failed to create anchor element".to_string())?
             .dyn_into()
-            .map_err(|_| {
-                io::Error::new(io::ErrorKind::Other, "Failed to cast to HtmlAnchorElement")
-            })?;
+            .map_err(|_| "Failed to cast to HtmlAnchorElement".to_string())?;
 
         anchor.set_href(&url);
         anchor.set_download("config.yaml");
         anchor.click();
 
         Url::revoke_object_url(&url)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to revoke object URL"))?;
+            .map_err(|_| "Failed to revoke object URL".to_string())?;
 
         Ok(())
     }
-    fn get_available_yamls(&self) -> io::Result<Vec<String>> {
+
+    fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+        let yaml_content = serde_yaml::to_string(yaml)
+            .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
         let window = web_sys::window()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
+            .ok_or_else(|| "Failed to get window".to_string())?;
         let storage = window
             .local_storage()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
+            .map_err(|_| "Failed to get localStorage".to_string())?
+            .ok_or_else(|| "localStorage not available".to_string())?;
+
+        storage.set_item(yaml_file, &yaml_content)
+            .map_err(|_| "Failed to set item in localStorage".to_string())
+    }
+
+    fn get_available_yamls(&self) -> Result<Vec<String>, String> {
+        let window = web_sys::window()
+            .ok_or_else(|| "Failed to get window".to_string())?;
+        let storage = window
+            .local_storage()
+            .map_err(|_| "Failed to get localStorage".to_string())?
+            .ok_or_else(|| "localStorage not available".to_string())?;
 
         let keys = js_sys::Object::keys(&storage);
-        let yamls: Vec<String> = keys
+        Ok(keys
             .iter()
             .filter_map(|key| key.as_string())
             .filter(|key| key.ends_with(".yaml") || key.ends_with(".yml"))
-            .collect();
-
-        Ok(yamls)
-    }
-
-    fn update_yaml_in_storage(&self, yaml: &Yaml, yaml_file: &str) -> io::Result<()> {
-        let yaml_content = serde_yaml::to_string(yaml)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let window = web_sys::window()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to get window"))?;
-        let storage = window
-            .local_storage()
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, "Failed to get localStorage"))?
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "localStorage not available"))?;
-
-        storage.set_item(yaml_file, &yaml_content).map_err(|_| {
-            io::Error::new(io::ErrorKind::Other, "Failed to set item in localStorage")
-        })?;
-
-        Ok(())
+            .collect())
     }
 }
 
@@ -174,6 +178,26 @@ pub fn get_yaml_manager() -> Box<dyn YamlManager> {
     {
         Box::new(WasmYamlManager)
     }
+}
+
+pub fn get_yaml() -> Yaml {
+    get_yaml_manager()
+        .load_yaml("default.yaml")
+        .expect("Failed to load yaml")
+}
+
+pub fn export_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+    get_yaml_manager().export_yaml(yaml, yaml_file)
+}
+
+pub fn get_available_yamls() -> Vec<String> {
+    get_yaml_manager()
+        .get_available_yamls()
+        .expect("Failed to get available yamls")
+}
+
+pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
+    get_yaml_manager().update_yaml(yaml, yaml_file)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -239,63 +263,11 @@ pub async fn load_yaml_async() -> Option<(String, Yaml)> {
     }
 }
 
-pub fn get_yaml() -> Yaml {
-    get_yaml_manager()
-        .load_yaml("default.yaml")
-        .expect("Failed to load yaml")
-}
-
-pub fn save_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let yaml_content = serde_yaml::to_string(yaml)
-            .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
-
-        let file_path = FileDialog::new()
-            .set_file_name(yaml_file)
-            .add_filter("YAML File", &["yaml", "yml"])
-            .save_file();
-
-        if let Some(path) = file_path {
-            std::fs::write(path, yaml_content)
-                .map_err(|e| format!("Failed to save YAML file: {:?}", e))?;
-            Ok(())
-        } else {
-            Err("File save cancelled".to_string())
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        get_yaml_manager()
-            .save_yaml(yaml, yaml_file)
-            .map_err(|e| format!("Failed to save yaml: {:?}", e))
-    }
-}
-pub fn get_available_yamls() -> Vec<String> {
-    get_yaml_manager()
-        .get_available_yamls()
-        .expect("Failed to get available yamls")
-}
-
-pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        save_yaml(yaml, yaml_file)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        get_yaml_manager()
-            .update_yaml_in_storage(yaml, yaml_file)
-            .map_err(|e| format!("Failed to update yaml in storage: {:?}", e))
-    }
-}
 #[cfg(not(target_arch = "wasm32"))]
 pub fn import_yaml() -> Option<(String, Yaml)> {
     let app_state = use_context::<Signal<MyLifeApp>>();
 
-    if let Some(file_path) = rfd::FileDialog::new()
+    if let Some(file_path) = FileDialog::new()
         .add_filter("YAML", &["yaml", "yml"])
         .pick_file()
     {

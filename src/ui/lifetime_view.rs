@@ -79,12 +79,6 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         hovered_period.set(None);
     };
 
-
-
-    info!("{}", size_info().window_height);
-    info!("{}", size_info().window_width);
-    info!("Cell size: {}, Gap: {}", cell_size, gap);
-
     rsx! {
         div {
             class: "lifetime-view-container",

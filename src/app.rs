@@ -39,20 +39,9 @@ fn Home(y: String) -> Element {
         #[cfg(target_arch = "wasm32")]
         {
             if !y.is_empty() {
-                info!("Received compressed YAML parameter");
                 if let Some(decompressed_str) = decode_and_decompress(&y) {
-                    info!(
-                        "Successfully decompressed YAML. Length: {}",
-                        decompressed_str.len()
-                    );
-                    info!(
-                        "First 100 characters of decompressed YAML: {}",
-                        &decompressed_str[..100.min(decompressed_str.len())]
-                    );
-
                     match serde_yaml::from_str::<Yaml>(&decompressed_str) {
                         Ok(new_yaml) => {
-                            info!("Successfully parsed YAML");
                             return new_yaml;
                         }
                         Err(e) => {
@@ -72,7 +61,6 @@ fn Home(y: String) -> Element {
             }
         }
 
-        info!("Using default YAML");
         get_yaml()
     });
 
@@ -85,9 +73,6 @@ fn Home(y: String) -> Element {
         #[cfg(target_arch = "wasm32")]
         if !y.is_empty() {
             state.selected_yaml = "Shared YAML".to_string();
-            info!("Initialized app state with Shared YAML");
-        } else {
-            info!("Initialized app state with default YAML");
         }
         state
     });

@@ -1,6 +1,6 @@
 use crate::models::{MyLifeApp, Yaml};
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
-use crate::yaml_manager::{get_available_yamls, get_yaml_manager, import_yaml, save_yaml};
+use crate::yaml_manager::{get_available_yamls, get_yaml_manager, import_yaml, export_yaml};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
 
@@ -58,11 +58,12 @@ pub fn TopPanel() -> Element {
         }
     };
 
-    let save_yaml_action = move |_| {
-        if let Err(e) = save_yaml(&yaml_state(), &app_state().selected_yaml) {
+    let export_yaml_action = move |_| {
+        if let Err(e) = export_yaml(&yaml_state(), &app_state().selected_yaml) {
             error!("Failed to save YAML: {}", e);
         }
     };
+
     #[cfg(target_arch = "wasm32")]
     let share_yaml = move |_: MouseEvent| {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
@@ -105,8 +106,8 @@ pub fn TopPanel() -> Element {
             // Action buttons (always visible)
             div {
                 class: "action-buttons",
-                button { onclick: load_yaml, "📥 Load YAML" }
-                button { onclick: save_yaml_action, "📤 Save YAML" }
+                button { onclick: load_yaml, "📥 Import YAML" }
+                button { onclick: export_yaml_action, "📤 Export YAML" }
                 {
                     #[cfg(target_arch = "wasm32")]
                     rsx! {

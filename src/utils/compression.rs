@@ -40,18 +40,9 @@ fn remove_ids(value: &mut serde_yaml::Value) {
 }
 
 pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
-    info!(
-        "Attempting to decode and decompress data of length: {}",
-        encoded_data.len()
-    );
-
     // Step 1: Base64 decoding
     let decoded_base64 = match URL_SAFE_NO_PAD.decode(encoded_data) {
         Ok(decoded) => {
-            info!(
-                "Successfully decoded base64. Decoded length: {}",
-                decoded.len()
-            );
             decoded
         }
         Err(e) => {
@@ -64,12 +55,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
     let mut decompressed = Vec::new();
     let mut decompressor = Decompressor::new(&decoded_base64[..], 4096);
     match decompressor.read_to_end(&mut decompressed) {
-        Ok(size) => {
-            info!(
-                "Successfully decompressed data. Decompressed size: {}",
-                size
-            );
-        }
+        Ok(size) => {}
         Err(e) => {
             error!("Failed to decompress data: {:?}", e);
             return None;
@@ -79,7 +65,6 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
     // Step 3: UTF-8 conversion (JSON string)
     let json_str = match String::from_utf8(decompressed) {
         Ok(s) => {
-            info!("Successfully converted decompressed data to UTF-8");
             s
         }
         Err(e) => {
@@ -94,7 +79,6 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
             add_random_ids(&mut json);
             match serde_yaml::to_string(&json) {
                 Ok(yaml) => {
-                    info!("Successfully converted JSON back to YAML");
                     Some(yaml)
                 }
                 Err(e) => {
