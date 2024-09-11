@@ -17,8 +17,8 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let mut hovered_period = use_signal(|| None::<Uuid>);
 
     let years = yaml_state().life_expectancy;
-    let cols = 48;
-    let rows = (years + 3) / 4;
+    let cols = 24;
+    let rows = (years + 3) / 2;
 
     let cell_data = use_memo(move || {
         let dob =
@@ -50,7 +50,6 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let handle_mouse_leave = move |_| {
         hovered_period.set(None);
     };
-
 
     rsx! {
         div {
@@ -96,10 +95,11 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         }
     }
 }
+#[cfg(not(target_arch = "wasm32"))]
 pub fn generate_svg_content(yaml: &Yaml) -> String {
     let years = yaml.life_expectancy;
-    let cols = 48;
-    let rows = (years + 3) / 4;
+    let cols = 24;
+    let rows = (years + 3) / 2;
 
     let dob = NaiveDate::parse_from_str(&format!("{}-01", yaml.date_of_birth), "%Y-%m-%d")
         .expect("Invalid date_of_birth format in yaml. Expected YYYY-MM");
@@ -111,11 +111,8 @@ pub fn generate_svg_content(yaml: &Yaml) -> String {
             let year = index / 12;
             let month = index % 12;
             let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
-            let (color, period) = get_color_and_period_for_date(
-                cell_date,
-                &yaml.life_periods,
-                current_date,
-            );
+            let (color, period) =
+                get_color_and_period_for_date(cell_date, &yaml.life_periods, current_date);
 
             CellData {
                 color,
@@ -132,7 +129,7 @@ pub fn generate_svg_content(yaml: &Yaml) -> String {
     for (index, cell) in cell_data.iter().enumerate() {
         let row = index / cols;
         let col = index % cols;
-        
+
         svg.push_str(&format!(
             r#"<rect x="{col}" y="{row}" width="1" height="1" fill="{color}" stroke="gray" stroke-width="0.02"/>"#,
             color = cell.color
@@ -143,7 +140,7 @@ pub fn generate_svg_content(yaml: &Yaml) -> String {
     svg
 }
 
-// Modify this function to use the new generate_svg_content function
+#[cfg(not(target_arch = "wasm32"))]
 pub fn get_svg_content() -> Option<String> {
     let yaml_state = use_context::<Signal<Yaml>>();
     let yaml = yaml_state();

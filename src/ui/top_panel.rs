@@ -1,11 +1,13 @@
 use crate::models::{MyLifeApp, Yaml};
-use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
-use dioxus::prelude::*;
-use crate::yaml_manager::import_yaml;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::compress_and_encode;
+#[cfg(target_arch = "wasm32")]
+use crate::utils::screenshot::share_screenshot;
+use crate::utils::screenshot::{save_screenshot, take_screenshot};
+use crate::yaml_manager::import_yaml;
+use crate::yaml_manager::{get_available_yamls, get_yaml_manager, save_yaml};
+use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
-use crate::utils::screenshot::{take_screenshot, save_screenshot};
 
 #[component]
 pub fn TopPanel() -> Element {
@@ -16,7 +18,6 @@ pub fn TopPanel() -> Element {
 
     let options = get_available_yamls();
 
-
     let take_screenshot = move |_| {
         info!("Screenshot button clicked");
         match take_screenshot() {
@@ -24,13 +25,12 @@ pub fn TopPanel() -> Element {
                 screenshot_data.set(data);
                 show_screenshot_modal.set(true);
                 info!("Screenshot process completed");
-            },
+            }
             Err(e) => {
                 error!("Failed to take screenshot: {}", e);
             }
         }
     };
-
 
     let load_yaml = move |_| {
         #[cfg(target_arch = "wasm32")]
@@ -59,7 +59,7 @@ pub fn TopPanel() -> Element {
             }
         }
     };
-    
+
     let buttons = {
         #[cfg(target_arch = "wasm32")]
         rsx! {
@@ -86,7 +86,6 @@ pub fn TopPanel() -> Element {
                     let current_url = web_sys::window().unwrap().location().href().unwrap();
                     let base_url = web_sys::Url::new(&current_url).unwrap();
                     let share_url = format!("{}?y={}", base_url.origin(), encoded_yaml);
-                    let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
 
                     web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
                 },
@@ -205,6 +204,18 @@ pub fn TopPanel() -> Element {
                             },
                             "Download"
                         }
+
+                        {
+                            #[cfg(target_arch = "wasm32")]
+                            rsx! {
+                                button {
+                                    onclick: move |_| {
+                                        share_screenshot(&screenshot_data);
+                                    },
+                                    "Share"
+                                }
+                            }
+                        }
                         button {
                             onclick: move |_| show_screenshot_modal.set(false),
                             "Close"
@@ -215,4 +226,3 @@ pub fn TopPanel() -> Element {
         }
     }
 }
-

@@ -1,11 +1,11 @@
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use brotli::enc::BrotliEncoderParams;
 use brotli::Decompressor;
 use dioxus_logger::tracing::{error, info};
 use serde_json;
 use serde_yaml;
-use uuid::Uuid;
 use std::io::Read;
+use uuid::Uuid;
 
 pub fn compress_and_encode(yaml_data: &str) -> String {
     // Convert YAML to JSON
@@ -59,7 +59,6 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
             return None;
         }
     };
-
 
     // Step 2: Brotli decompression
     let mut decompressed = Vec::new();

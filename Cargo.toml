@@ -47,7 +47,7 @@ dioxus = { version = "0.5", features = ["web", "router"] }
 wasm-logger = "0.2.0"
 console_error_panic_hook = "0.1.7"
 futures-channel = "0.3"
-web-sys = { version = "0.3", features = ["Window", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlCanvasElement", "Element", "SvgElement"] }
+web-sys = { version = "0.3", features = ["ResizeObserver", "ResizeObserverEntry", "Window", "Navigator", "CanvasRenderingContext2d", "HtmlImageElement", "HtmlCanvasElement", "Element", "SvgElement"] }
 wasm-bindgen = "0.2.93"
 wasm-bindgen-futures = "0.4.43"
 js-sys = "0.3.4"
