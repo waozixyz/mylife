@@ -33,64 +33,29 @@ textarea:focus,
 select:focus {
     outline: none;
     border-color: var(--input-focus-color);
-    box-shadow: 0 0 0 2px var(--input-focus-color);
+    box-shadow: 0 0 0 3px rgba(var(--input-focus-color-rgb), 0.3);
+    transition: all 0.2s ease-in-out;
 }
 
-/* Custom select styling */
 select {
+    padding: 5px;
+    border-radius: 4px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-position: right 12px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
     padding-right: 40px;
-}
 
-/* Custom checkbox and radio button styling */
-input[type="checkbox"],
-input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-input[type="checkbox"] + label,
-input[type="radio"] + label {
-    position: relative;
-    padding-left: 30px;
-    cursor: pointer;
-    display: inline-block;
-    line-height: 24px;
-    margin-bottom: 16px;
-}
-
-input[type="checkbox"] + label:before,
-input[type="radio"] + label:before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--input-border-color);
-    background: var(--input-bg-color);
-    transition: all 0.3s ease;
-}
-
-input[type="checkbox"] + label:before {
-    border-radius: 4px;
-}
-
-input[type="radio"] + label:before {
-    border-radius: 50%;
 }
 
 input[type="checkbox"]:checked + label:before,
 input[type="radio"]:checked + label:before {
     background: var(--primary-color);
     border-color: var(--primary-color);
+    transition: all 0.2s ease-in-out;
 }
 
 input[type="checkbox"]:checked + label:after {
@@ -100,6 +65,7 @@ input[type="checkbox"]:checked + label:after {
     top: 1px;
     color: var(--text-color);
     font-size: 14px;
+    transition: all 0.2s ease-in-out;
 }
 
 input[type="radio"]:checked + label:after {
@@ -111,7 +77,10 @@ input[type="radio"]:checked + label:after {
     height: 10px;
     border-radius: 50%;
     background: var(--text-color);
+    transition: all 0.2s ease-in-out;
 }
+
+
 
 /* Placeholder styling */
 ::placeholder {
@@ -151,26 +120,33 @@ input[type="file"] + label:hover {
 }
 
 
-
-/* Common Element Styles */
 button {
     background-color: var(--primary-color);
     color: var(--text-color);
     border: none;
     padding: 12px 24px;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     margin-right: 12px;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    box-shadow: 0 2px 4px var(--shadow-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 button:hover {
     background-color: var(--button-hover-color);
-    box-shadow: 0 4px 8px var(--shadow-color);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Specific button styles */
@@ -179,3 +155,40 @@ button:hover {
     padding: 8px 16px;
     font-size: 1.2em;
 }
+
+
+.back-button {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.quit-button {
+    position: absolute;
+    right: 10px;
+    top:10px0;
+    padding: 5px 10px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.config-selectors {
+    display: flex;
+    gap: 10px;
+}
+

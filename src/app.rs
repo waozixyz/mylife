@@ -1,5 +1,5 @@
-use crate::models::{MyLifeApp, Yaml};
-use crate::ui::{BottomPanel, CentralPanel, TopPanel};
+use crate::models::{MyLifeApp, SizeInfo, Yaml};
+use crate::ui::{BottomPanel, CentralPanel, TopPanel, WindowSizeManager};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
 use crate::yaml_manager::{get_yaml, get_yaml_manager};
@@ -15,11 +15,11 @@ enum Route {
 #[component]
 pub fn App() -> Element {
     rsx! {
-        style { {include_str!("../assets/input.css")} }
-        style { {include_str!("../assets/modal.css")} }
-        style { {include_str!("../assets/views.css")} }
-        style { {include_str!("../assets/items.css")} }
-        style { {include_str!("../assets/main.css")} }
+        style { {include_str!("../assets/styles/input.css")} }
+        style { {include_str!("../assets/styles/modal.css")} }
+        style { {include_str!("../assets/styles/views.css")} }
+        style { {include_str!("../assets/styles/items.css")} }
+        style { {include_str!("../assets/styles/main.css")} }
 
         Router::<Route> {}
     }
@@ -27,6 +27,14 @@ pub fn App() -> Element {
 
 #[component]
 fn Home(y: String) -> Element {
+    let size_info = use_signal(|| SizeInfo {
+        cell_size: 40.0,
+        window_width: 800.0,
+        window_height: 600.0,
+    });
+
+    use_context_provider(|| size_info);
+
     let yaml_state = use_signal(|| {
         #[cfg(target_arch = "wasm32")]
         {
@@ -94,6 +102,7 @@ fn Home(y: String) -> Element {
             CentralPanel {}
             BottomPanel {}
         }
+        WindowSizeManager {}
     }
 }
 

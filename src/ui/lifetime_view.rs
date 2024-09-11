@@ -1,90 +1,125 @@
-use crate::models::{LifePeriod, Yaml};
+use crate::models::{LifePeriod, Yaml, CellData, SizeInfo};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{debug, error};
+use dioxus_logger::tracing::{info, debug, error};
 use uuid::Uuid;
 
-#[derive(PartialEq, Clone)]
-struct CellData {
-    color: String,
-    period: Option<LifePeriod>,
-    date: NaiveDate,
+
+
+fn calculate_grid_dimensions(size_info: &SizeInfo, life_expectancy: u32) -> (usize, usize) {
+    let is_landscape = size_info.window_width > size_info.window_height;
+    let cols = if is_landscape { 48 } else { 24 };
+    let rows = if is_landscape { 
+        (life_expectancy as usize + 7) / 4 
+    } else { 
+        (life_expectancy as usize + 3) / 2 
+    };
+    (cols, rows)
 }
+
+fn calculate_cell_size(size_info: &SizeInfo, cols: usize, rows: usize) -> (f32, f32) {
+    let is_landscape = size_info.window_width > size_info.window_height;
+    let scale = 32.0;
+    let gap_ratio = 0.1; // 10% of cell size for gap
+
+    let cell_size = if is_landscape {
+        size_info.window_height as f32 / rows as f32 / scale
+    } else {
+        size_info.window_width as f32 / cols as f32 / scale
+    };
+
+    let gap = cell_size * gap_ratio;
+    (cell_size, gap)
+}
+
+
+fn generate_lifetime_data(yaml: &Yaml, size_info: &SizeInfo) -> (Vec<CellData>, usize, usize, f32, f32, f32, f32) {
+    let years = yaml.life_expectancy;
+    let (cols, rows) = calculate_grid_dimensions(size_info, years);
+    let (cell_size, gap) = calculate_cell_size(size_info, cols, rows);
+
+    let total_width = cols as f32 * (cell_size + gap) - gap;
+    let total_height = rows as f32 * (cell_size + gap) - gap;
+
+    let dob = parse_date(&yaml.date_of_birth, "Invalid date_of_birth format in yaml. Expected YYYY-MM");
+    let current_date = Local::now().date_naive();
+
+    let cell_data: Vec<CellData> = (0..years * 12)
+        .map(|index| {
+            let year = index / 12;
+            let month = index % 12;
+            let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
+            let (color, period) = get_color_and_period_for_date(cell_date, &yaml.life_periods, current_date);
+
+            CellData {
+                color,
+                period,
+                date: cell_date,
+            }
+        })
+        .collect();
+
+    (cell_data, cols, rows, cell_size, gap, total_width, total_height)
+}
+
+
 
 #[component]
 pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let yaml_state = use_context::<Signal<Yaml>>();
     let mut hovered_period = use_signal(|| None::<Uuid>);
+    let mut size_info = use_context::<Signal<SizeInfo>>();
 
-    let years = yaml_state().life_expectancy;
-    let cols = 24;
-    let rows = (years + 3) / 2;
 
-    let cell_data = use_memo(move || {
-        let dob =
-            NaiveDate::parse_from_str(&format!("{}-01", yaml_state().date_of_birth), "%Y-%m-%d")
-                .expect("Invalid date_of_birth format in yaml. Expected YYYY-MM");
+    let (cell_data, cols, rows, cell_size, gap, total_width, total_height) = 
+        use_memo(move || generate_lifetime_data(&yaml_state(), &size_info()))();
 
-        let current_date = Local::now().date_naive();
-
-        (0..years * 12)
-            .map(|index| {
-                let year = index / 12;
-                let month = index % 12;
-                let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
-                let (color, period) = get_color_and_period_for_date(
-                    cell_date,
-                    &yaml_state().life_periods,
-                    current_date,
-                );
-
-                CellData {
-                    color,
-                    period,
-                    date: cell_date,
-                }
-            })
-            .collect::<Vec<_>>()
-    });
 
     let handle_mouse_leave = move |_| {
         hovered_period.set(None);
     };
+
+
+
+    info!("{}", size_info().window_height);
+    info!("{}", size_info().window_width);
+    info!("Cell size: {}, Gap: {}", cell_size, gap);
 
     rsx! {
         div {
             class: "lifetime-view-container",
             svg {
                 class: "lifetime-view-svg",
-                preserve_aspect_ratio: "xMidYMid meet",
-                view_box: "0 0 {cols} {rows}",
+                preserve_aspect_ratio: "xMinYMin meet",
+                view_box: "0 0 {total_width} {total_height}",
                 onmouseleave: handle_mouse_leave,
-
-                {cell_data().iter().enumerate().map(|(index, cell)| {
+                
+                {cell_data.iter().enumerate().map(|(index, cell)| {
                     let row = index / cols;
                     let col = index % cols;
                     let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
-
+                    let x = col as f32 * (cell_size + gap);
+                    let y = row as f32 * (cell_size + gap);
                     rsx! {
                         rect {
                             key: "{cell.date}",
-                            x: "{col}",
-                            y: "{row}",
-                            width: "1",
-                            height: "1",
+                            x: "{x}",
+                            y: "{y}",
+                            width: "{cell_size}",
+                            height: "{cell_size}",
                             fill: "{cell.color}",
                             stroke: if is_hovered { "#c800c8" } else { "gray" },
                             stroke_width: if is_hovered { "0.05" } else { "0.02" },
                             onclick: {
                                 let period = cell.period.clone();
-                                let on_period_click = on_period_click;
+                                let on_period_click = on_period_click.clone();
                                 move |_| {
                                     if let Some(period) = &period {
                                         on_period_click.call(period.id);
                                     }
                                 }
                             },
-                            onmouseenter: {
+                            onmouseenter: {;
                                 let period_id = cell.period.as_ref().map(|p| p.id);
                                 move |_| hovered_period.set(period_id)
                             },
@@ -95,24 +130,17 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         }
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
-pub fn generate_svg_content(yaml: &Yaml) -> String {
-    let years = yaml.life_expectancy;
-    let cols = 24;
-    let rows = (years + 3) / 2;
 
-    let dob = NaiveDate::parse_from_str(&format!("{}-01", yaml.date_of_birth), "%Y-%m-%d")
-        .expect("Invalid date_of_birth format in yaml. Expected YYYY-MM");
-
+fn generate_cell_data(yaml: &Yaml) -> Vec<CellData> {
+    let dob = parse_date(&yaml.date_of_birth, "Invalid date_of_birth format in yaml. Expected YYYY-MM");
     let current_date = Local::now().date_naive();
 
-    let cell_data: Vec<CellData> = (0..years * 12)
+    (0..yaml.life_expectancy * 12)
         .map(|index| {
             let year = index / 12;
             let month = index % 12;
             let cell_date = dob + Duration::days((year * 365 + month * 30) as i64);
-            let (color, period) =
-                get_color_and_period_for_date(cell_date, &yaml.life_periods, current_date);
+            let (color, period) = get_color_and_period_for_date(cell_date, &yaml.life_periods, current_date);
 
             CellData {
                 color,
@@ -120,19 +148,28 @@ pub fn generate_svg_content(yaml: &Yaml) -> String {
                 date: cell_date,
             }
         })
-        .collect();
+        .collect()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn generate_svg_content(yaml: &Yaml, size_info: &SizeInfo) -> String {
+    let (cell_data, cols, rows, cell_size, gap, total_width, total_height) = 
+        generate_lifetime_data(yaml, size_info);
 
     let mut svg = format!(
-        r#"<svg class="lifetime-view-svg" preserveAspectRatio="xMidYMid meet" viewBox="0 0 {cols} {rows}">"#
+        r#"<svg class="lifetime-view-svg" preserveAspectRatio="xMidYMid meet" viewBox="0 0 {} {}">"#,
+        total_width, total_height
     );
 
     for (index, cell) in cell_data.iter().enumerate() {
         let row = index / cols;
         let col = index % cols;
+        let x = col as f32 * (cell_size + gap);
+        let y = row as f32 * (cell_size + gap);
 
         svg.push_str(&format!(
-            r#"<rect x="{col}" y="{row}" width="1" height="1" fill="{color}" stroke="gray" stroke-width="0.02"/>"#,
-            color = cell.color
+            r#"<rect x="{}" y="{}" width="{}" height="{}" fill="{}" stroke="gray" stroke-width="0.02"/>"#,
+            x, y, cell_size, cell_size, cell.color
         ));
     }
 
@@ -143,9 +180,13 @@ pub fn generate_svg_content(yaml: &Yaml) -> String {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn get_svg_content() -> Option<String> {
     let yaml_state = use_context::<Signal<Yaml>>();
+    let size_info = use_context::<Signal<SizeInfo>>();
+
     let yaml = yaml_state();
-    Some(generate_svg_content(&yaml))
+    let size_info = size_info();
+    Some(generate_svg_content(&yaml, &size_info))
 }
+
 
 fn get_color_and_period_for_date(
     date: NaiveDate,
@@ -155,37 +196,14 @@ fn get_color_and_period_for_date(
     debug!("Searching for period for date: {}", date);
 
     for (index, period) in life_periods.iter().rev().enumerate() {
-        let period_start =
-            match NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d") {
-                Ok(date) => date,
-                Err(e) => {
-                    error!(
-                        "Failed to parse start date for period: {}. Error: {}",
-                        period.start, e
-                    );
-                    continue;
-                }
-            };
-
+        let period_start = parse_date(&period.start, &format!("Failed to parse start date for period: {}", period.start));
         let period_end = if index == 0 {
-            // This is the last period, use current date as end
             current_date
         } else {
-            // Use the start of the next period as the end of this period
-            match NaiveDate::parse_from_str(
-                &format!("{}-01", life_periods[life_periods.len() - index].start),
-                "%Y-%m-%d",
-            ) {
-                Ok(date) => date,
-                Err(e) => {
-                    error!(
-                        "Failed to parse start date for next period: {}. Error: {}",
-                        life_periods[life_periods.len() - index].start,
-                        e
-                    );
-                    continue;
-                }
-            }
+            parse_date(
+                &life_periods[life_periods.len() - index].start,
+                &format!("Failed to parse start date for next period: {}", life_periods[life_periods.len() - index].start)
+            )
         };
 
         if date >= period_start && date < period_end {
@@ -198,4 +216,12 @@ fn get_color_and_period_for_date(
     }
 
     ("#fafafa".to_string(), None)
+}
+
+fn parse_date(date_str: &str, error_msg: &str) -> NaiveDate {
+    NaiveDate::parse_from_str(&format!("{}-01", date_str), "%Y-%m-%d")
+        .unwrap_or_else(|e| {
+            error!("{}: {}", error_msg, e);
+            panic!("{}", error_msg);
+        })
 }

@@ -5,6 +5,7 @@ mod events_view;
 mod legend;
 mod lifetime_view;
 mod top_panel;
+mod window_manager;
 
 pub use bottom_panel::BottomPanel;
 pub use central_panel::CentralPanel;
@@ -15,3 +16,4 @@ pub use legend::Legend;
 pub use lifetime_view::get_svg_content;
 pub use lifetime_view::LifetimeView;
 pub use top_panel::TopPanel;
+pub use window_manager::WindowSizeManager;

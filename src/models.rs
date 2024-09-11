@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use chrono::NaiveDate;
+
+#[derive(Clone, PartialEq)]
+pub struct SizeInfo {
+    pub cell_size: f64,
+    pub window_width: f64,
+    pub window_height: f64,
+}
 
 #[derive(Default, Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
@@ -18,6 +26,14 @@ pub struct MyLifeApp {
     pub data_folder: String,
     pub screenshot_data: Option<Vec<u8>>,
 }
+
+#[derive(PartialEq, Clone)]
+pub struct CellData {
+    pub color: String,
+    pub period: Option<LifePeriod>,
+    pub date: NaiveDate,
+}
+
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Yaml {
