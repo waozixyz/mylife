@@ -4,7 +4,7 @@ use crate::ui::{BottomPanel, CentralPanel, TopPanel, WindowSizeManager};
 use crate::utils::compression::decode_and_decompress;
 use crate::yaml_manager::{get_yaml, get_yaml_manager};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{error, info};
+use dioxus_logger::tracing::error;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 enum Route {

@@ -1,7 +1,7 @@
 use crate::models::{LifePeriod, Yaml, CellData, SizeInfo};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{info, debug, error};
+use dioxus_logger::tracing::{debug, error};
 use uuid::Uuid;
 
 
@@ -71,7 +71,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let size_info = use_context::<Signal<SizeInfo>>();
 
 
-    let (cell_data, cols, rows, cell_size, gap, total_width, total_height) = 
+    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) = 
         use_memo(move || generate_lifetime_data(&yaml_state(), &size_info()))();
 
 
@@ -147,7 +147,7 @@ fn generate_cell_data(yaml: &Yaml) -> Vec<CellData> {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn generate_svg_content(yaml: &Yaml, size_info: &SizeInfo) -> String {
-    let (cell_data, cols, rows, cell_size, gap, total_width, total_height) = 
+    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) = 
         generate_lifetime_data(yaml, size_info);
 
     let mut svg = format!(

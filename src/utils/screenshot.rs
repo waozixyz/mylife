@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, error};
-use crate::models::{LegendItem, MyLifeApp, Yaml};
+use crate::models::{LegendItem, Yaml};
 use crate::utils::image_utils::*;
 
 #[cfg(target_arch = "wasm32")]
@@ -36,7 +36,6 @@ pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     
     info!("Processed SVG content length: {}", processed_svg.len());
 
-    let app_state = use_context::<Signal<MyLifeApp>>();
     let yaml_state = use_context::<Signal<Yaml>>();
 
     let legend_items = yaml_state().life_periods.iter().map(|period| LegendItem {

@@ -3,8 +3,15 @@ use crate::utils::screenshot::{save_screenshot, take_screenshot};
 use crate::yaml_manager::{get_available_yamls, get_yaml_manager, import_yaml, export_yaml};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
+use qrcode::QrCode;
+use qrcode::render::svg;
+use arboard::Clipboard;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
+use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
+#[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
+use wl_clipboard_rs::paste::{get_contents, ClipboardType, Seat};
+
 use crate::utils::compression::compress_and_encode;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::screenshot::share_screenshot;
@@ -16,6 +23,8 @@ pub fn TopPanel() -> Element {
     let mut show_screenshot_modal = use_signal(|| false);
     let mut screenshot_data = use_signal(String::new);
     let size_info = use_context::<Signal<SizeInfo>>();
+    let mut show_share_modal = use_signal(|| false);
+    let mut share_url = use_signal(String::new);
 
     let options = get_available_yamls();
 
@@ -66,20 +75,66 @@ pub fn TopPanel() -> Element {
         }
     };
 
-    #[cfg(target_arch = "wasm32")]
     let share_yaml = move |_: MouseEvent| {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
         info!("Original YAML content: {}", yaml_content);
         let encoded_yaml = compress_and_encode(&yaml_content);
         info!("Compressed and encoded YAML: {}", encoded_yaml);
 
-        let current_url = web_sys::window().unwrap().location().href().unwrap();
-        let base_url = web_sys::Url::new(&current_url).unwrap();
-        let share_url = format!("{}?y={}", base_url.origin(), encoded_yaml);
-
-        web_sys::window().unwrap().open_with_url_and_target(&share_url, "_blank").unwrap();
-    
+        let base_url = "https://mylife.waozi.xyz";
+        let url = format!("{}?y={}", base_url, encoded_yaml);
+        
+        share_url.set(url);
+        show_share_modal.set(true);
     };
+
+    
+    let copy_to_clipboard = move |_: MouseEvent| {
+        let url = share_url();
+        
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = web_sys::window()
+                .unwrap()
+                .navigator()
+                .clipboard()
+                .unwrap()
+                .write_text(&url);
+        }
+
+        #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
+        {
+            let opts = WlOptions::new();
+            if let Err(e) = opts.copy(Source::Bytes(url.clone().into_bytes().into()), MimeType::Text) {
+                error!("Failed to copy URL to clipboard using wl-clipboard-rs: {}", e);
+                // Fallback to arboard
+                if let Ok(mut clipboard) = Clipboard::new() {
+                    if let Err(e) = clipboard.set_text(&url) {
+                        error!("Failed to copy URL to clipboard using arboard: {}", e);
+                    }
+                }
+            }
+        }
+
+        #[cfg(all(not(target_os = "linux"), not(target_arch = "wasm32")))]
+        {
+            if let Ok(mut clipboard) = Clipboard::new() {
+                if let Err(e) = clipboard.set_text(&url) {
+                    error!("Failed to copy URL to clipboard: {}", e);
+                }
+            }
+        }
+    };
+
+
+    let generate_qr_code = move |url: &str| -> String {
+        let code = QrCode::new(url).unwrap();
+        code.render::<svg::Color>()
+            .min_dimensions(200, 200)
+            .max_dimensions(250, 250)
+            .build()
+    };
+
     rsx! {
         div {
             class: "top-panel",
@@ -110,12 +165,7 @@ pub fn TopPanel() -> Element {
                     class: "action-buttons",
                     button { onclick: load_yaml, "📥 Import YAML" }
                     button { onclick: export_yaml_action, "📤 Export YAML" }
-                    {
-                        #[cfg(target_arch = "wasm32")]
-                        rsx! {
-                            button { onclick: share_yaml, "🔗 Share" }
-                        }
-                    }
+                    button { onclick: share_yaml, "🔗 Share" }
                     button { onclick: take_screenshot, "📸 Screenshot" }
                 }
     
@@ -170,9 +220,7 @@ pub fn TopPanel() -> Element {
             }
         }
     
-
         // Screenshot Modal
-
         {if show_screenshot_modal() {
             rsx! {
                 div {
@@ -216,5 +264,40 @@ pub fn TopPanel() -> Element {
             rsx! { div {} }
         }}
 
+        // Share Modal
+        {if show_share_modal() {
+            rsx! {
+                div {
+                    class: "modal-overlay",
+                    div {
+                        class: "modal-content",
+                        h2 { "Share Your YAML" }
+                        div {
+                            class: "qr-code-container",
+                            dangerous_inner_html: "{generate_qr_code(&share_url())}"
+                        }
+                        div {
+                            class: "url-container",
+                            input {
+                                readonly: true,
+                                value: "{share_url()}",
+                            }
+                            button {
+                                onclick: copy_to_clipboard,
+                                class: "copy-button",
+                                "Copy"
+                            }
+                        }
+                        button {
+                            onclick: move |_| show_share_modal.set(false),
+                            class: "close-button",
+                            "Close"
+                        }
+                    }
+                }
+            }
+        } else {
+            rsx! { div {} }
+        }}
     }
 }

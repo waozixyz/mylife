@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use brotli::enc::BrotliEncoderParams;
 use brotli::Decompressor;
-use dioxus_logger::tracing::{error, info};
+use dioxus_logger::tracing::error;
 use serde_json;
 use serde_yaml;
 use std::io::Read;
@@ -55,7 +55,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
     let mut decompressed = Vec::new();
     let mut decompressor = Decompressor::new(&decoded_base64[..], 4096);
     match decompressor.read_to_end(&mut decompressed) {
-        Ok(size) => {}
+        Ok(_size) => {}
         Err(e) => {
             error!("Failed to decompress data: {:?}", e);
             return None;

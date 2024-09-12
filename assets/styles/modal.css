@@ -68,3 +68,47 @@
 .close-button:hover {
     background-color: var(--button-hover-color) !important;
 }
+
+.qr-code-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 1rem 0;
+    padding: 1rem;
+    background-image: url('path/to/your/background.webp');
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+}
+
+.qr-code-container svg {
+    width: 200px;
+    height: 200px;
+}
+
+.url-container {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+.url-container input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px 0 0 4px;
+    font-size: 0.9rem;
+}
+
+.copy-button {
+    padding: 0.5rem 1rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.copy-button:hover {
+    background-color: #45a049;
+}

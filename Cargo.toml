@@ -35,6 +35,8 @@ rand = "0.8.5"
 rusttype = "0.9.3"
 imageproc = "0.25.0"
 hex_color = "3.0.0"
+qrcode = "0.14.1"
+arboard = "3.4.1"
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -56,3 +58,6 @@ web-sys = { version = "0.3", features = ["ResizeObserver", "ResizeObserverEntry"
 wasm-bindgen = "0.2.93"
 wasm-bindgen-futures = "0.4.43"
 js-sys = "0.3.4"
+
+[target.'cfg(all(target_os = "linux", not(target_arch = "wasm32")))'.dependencies]
+wl-clipboard-rs = "0.7"

@@ -26,7 +26,7 @@ pub fn draw_title(image: &mut RgbaImage, text: &str, font: &Font, is_landscape: 
         Scale::uniform(200.0) // Keep the large size for portrait
     };
     let color = Rgba([255, 255, 255, 255]); // White color
-    let v_metrics = font.v_metrics(scale);
+    let _v_metrics = font.v_metrics(scale);
     
     // Center the text horizontally
     let text_width = font.layout(text, scale, rusttype::point(0.0, 0.0))

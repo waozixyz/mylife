@@ -1,6 +1,5 @@
 use crate::models::{MyLifeApp, Yaml};
 use dioxus::prelude::*;
-use std::io;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::{fs, path::Path};
