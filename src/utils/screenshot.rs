@@ -1,15 +1,8 @@
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::info;
-use resvg::render;
-use resvg::usvg::{Options, Tree};
-use tiny_skia::{Pixmap, Transform};
-use dioxus_logger::tracing::error;
-use image::{DynamicImage, ImageBuffer, Rgba};
-use image::GenericImageView;
-use image::codecs::webp::WebPEncoder;
-use std::fs;
-use rand::seq::SliceRandom;
+use dioxus_logger::tracing::{info, error};
+use crate::models::{LegendItem, MyLifeApp, Yaml};
+use crate::utils::image_utils::*;
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Array, Object, Promise};
@@ -21,171 +14,16 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorElement, Navigator};
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::fs::File;
+use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
-use std::io::Write;
+use rfd::FileDialog;
+#[cfg(not(target_arch = "wasm32"))]
+use image::io::Reader as ImageReader;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Cursor, Write};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ui::get_svg_content;
-
-#[cfg(target_arch = "wasm32")]
-use include_dir::{include_dir, Dir};
-#[cfg(target_arch = "wasm32")]
-static LANDSCAPE_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/landscape");
-#[cfg(target_arch = "wasm32")]
-static PORTRAIT_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/portrait");
-
-
-fn get_background_images(is_landscape: bool) -> Vec<String> {
-    let folder_path = if is_landscape {
-        "assets/cards/landscape"
-    } else {
-        "assets/cards/portrait"
-    };
-
-    match fs::read_dir(folder_path) {
-        Ok(entries) => entries
-            .filter_map(|entry| {
-                entry.ok().and_then(|e| {
-                    let path = e.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("webp") {
-                        Some(path.to_string_lossy().into_owned())
-                    } else {
-                        None
-                    }
-                })
-            })
-            .collect(),
-        Err(e) => {
-            error!("Failed to read directory {}: {:?}", folder_path, e);
-            Vec::new()
-        }
-    }
-}
-
-fn process_svg_content(svg_content: String) -> Result<String, String> {
-    info!("SVG content length: {}", svg_content.len());
-
-    let svg_content_cleaned = svg_content.replace(r#" data-dioxus-id="\d+""#, "");
-    info!("Cleaned SVG content length: {}", svg_content_cleaned.len());
-
-    let svg_with_namespace = if !svg_content_cleaned.contains("xmlns=") {
-        svg_content_cleaned.replace("<svg", r#"<svg xmlns="http://www.w3.org/2000/svg""#)
-    } else {
-        svg_content_cleaned
-    };
-
-    Ok(svg_with_namespace)
-}
-
-
-#[cfg(target_arch = "wasm32")]
-fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String> {
-    let images_dir = if is_landscape { &LANDSCAPE_IMAGES } else { &PORTRAIT_IMAGES };
-    
-    let webp_files: Vec<_> = images_dir.files().filter(|f| f.path().extension().and_then(|s| s.to_str()) == Some("webp")).collect();
-    
-    if webp_files.is_empty() {
-        return Err("No background images found".to_string());
-    }
-
-    let chosen_image = webp_files
-        .choose(&mut rand::thread_rng())
-        .ok_or("Failed to choose a random image")?;
-
-    let image_data = chosen_image.contents();
-    
-    image::load_from_memory(image_data)
-        .map_err(|e| format!("Failed to load background image: {:?}", e))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String> {
-    let background_images = get_background_images(is_landscape);
-    
-    if background_images.is_empty() {
-        return Err("No background images found".to_string());
-    }
-
-    let chosen_image = background_images
-        .choose(&mut rand::thread_rng())
-        .ok_or("Failed to choose a random image")?;
-
-    image::open(chosen_image)
-        .map_err(|e| format!("Failed to open background image: {:?}", e))
-}
-
-fn render_svg_to_image(svg_content: &str, is_landscape: bool) -> Result<Vec<u8>, String> {
-    let opt = Options::default();
-    let tree = Tree::from_str(svg_content, &opt).map_err(|e| format!("Failed to parse SVG: {:?}", e))?;
-
-
-    let background = load_background_image(is_landscape)?;
-    let (bg_width, bg_height) = if is_landscape {
-        (1344, 768)
-    } else {
-        (768, 1344)
-    };
-    info!("Background image size: {}x{}", bg_width, bg_height);
-    
-    // Resize the background image if necessary
-    let background = background.resize_exact(bg_width, bg_height, image::imageops::FilterType::Lanczos3);
-
-    // Calculate the scaling factor for the SVG
-    let svg_size = tree.size();
-    let svg_aspect_ratio = svg_size.width() / svg_size.height();
-
-    let (svg_width, svg_height) = if is_landscape {
-        (800, (800.0 / svg_aspect_ratio).round() as u32)
-    } else {
-        ((800.0 * svg_aspect_ratio).round() as u32, 800)
-    };
-
-    let scale_x = svg_width as f32 / svg_size.width();
-    let scale_y = svg_height as f32 / svg_size.height();
-
-    info!("Scaled SVG size: {}x{}", svg_width, svg_height);
-
-    let mut pixmap = Pixmap::new(svg_width, svg_height).ok_or("Failed to create Pixmap")?;
-
-    let transform = Transform::from_scale(scale_x, scale_y);
-    render(&tree, transform, &mut pixmap.as_mut());
-
-    // Convert Pixmap to image::RgbaImage
-    let svg_image = ImageBuffer::<Rgba<u8>, _>::from_raw(
-        svg_width,
-        svg_height,
-        pixmap.data().to_vec()
-    ).ok_or("Failed to create RgbaImage")?;
-
-    // Create a new image with the background dimensions
-    let mut final_image = DynamicImage::new_rgba8(bg_width, bg_height);
-
-    // Copy the background onto the final image
-    image::imageops::replace(&mut final_image, &background, 0, 0);
-
-    // Calculate the position to center the SVG image
-    let x = (bg_width - svg_width) / 2;
-    let y = (bg_height - svg_height) / 2;
-
-    info!("Overlay position: ({}, {})", x, y);
-
-    // Overlay the SVG image onto the final image
-    image::imageops::overlay(&mut final_image, &svg_image, x.into(), y.into());
-
-    // Encode to WebP
-    let mut webp_data = Vec::new();
-    WebPEncoder::new(&mut webp_data)
-        .encode(
-            &final_image.to_rgba8(),
-            bg_width,
-            bg_height,
-            image::ColorType::Rgba8
-        )
-        .map_err(|e| format!("Failed to encode WebP: {:?}", e))?;
-
-    Ok(webp_data)
-}
 
 pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     #[cfg(target_arch = "wasm32")]
@@ -197,13 +35,25 @@ pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     let processed_svg = process_svg_content(svg_content)?;
     
     info!("Processed SVG content length: {}", processed_svg.len());
+
+    let app_state = use_context::<Signal<MyLifeApp>>();
+    let yaml_state = use_context::<Signal<Yaml>>();
+
+    let legend_items = yaml_state().life_periods.iter().map(|period| LegendItem {
+        id: period.id,
+        name: period.name.clone(),
+        start: period.start.clone(),
+        color: period.color.clone(),
+        is_event: false,
+    }).collect::<Vec<_>>();
     
-    let image_data = render_svg_to_image(&processed_svg, is_landscape)
+    let image_data = render_svg_to_image(&processed_svg, is_landscape, &legend_items)
         .map_err(|e| format!("Failed to render SVG to image: {}", e))?;
 
     let base64_image = general_purpose::STANDARD.encode(&image_data);
     Ok(format!("data:image/webp;base64,{}", base64_image))
 }
+
 #[cfg(target_arch = "wasm32")]
 fn get_svg_content_wasm() -> Result<String, String> {
     let window = window().ok_or("Failed to get window")?;
@@ -217,7 +67,6 @@ fn get_svg_content_wasm() -> Result<String, String> {
 
     Ok(svg.outer_html())
 }
-
 
 #[cfg(target_arch = "wasm32")]
 pub fn save_screenshot(data: &Signal<String>) {
@@ -235,14 +84,9 @@ pub fn save_screenshot(data: &Signal<String>) {
     a.click();
     document.body().unwrap().remove_child(&a).unwrap();
 }
+
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_screenshot(data: &Signal<String>) {
-    use std::path::PathBuf;
-    use chrono::Local;
-    use rfd::FileDialog;
-    use image::io::Reader as ImageReader;
-    use std::io::Cursor;
-
     let binding = data();
     let image_data = binding.strip_prefix("data:image/webp;base64,").unwrap_or("");
     let decoded = general_purpose::STANDARD.decode(image_data).unwrap();
@@ -274,6 +118,7 @@ pub fn save_screenshot(data: &Signal<String>) {
         error!("Screenshot save cancelled or failed");
     }
 }
+
 #[cfg(target_arch = "wasm32")]
 pub fn share_screenshot(data: &Signal<String>) {
     let data = data.clone();

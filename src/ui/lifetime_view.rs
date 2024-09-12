@@ -113,7 +113,7 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                                     }
                                 }
                             },
-                            onmouseenter: {;
+                            onmouseenter: {
                                 let period_id = cell.period.as_ref().map(|p| p.id);
                                 move |_| hovered_period.set(period_id)
                             },

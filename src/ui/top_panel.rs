@@ -105,22 +105,20 @@ pub fn TopPanel() -> Element {
                 "✖"
             }
     
-            // Action buttons (always visible)
-            div {
-                class: "action-buttons",
-                button { onclick: load_yaml, "📥 Import YAML" }
-                button { onclick: export_yaml_action, "📤 Export YAML" }
-                {
-                    #[cfg(target_arch = "wasm32")]
-                    rsx! {
-                        button { onclick: share_yaml, "🔗 Share" }
-                    }
-                }
-                button { onclick: take_screenshot, "📸 Screenshot" }
-            }
-    
-            // Configuration selector and Life Expectancy (only in Lifetime view)
             if app_state().view == "Lifetime" {
+                div {
+                    class: "action-buttons",
+                    button { onclick: load_yaml, "📥 Import YAML" }
+                    button { onclick: export_yaml_action, "📤 Export YAML" }
+                    {
+                        #[cfg(target_arch = "wasm32")]
+                        rsx! {
+                            button { onclick: share_yaml, "🔗 Share" }
+                        }
+                    }
+                    button { onclick: take_screenshot, "📸 Screenshot" }
+                }
+    
                 div {
                     class: "config-selectors",
                     
