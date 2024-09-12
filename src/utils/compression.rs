@@ -1,10 +1,14 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use brotli::enc::BrotliEncoderParams;
+#[cfg(target_arch = "wasm32")]
 use brotli::Decompressor;
+#[cfg(target_arch = "wasm32")]
 use dioxus_logger::tracing::error;
 use serde_json;
 use serde_yaml;
+#[cfg(target_arch = "wasm32")]
 use std::io::Read;
+#[cfg(target_arch = "wasm32")]
 use uuid::Uuid;
 
 pub fn compress_and_encode(yaml_data: &str) -> String {
@@ -38,13 +42,11 @@ fn remove_ids(value: &mut serde_yaml::Value) {
         _ => {}
     }
 }
-
+#[cfg(target_arch = "wasm32")]
 pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
     // Step 1: Base64 decoding
     let decoded_base64 = match URL_SAFE_NO_PAD.decode(encoded_data) {
-        Ok(decoded) => {
-            decoded
-        }
+        Ok(decoded) => decoded,
         Err(e) => {
             error!("Failed to decode base64: {:?}", e);
             return None;
@@ -64,9 +66,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
 
     // Step 3: UTF-8 conversion (JSON string)
     let json_str = match String::from_utf8(decompressed) {
-        Ok(s) => {
-            s
-        }
+        Ok(s) => s,
         Err(e) => {
             error!("Failed to convert decompressed data to UTF-8: {:?}", e);
             return None;
@@ -78,9 +78,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
         Ok(mut json) => {
             add_random_ids(&mut json);
             match serde_yaml::to_string(&json) {
-                Ok(yaml) => {
-                    Some(yaml)
-                }
+                Ok(yaml) => Some(yaml),
                 Err(e) => {
                     error!("Failed to convert JSON to YAML: {:?}", e);
                     None
@@ -93,7 +91,7 @@ pub fn decode_and_decompress(encoded_data: &str) -> Option<String> {
         }
     }
 }
-
+#[cfg(target_arch = "wasm32")]
 fn add_random_ids(value: &mut serde_json::Value) {
     match value {
         serde_json::Value::Object(map) => {

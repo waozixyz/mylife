@@ -1,8 +1,8 @@
-use base64::{engine::general_purpose, Engine as _};
-use dioxus::prelude::*;
-use dioxus_logger::tracing::{info, error};
 use crate::models::{LegendItem, Yaml};
 use crate::utils::image_utils::*;
+use base64::{engine::general_purpose, Engine as _};
+use dioxus::prelude::*;
+use dioxus_logger::tracing::{error, info};
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Array, Object, Promise};
@@ -16,9 +16,9 @@ use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorEl
 #[cfg(not(target_arch = "wasm32"))]
 use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
-use rfd::FileDialog;
-#[cfg(not(target_arch = "wasm32"))]
 use image::io::Reader as ImageReader;
+#[cfg(not(target_arch = "wasm32"))]
+use rfd::FileDialog;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Cursor, Write};
 
@@ -33,19 +33,23 @@ pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     let svg_content = get_svg_content().ok_or_else(|| "Yaml context not found".to_string())?;
 
     let processed_svg = process_svg_content(svg_content)?;
-    
+
     info!("Processed SVG content length: {}", processed_svg.len());
 
     let yaml_state = use_context::<Signal<Yaml>>();
 
-    let legend_items = yaml_state().life_periods.iter().map(|period| LegendItem {
-        id: period.id,
-        name: period.name.clone(),
-        start: period.start.clone(),
-        color: period.color.clone(),
-        is_event: false,
-    }).collect::<Vec<_>>();
-    
+    let legend_items = yaml_state()
+        .life_periods
+        .iter()
+        .map(|period| LegendItem {
+            id: period.id,
+            name: period.name.clone(),
+            start: period.start.clone(),
+            color: period.color.clone(),
+            is_event: false,
+        })
+        .collect::<Vec<_>>();
+
     let image_data = render_svg_to_image(&processed_svg, is_landscape, &legend_items)
         .map_err(|e| format!("Failed to render SVG to image: {}", e))?;
 
@@ -87,7 +91,9 @@ pub fn save_screenshot(data: &Signal<String>) {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_screenshot(data: &Signal<String>) {
     let binding = data();
-    let image_data = binding.strip_prefix("data:image/webp;base64,").unwrap_or("");
+    let image_data = binding
+        .strip_prefix("data:image/webp;base64,")
+        .unwrap_or("");
     let decoded = general_purpose::STANDARD.decode(image_data).unwrap();
 
     let current_date = Local::now().format("%Y-%m-%d").to_string();
@@ -97,9 +103,10 @@ pub fn save_screenshot(data: &Signal<String>) {
         .set_file_name(&default_filename)
         .add_filter("WebP Image", &["webp"])
         .add_filter("JPEG Image", &["jpg", "jpeg"])
-        .save_file() {
+        .save_file()
+    {
         let mut file = std::fs::File::create(&path).unwrap();
-        
+
         if path.extension().and_then(|ext| ext.to_str()) == Some("webp") {
             file.write_all(&decoded).unwrap();
         } else {
@@ -111,8 +118,11 @@ pub fn save_screenshot(data: &Signal<String>) {
                 .unwrap();
             image.write_to(&mut file, image::ImageFormat::Jpeg).unwrap();
         }
-        
-        info!("Screenshot saved as {}", path.file_name().unwrap().to_string_lossy());
+
+        info!(
+            "Screenshot saved as {}",
+            path.file_name().unwrap().to_string_lossy()
+        );
     } else {
         error!("Screenshot save cancelled or failed");
     }

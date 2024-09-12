@@ -1,11 +1,11 @@
-use crate::models::{MyLifeApp, Yaml, SizeInfo};
+use crate::models::{MyLifeApp, SizeInfo, Yaml};
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
-use crate::yaml_manager::{get_available_yamls, get_yaml_manager, import_yaml, export_yaml};
-use dioxus::prelude::*;
-use dioxus_logger::tracing::{error, info};
-use qrcode::QrCode;
-use qrcode::render::svg;
+use crate::yaml_manager::{export_yaml, get_available_yamls, get_yaml_manager, import_yaml};
 use arboard::Clipboard;
+use dioxus::prelude::*;
+use dioxus_logger::tracing::error;
+use qrcode::render::svg;
+use qrcode::QrCode;
 
 #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
 use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
@@ -27,13 +27,11 @@ pub fn TopPanel() -> Element {
     let options = get_available_yamls();
 
     let take_screenshot = move |_| {
-        info!("Screenshot button clicked");
         let is_landscape = size_info().window_width > size_info().window_height;
         match take_screenshot(is_landscape) {
             Ok(data) => {
                 screenshot_data.set(data);
                 show_screenshot_modal.set(true);
-                info!("Screenshot process completed");
             }
             Err(e) => error!("Failed to take screenshot: {}", e),
         }
@@ -47,7 +45,6 @@ pub fn TopPanel() -> Element {
                     yaml_state.set(new_yaml.clone());
                     app_state.write().selected_yaml = name.clone();
                     app_state.write().loaded_yamls.push((name, new_yaml));
-                    info!("YAML loaded and state updated");
                 } else {
                     error!("Failed to import YAML");
                 }
@@ -60,7 +57,6 @@ pub fn TopPanel() -> Element {
                 yaml_state.set(new_yaml.clone());
                 app_state.write().selected_yaml = name.clone();
                 app_state.write().loaded_yamls.push((name, new_yaml));
-                info!("YAML loaded and state updated");
             } else {
                 error!("Failed to import YAML");
             }
@@ -75,21 +71,18 @@ pub fn TopPanel() -> Element {
 
     let share_yaml = move |_: MouseEvent| {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
-        info!("Original YAML content: {}", yaml_content);
         let encoded_yaml = compress_and_encode(&yaml_content);
-        info!("Compressed and encoded YAML: {}", encoded_yaml);
 
         let base_url = "https://mylife.waozi.xyz";
         let url = format!("{}?y={}", base_url, encoded_yaml);
-        
+
         share_url.set(url);
         show_share_modal.set(true);
     };
 
-    
     let copy_to_clipboard = move |_: MouseEvent| {
         let url = share_url();
-        
+
         #[cfg(target_arch = "wasm32")]
         {
             let _ = web_sys::window()
@@ -103,8 +96,14 @@ pub fn TopPanel() -> Element {
         #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
         {
             let opts = WlOptions::new();
-            if let Err(e) = opts.copy(Source::Bytes(url.clone().into_bytes().into()), MimeType::Text) {
-                error!("Failed to copy URL to clipboard using wl-clipboard-rs: {}", e);
+            if let Err(e) = opts.copy(
+                Source::Bytes(url.clone().into_bytes().into()),
+                MimeType::Text,
+            ) {
+                error!(
+                    "Failed to copy URL to clipboard using wl-clipboard-rs: {}",
+                    e
+                );
                 // Fallback to arboard
                 if let Ok(mut clipboard) = Clipboard::new() {
                     if let Err(e) = clipboard.set_text(&url) {
@@ -124,19 +123,17 @@ pub fn TopPanel() -> Element {
         }
     };
 
-
     let generate_qr_code = move |url: &str| -> String {
         let code = QrCode::new(url).unwrap();
-        code.render::<svg::Color>()
+        code.render::<svg::Color<'_>>()
             .min_dimensions(200, 200)
             .max_dimensions(250, 250)
             .build()
     };
-
     rsx! {
         div {
             class: "top-panel",
-            
+
             // Back button (only in EventView)
             if app_state().view == "EventView" {
                 button {
@@ -147,7 +144,7 @@ pub fn TopPanel() -> Element {
                     span { "⬅" },
                 }
             }
-    
+
             // Quit button
             button {
                 class: "quit-button",
@@ -157,7 +154,7 @@ pub fn TopPanel() -> Element {
                 },
                 "✖"
             }
-    
+
             if app_state().view == "Lifetime" {
                 div {
                     class: "action-buttons",
@@ -166,10 +163,10 @@ pub fn TopPanel() -> Element {
                     button { onclick: share_yaml, "🔗 Share" }
                     button { onclick: take_screenshot, "📸 Screenshot" }
                 }
-    
+
                 div {
                     class: "config-selectors",
-                    
+
                     select {
                         value: "{app_state().selected_yaml}",
                         onchange: move |evt| {
@@ -217,7 +214,7 @@ pub fn TopPanel() -> Element {
                 }
             }
         }
-    
+
         // Screenshot Modal
         {if show_screenshot_modal() {
             rsx! {

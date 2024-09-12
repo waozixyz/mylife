@@ -2,9 +2,9 @@ use crate::models::{MyLifeApp, Yaml};
 use dioxus::prelude::*;
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::{fs, path::Path};
-#[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
+#[cfg(not(target_arch = "wasm32"))]
+use std::{fs, path::Path};
 
 #[cfg(target_arch = "wasm32")]
 use {
@@ -42,8 +42,7 @@ impl YamlManager for NativeYamlManager {
         let yaml_path = Path::new(&self.data_folder).join(yaml_file);
         let yaml_content = fs::read_to_string(yaml_path)
             .map_err(|e| format!("Failed to read YAML file: {:?}", e))?;
-        serde_yaml::from_str(&yaml_content)
-            .map_err(|e| format!("Failed to parse YAML: {:?}", e))
+        serde_yaml::from_str(&yaml_content).map_err(|e| format!("Failed to parse YAML: {:?}", e))
     }
 
     fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
@@ -95,8 +94,7 @@ pub struct WasmYamlManager;
 #[cfg(target_arch = "wasm32")]
 impl YamlManager for WasmYamlManager {
     fn load_yaml(&self, _yaml_file: &str) -> Result<Yaml, String> {
-        let window = web_sys::window()
-            .ok_or_else(|| "Failed to get window".to_string())?;
+        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
         let storage = window
             .local_storage()
             .map_err(|_| "Failed to get localStorage".to_string())?
@@ -118,11 +116,12 @@ impl YamlManager for WasmYamlManager {
         let url = Url::create_object_url_with_blob(&blob)
             .map_err(|_| "Failed to create object URL".to_string())?;
 
-        let window = web_sys::window()
-            .ok_or_else(|| "Failed to get window".to_string())?;
-        let document = window.document()
+        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
+        let document = window
+            .document()
             .ok_or_else(|| "Failed to get document".to_string())?;
-        let anchor: HtmlAnchorElement = document.create_element("a")
+        let anchor: HtmlAnchorElement = document
+            .create_element("a")
             .map_err(|_| "Failed to create anchor element".to_string())?
             .dyn_into()
             .map_err(|_| "Failed to cast to HtmlAnchorElement".to_string())?;
@@ -131,8 +130,7 @@ impl YamlManager for WasmYamlManager {
         anchor.set_download("config.yaml");
         anchor.click();
 
-        Url::revoke_object_url(&url)
-            .map_err(|_| "Failed to revoke object URL".to_string())?;
+        Url::revoke_object_url(&url).map_err(|_| "Failed to revoke object URL".to_string())?;
 
         Ok(())
     }
@@ -140,20 +138,19 @@ impl YamlManager for WasmYamlManager {
     fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
         let yaml_content = serde_yaml::to_string(yaml)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
-        let window = web_sys::window()
-            .ok_or_else(|| "Failed to get window".to_string())?;
+        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
         let storage = window
             .local_storage()
             .map_err(|_| "Failed to get localStorage".to_string())?
             .ok_or_else(|| "localStorage not available".to_string())?;
 
-        storage.set_item(yaml_file, &yaml_content)
+        storage
+            .set_item(yaml_file, &yaml_content)
             .map_err(|_| "Failed to set item in localStorage".to_string())
     }
 
     fn get_available_yamls(&self) -> Result<Vec<String>, String> {
-        let window = web_sys::window()
-            .ok_or_else(|| "Failed to get window".to_string())?;
+        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
         let storage = window
             .local_storage()
             .map_err(|_| "Failed to get localStorage".to_string())?

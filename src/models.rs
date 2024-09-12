@@ -1,6 +1,6 @@
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::NaiveDate;
 
 #[derive(Clone, PartialEq)]
 pub struct SizeInfo {
@@ -33,7 +33,6 @@ pub struct CellData {
     pub period: Option<LifePeriod>,
     pub date: NaiveDate,
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Yaml {
