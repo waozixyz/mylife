@@ -9,8 +9,6 @@ use arboard::Clipboard;
 
 #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
 use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
-#[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
-use wl_clipboard_rs::paste::{get_contents, ClipboardType, Seat};
 
 use crate::utils::compression::compress_and_encode;
 #[cfg(target_arch = "wasm32")]
