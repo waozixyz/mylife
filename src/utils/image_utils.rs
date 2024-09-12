@@ -19,36 +19,68 @@ static LANDSCAPE_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/la
 #[cfg(target_arch = "wasm32")]
 static PORTRAIT_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/portrait");
 
+pub fn draw_title(image: &mut RgbaImage, text: &str, font: &Font, is_landscape: bool) {
+    let scale = if is_landscape {
+        Scale::uniform(100.0) // Smaller font size for landscape
+    } else {
+        Scale::uniform(200.0) // Keep the large size for portrait
+    };
+    let color = Rgba([255, 255, 255, 255]); // White color
+    let v_metrics = font.v_metrics(scale);
+    
+    // Center the text horizontally
+    let text_width = font.layout(text, scale, rusttype::point(0.0, 0.0))
+        .map(|g| g.position().x + g.unpositioned().h_metrics().advance_width)
+        .last()
+        .unwrap_or(0.0);
+    
+    let x = ((image.width() as f32 - text_width) / 2.0).round() as i32;
+    let y = 20; // 20 pixels from the top
+
+    draw_text_mut(image, color, x, y, scale, font, text);
+}
+
 pub fn render_legend(legend_items: &[LegendItem], width: u32) -> RgbaImage {
-    let item_height = 20;
-    let padding = 5;
-    let height = legend_items.len() as u32 * item_height + 2 * padding;
+    let item_height = 40; // Increased height for larger text
+    let padding = 10;
+    let items_per_row = 2;
+    let rows = (legend_items.len() + items_per_row - 1) / items_per_row;
+    let height = rows as u32 * item_height + 2 * padding;
     
     let mut img = RgbaImage::new(width, height);
-    let font = Font::try_from_bytes(include_bytes!("../../assets/JacquesFrancoisShadow-Regular.ttf")).unwrap();
-    let scale = Scale::uniform(12.0);
+    let font = Font::try_from_bytes(include_bytes!("../../assets/Handjet-Regular.ttf")).unwrap();
+    let scale = Scale::uniform(24.0); // Increased font size
 
-    // Fill the entire background with a light color
+    // Fill the entire background with a semi-transparent black
     for pixel in img.pixels_mut() {
-        *pixel = Rgba([240, 240, 240, 255]); // Light gray background
+        *pixel = Rgba([0, 0, 0, 128]); // Semi-transparent black background
     }
 
     for (i, item) in legend_items.iter().enumerate() {
-        let y = (i as u32 * item_height) + padding;
+        let row = i / items_per_row;
+        let col = i % items_per_row;
+        let x = col as u32 * (width / items_per_row as u32);
+        let y = row as u32 * item_height + padding;
         
         // Parse hex color
         let color = HexColor::parse(&item.color).unwrap_or(HexColor::default());
         
         // Draw colored rectangle
-        for py in y..y+item_height {
-            for px in padding..width-padding {
+        let rect_width = 30;
+        let rect_height = 30;
+        let rect_x = x + padding;
+        let rect_y = y + (item_height - rect_height) / 2;
+        for py in rect_y..rect_y+rect_height {
+            for px in rect_x..rect_x+rect_width {
                 img.put_pixel(px, py, Rgba([color.r, color.g, color.b, 255]));
             }
         }
 
         // Draw text
         let text = format!("{} ({})", item.name, item.start);
-        draw_text_mut(&mut img, Rgba([0, 0, 0, 255]), (padding + 5) as i32, (y + 2) as i32, scale, &font, &text);
+        let text_x = rect_x + rect_width + padding;
+        let text_y = y + (item_height - scale.y as u32) / 2;
+        draw_text_mut(&mut img, Rgba([255, 255, 255, 255]), text_x as i32, text_y as i32, scale, &font, &text);
     }
 
     img
@@ -65,19 +97,18 @@ pub fn draw_text_mut(image: &mut RgbaImage, color: Rgba<u8>, x: i32, y: i32, sca
                 let gy = gy as i32 + bounding_box.min.y;
                 if gx >= 0 && gx < image.width() as i32 && gy >= 0 && gy < image.height() as i32 {
                     let pixel = image.get_pixel_mut(gx as u32, gy as u32);
-                    let font_color = (color.0[0] as f32 * gv, color.0[1] as f32 * gv, color.0[2] as f32 * gv, color.0[3] as f32 * gv);
-                    *pixel = Rgba([
-                        (font_color.0) as u8,
-                        (font_color.1) as u8,
-                        (font_color.2) as u8,
-                        (font_color.3) as u8,
+                    let font_color = Rgba([
+                        ((1.0 - gv) * pixel[0] as f32 + gv * color.0[0] as f32) as u8,
+                        ((1.0 - gv) * pixel[1] as f32 + gv * color.0[1] as f32) as u8,
+                        ((1.0 - gv) * pixel[2] as f32 + gv * color.0[2] as f32) as u8,
+                        ((1.0 - gv) * pixel[3] as f32 + gv * color.0[3] as f32) as u8,
                     ]);
+                    *pixel = font_color;
                 }
             });
         }
     }
 }
-
 pub fn get_background_images(is_landscape: bool) -> Vec<String> {
     let folder_path = if is_landscape {
         "assets/cards/landscape"
@@ -202,29 +233,40 @@ pub fn render_svg_to_image(svg_content: &str, is_landscape: bool, legend_items: 
         pixmap.data().to_vec()
     ).ok_or("Failed to create RgbaImage")?;
 
-    // Render the legend
-    let legend_height = legend_items.len() as u32 * 20 + 10; // 20px per item + 10px padding
-    let legend_image = render_legend(legend_items, bg_width);
+    // Calculate the legend height based on the number of items
+    let items_per_row = 2;
+    let rows = (legend_items.len() + items_per_row - 1) / items_per_row;
+    let legend_height = rows as u32 * 40 + 20; // 40px per row + 20px padding
 
     // Create a new image with space for both the SVG and the legend
     let final_width = bg_width;
-    let final_height = bg_height + legend_height;
+    let final_height = bg_height;
     let mut final_image = DynamicImage::new_rgba8(final_width, final_height);
 
     // Copy the background onto the final image
     image::imageops::replace(&mut final_image, &background, 0, 0);
 
+    // Draw the title
+    let font = Font::try_from_bytes(include_bytes!("../../assets/Handjet-Regular.ttf")).unwrap();
+    draw_title(final_image.as_mut_rgba8().unwrap(), "MyLife", &font, is_landscape);
+
+    
     // Calculate the position to center the SVG image
+    let title_height = if is_landscape { 60 } else { 130 }; // Less space for title in landscape mode
     let x = (bg_width - svg_width) / 2;
-    let y = (bg_height - svg_height) / 2;
+    let y = title_height + (bg_height - svg_height - legend_height - title_height) / 2;
 
     info!("Overlay position: ({}, {})", x, y);
 
     // Overlay the SVG image onto the final image
     image::imageops::overlay(&mut final_image, &svg_image, x.into(), y.into());
 
+    // Render the legend
+    let legend_image = render_legend(legend_items, bg_width);
+
     // Add the legend to the bottom of the image
-    image::imageops::overlay(&mut final_image, &legend_image, 0, bg_height.into());
+    let legend_y = bg_height - legend_height;
+    image::imageops::overlay(&mut final_image, &legend_image, 0, legend_y.into());
 
     // Encode to WebP
     let mut webp_data = Vec::new();

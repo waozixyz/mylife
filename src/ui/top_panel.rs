@@ -15,7 +15,7 @@ pub fn TopPanel() -> Element {
     let mut yaml_state = use_context::<Signal<Yaml>>();
     let mut show_screenshot_modal = use_signal(|| false);
     let mut screenshot_data = use_signal(String::new);
-    let mut size_info = use_context::<Signal<SizeInfo>>();
+    let size_info = use_context::<Signal<SizeInfo>>();
 
     let options = get_available_yamls();
 
