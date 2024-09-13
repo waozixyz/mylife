@@ -1,0 +1,48 @@
+/* src/assets/styles/home.css */
+
+@font-face {
+    font-family: 'Handjet';
+    src: url('../Handjet-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.home-container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+}
+
+.title {
+    font-family: 'Handjet', sans-serif;
+    font-size: 8rem;  /* Increased size for more impact */
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.button-container {
+    margin-top: 2rem;
+}
+
+.view-timeline-button {
+    font-family: 'Handjet', sans-serif;
+    padding: 1rem 2rem;
+    font-size: 2rem;  /* Increased size for better visibility */
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s, transform 0.3s;
+    border: 2px solid white;  /* Added border for better contrast */
+}
+
+.view-timeline-button:hover {
+    background-color: var(--button-hover-color);
+    transform: scale(1.05);  /* Slight grow effect on hover */
+}

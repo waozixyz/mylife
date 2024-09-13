@@ -9,6 +9,9 @@ mod models;
 mod ui;
 mod utils;
 mod yaml_manager;
+mod pages;
+mod routes;
+mod state_manager;
 
 fn main() {
     dioxus_logger::init(Level::INFO).expect("logger failed to init");

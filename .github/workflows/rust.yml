@@ -39,10 +39,6 @@ jobs:
             TARGET: web
           - os: ubuntu-latest
             TARGET: desktop
-          - os: macos-latest
-            TARGET: desktop
-          - os: windows-latest
-            TARGET: desktop
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

@@ -1,32 +1,13 @@
-use crate::models::{MyLifeApp, SizeInfo, Yaml};
-use crate::ui::{BottomPanel, CentralPanel, TopPanel, WindowSizeManager};
-#[cfg(target_arch = "wasm32")]
-use crate::utils::compression::decode_and_decompress;
-use crate::yaml_manager::{get_yaml, get_yaml_manager};
-use dioxus::prelude::*;
-use dioxus_logger::tracing::error;
+// src/app.rs
 
-#[derive(Clone, Routable, Debug, PartialEq)]
-enum Route {
-    #[route("/?:y")]
-    Home { y: String },
-}
+use crate::models::SizeInfo;
+use crate::pages::{HomePage, TimelinePage};
+use dioxus::prelude::*;
+use crate::routes::Route;
+use crate::ui::WindowSizeManager;
 
 #[component]
 pub fn App() -> Element {
-    rsx! {
-        style { {include_str!("../assets/styles/input.css")} }
-        style { {include_str!("../assets/styles/modal.css")} }
-        style { {include_str!("../assets/styles/views.css")} }
-        style { {include_str!("../assets/styles/items.css")} }
-        style { {include_str!("../assets/styles/main.css")} }
-
-        Router::<Route> {}
-    }
-}
-
-#[component]
-fn Home(y: String) -> Element {
     let size_info = use_signal(|| SizeInfo {
         cell_size: 40.0,
         window_width: 800.0,
@@ -35,96 +16,14 @@ fn Home(y: String) -> Element {
 
     use_context_provider(|| size_info);
 
-    let yaml_state = use_signal(|| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if !y.is_empty() {
-                if let Some(decompressed_str) = decode_and_decompress(&y) {
-                    match serde_yaml::from_str::<Yaml>(&decompressed_str) {
-                        Ok(new_yaml) => {
-                            return new_yaml;
-                        }
-                        Err(e) => {
-                            error!("Failed to parse YAML: {}", e);
-                            // Log the first few lines of the YAML for context
-                            let context = decompressed_str
-                                .lines()
-                                .take(5)
-                                .collect::<Vec<_>>()
-                                .join("\n");
-                            error!("YAML parsing error context:\n{}", context);
-                        }
-                    }
-                } else {
-                    error!("Failed to decompress YAML");
-                }
-            }
-        }
-
-        get_yaml()
-    });
-
-    let app_state = use_signal(|| {
-        #[cfg(target_arch = "wasm32")]
-        let mut state = initialize_app_state();
-        #[cfg(not(target_arch = "wasm32"))]
-        let state = initialize_app_state();
-
-        #[cfg(target_arch = "wasm32")]
-        if !y.is_empty() {
-            state.selected_yaml = "Shared YAML".to_string();
-        }
-        state
-    });
-
-    use_context_provider(|| app_state);
-    use_context_provider(|| yaml_state);
-
     rsx! {
-        div {
-            class: "app-container",
-            TopPanel {}
-            CentralPanel {}
-            BottomPanel {}
-        }
+        style { {include_str!("../assets/styles/input.css")} }
+        style { {include_str!("../assets/styles/modal.css")} }
+        style { {include_str!("../assets/styles/views.css")} }
+        style { {include_str!("../assets/styles/items.css")} }
+        style { {include_str!("../assets/styles/main.css")} }
+
+        Router::<Route> {}
         WindowSizeManager {}
     }
-}
-
-fn initialize_app_state() -> MyLifeApp {
-    let loaded_yamls = load_yamls();
-
-    MyLifeApp {
-        view: "Lifetime".to_string(),
-        selected_yaml: "default.yaml".to_string(),
-        selected_legend_item: None,
-        original_legend_item: None,
-        selected_life_period: None,
-        value: 0.0,
-        loaded_yamls,
-        item_state: None,
-        temp_start_date: String::new(),
-        data_folder: "data".to_string(),
-        screenshot_data: None,
-    }
-}
-
-fn load_yamls() -> Vec<(String, Yaml)> {
-    get_yaml_manager()
-        .get_available_yamls()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|name| {
-            get_yaml_manager()
-                .load_yaml(&name)
-                .map_err(|e| {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    error!("Failed to load yaml {}: {:?}", name, e);
-                    #[cfg(target_arch = "wasm32")]
-                    error!("Failed to load yaml {}: {:?}", name, e);
-                })
-                .ok()
-                .map(|yaml| (name, yaml))
-        })
-        .collect()
 }

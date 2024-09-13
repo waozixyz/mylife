@@ -2,92 +2,69 @@ name: John Doe
 date_of_birth: 2000-01
 life_expectancy: 92
 life_periods:
-- id: 12ff9e73-b460-4054-bbc4-d57a3bef71a4
-  name: Childhood
+- name: Childhood
   start: 2000-01
   color: '#5100FF'
-  events:
-  - id: 6ea75919-54af-4608-937d-32357b94f996
-    name: Test
-    color: '#880022'
-    start: 2001-01-09
-  - id: cfaea897-3364-470b-b53f-578ee53e34b8
-    name: New Ev
-    color: '#228822'
-    start: 2003-08-09
-- id: 30f5a1c3-fbbb-465b-b4c6-7d0e5989f57f
-  name: Teenage Years
+  events:[]
+- name: Teenage Years
   start: 2013-01
   color: '#00FF77'
   events: []
-- id: 77b997ae-985a-4471-8e1c-43c248eaadd2
-  name: University
+- name: University
   start: 2018-01
   color: '#00BEFF'
   events: []
-- id: 70c24bf1-468d-4886-a9bb-da14aab619d9
-  name: Career Growth
+- name: Career Growth
   start: 2022-01
   color: '#FFFF00'
   events:
-  - id: 6a72aab8-533c-4de8-b4d4-fbaf376b0a90
-    name: New Year Trip
+  - name: New Year Trip
     color: '#E91E63'
     start: 2023-01-01
-  - id: 1124cf76-e021-4bb6-822d-ee2b3a312429
-    name: Job Search
+  - name: Job Search
     color: '#607D8B'
     start: 2023-02-01
-  - id: 30bf84c6-8b20-48e7-816d-7d863d610d35
-    name: First Full-time Job
+  - name: First Full-time Job
     color: '#795548'
     start: 2023-05-01
-  - id: 4e52696b-61ef-420c-9593-97be426d736a
-    name: Work From Home
+  - name: Work From Home
     color: '#FF5722'
     start: 2023-09-01
-  - id: f339103f-a7f7-4bff-a8bc-05cb794ee17a
-    name: Year-end Vacation
+  - name: Year-end Vacation
     color: '#009688'
     start: 2023-12-23
-  - id: ed595e38-8444-4458-8d6e-773b847a5d8d
-    name: Fall Semester
+  - name: Fall Semester
     color: '#9C27B0'
     start: 2022-09-05
-  - id: 8ee3e274-a3bb-4af5-8859-35d3406c2a73
-    name: Summer Job
+  - name: Summer Job
     color: '#FFA500'
     start: 2022-06-06
-  - id: 844596c1-1976-4d9a-98cd-bc7531e8a315
-    name: Spring Semester
+  - name: Spring Semester
     color: '#2196F3'
     start: 2022-03-21
-  - id: a2d7ae40-79f2-4bbe-9b57-a71c09bd1ecc
-    name: Winter Internship
+  - name: Winter Internship
     color: '#4CAF50'
     start: 2022-01-03
-- id: b9bbd0ce-e722-4093-9f18-bb1a8623e5ff
-  name: Working
+- name: Working
   start: 2024-01
   color: '#FF9E00'
   events:
-  - id: 49450a13-b133-4e71-ac4d-33a879682ce4
-    name: New Project at Work
+  - name: New Project at Work
     color: '#3F51B5'
     start: 2024-01-08
-  - id: 951982fc-c310-4f46-8cc1-818da7a0cb90
-    name: Learning New Skill
+  - name: Learning New Skill
     color: '#CDDC39'
     start: 2024-04-01
-  - id: 383bebfb-fb5d-4a5e-9642-eb7d98d27369
-    name: Summer Workation
+  - name: Summer Workation
     color: '#FF9800'
     start: 2024-06-15
-  - id: 80b35b9a-3533-4844-b6e5-298aabbe9fc9
-    name: Promotion Preparation
+  - name: Promotion Preparation
     color: '#9C27B0'
     start: 2024-08-01
-  - id: 04845770-f78a-4749-8f73-29c9e56170a5
-    name: Holiday Season
+  - name: Holiday Season
     color: '#F44336'
     start: 2024-08-25
+routines:
+  - name: Mourning Routine
+    start: 2024-08-24
+    actions: []
