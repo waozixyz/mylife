@@ -14,6 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Cache system dependencies
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -45,9 +53,18 @@ jobs:
       
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       
+      - name: Cache Dioxus CLI
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/dx
+          key: ${{ runner.os }}-dioxus-cli-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli
+        if: steps.cache-dioxus-cli.outputs.cache-hit != 'true'
       
       - name: Build
         run: dx build --release --platform web
