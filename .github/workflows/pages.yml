@@ -1,4 +1,4 @@
-name: Github Pages
+name: GitHub Pages
 
 on:
   push:
@@ -19,12 +19,17 @@ jobs:
       - name: Install Nix
         run: |
           sh <(curl -L https://nixos.org/nix/install) --no-daemon
-          
+          . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
+
       - name: Install Nix dependencies
-        run: nix-env -iA nixpkgs.cachix
-          
+        run: |
+          . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
+          nix-env -iA nixpkgs.cachix
+
       - name: Build with Nix
-        run: nix-shell --pure --run 'dx build --release --platform web'
+        run: |
+          . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
+          nix-shell --pure --run 'dx build --release --platform web'
         
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
