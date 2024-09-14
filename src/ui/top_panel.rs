@@ -2,6 +2,7 @@ use crate::models::{MyLifeApp, SizeInfo, Yaml};
 use crate::routes::Route;
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
 use crate::yaml_manager::{export_yaml, get_available_yamls, get_yaml_manager, import_yaml};
+#[cfg(not(target_arch = "wasm32"))]
 use arboard::Clipboard;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::error;
@@ -83,17 +84,28 @@ pub fn TopPanel() -> Element {
 
     let copy_to_clipboard = move |_: MouseEvent| {
         let url = share_url();
-
         #[cfg(target_arch = "wasm32")]
         {
-            let _ = web_sys::window()
-                .unwrap()
-                .navigator()
-                .clipboard()
-                .unwrap()
-                .write_text(&url);
+            use wasm_bindgen_futures::JsFuture;
+        
+            let window = web_sys::window().expect("No global `window` exists");
+            let navigator = window.navigator();
+            
+            let clipboard = navigator.clipboard();
+            let url_clone = url.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let promise = clipboard.write_text(&url_clone);
+                match JsFuture::from(promise).await {
+                    Ok(_) => {
+                        log::info!("URL copied to clipboard successfully");
+                    },
+                    Err(e) => {
+                        error!("Failed to copy URL to clipboard: {:?}", e);
+                    }
+                }
+            });
         }
-
+    
         #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
         {
             let opts = WlOptions::new();
@@ -113,7 +125,7 @@ pub fn TopPanel() -> Element {
                 }
             }
         }
-
+    
         #[cfg(all(not(target_os = "linux"), not(target_arch = "wasm32")))]
         {
             if let Ok(mut clipboard) = Clipboard::new() {
@@ -131,6 +143,7 @@ pub fn TopPanel() -> Element {
             .max_dimensions(250, 250)
             .build()
     };
+
     rsx! {
         div {
             class: "top-panel",
@@ -254,8 +267,7 @@ pub fn TopPanel() -> Element {
             rsx! { div {} }
         }}
 
-        // Share Modal
-        {if show_share_modal() {
+         {if show_share_modal() {
             rsx! {
                 div {
                     class: "modal-overlay",

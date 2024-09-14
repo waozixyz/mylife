@@ -62,3 +62,6 @@ devenv.local.nix
 
 data
 !data/default.yaml
+
+
+*.br

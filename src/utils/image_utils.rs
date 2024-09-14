@@ -13,12 +13,30 @@ use std::fs;
 use tiny_skia::{Pixmap, Transform};
 
 #[cfg(target_arch = "wasm32")]
-use include_dir::{include_dir, Dir};
-#[cfg(target_arch = "wasm32")]
-static LANDSCAPE_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/landscape");
-#[cfg(target_arch = "wasm32")]
-static PORTRAIT_IMAGES: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/cards/portrait");
+const LANDSCAPE_IMAGES: [&[u8]; 9] = [
+    include_bytes!("../../assets/cards/landscape/1.webp"),
+    include_bytes!("../../assets/cards/landscape/2.webp"),
+    include_bytes!("../../assets/cards/landscape/3.webp"),
+    include_bytes!("../../assets/cards/landscape/4.webp"),
+    include_bytes!("../../assets/cards/landscape/5.webp"),
+    include_bytes!("../../assets/cards/landscape/6.webp"),
+    include_bytes!("../../assets/cards/landscape/7.webp"),
+    include_bytes!("../../assets/cards/landscape/8.webp"),
+    include_bytes!("../../assets/cards/landscape/9.webp"),
+];
 
+#[cfg(target_arch = "wasm32")]
+const PORTRAIT_IMAGES: [&[u8]; 9] = [
+    include_bytes!("../../assets/cards/portrait/1.webp"),
+    include_bytes!("../../assets/cards/portrait/2.webp"),
+    include_bytes!("../../assets/cards/portrait/3.webp"),
+    include_bytes!("../../assets/cards/portrait/4.webp"),
+    include_bytes!("../../assets/cards/portrait/5.webp"),
+    include_bytes!("../../assets/cards/portrait/6.webp"),
+    include_bytes!("../../assets/cards/portrait/7.webp"),
+    include_bytes!("../../assets/cards/portrait/8.webp"),
+    include_bytes!("../../assets/cards/portrait/9.webp"),
+];
 pub fn draw_title(image: &mut RgbaImage, text: &str, font: &Font<'_>, is_landscape: bool) {
     let scale = if is_landscape {
         Scale::uniform(100.0) // Smaller font size for landscape
@@ -176,29 +194,15 @@ pub fn process_svg_content(svg_content: String) -> Result<String, String> {
 
 #[cfg(target_arch = "wasm32")]
 pub fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String> {
-    let images_dir = if is_landscape {
-        &LANDSCAPE_IMAGES
-    } else {
-        &PORTRAIT_IMAGES
-    };
-
-    let webp_files: Vec<_> = images_dir
-        .files()
-        .filter(|f| f.path().extension().and_then(|s| s.to_str()) == Some("webp"))
-        .collect();
-
-    if webp_files.is_empty() {
-        return Err("No background images found".to_string());
-    }
-
-    let chosen_image = webp_files
+    let images = if is_landscape { &LANDSCAPE_IMAGES } else { &PORTRAIT_IMAGES };
+    
+    let chosen_image = images
         .choose(&mut rand::thread_rng())
         .ok_or("Failed to choose a random image")?;
 
-    let image_data = chosen_image.contents();
-
-    image::load_from_memory(image_data)
-        .map_err(|e| format!("Failed to load background image: {:?}", e))
+    // Load the image from bytes
+    image::load_from_memory(chosen_image)
+        .map_err(|e| format!("Failed to load image from memory: {:?}", e))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

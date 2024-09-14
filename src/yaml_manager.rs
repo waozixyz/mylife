@@ -1,4 +1,7 @@
-use crate::models::{LifePeriod, MyLifeApp, Yaml};
+use crate::models::{LifePeriod, Yaml};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::models::MyLifeApp;
+#[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -170,12 +173,15 @@ pub struct WasmYamlManager;
 
 #[cfg(target_arch = "wasm32")]
 impl YamlManager for WasmYamlManager {
-    pub fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String> {
-        let yaml_path = Path::new(&self.data_folder).join(yaml_file);
+    fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String> {
+        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
+        let storage = window
+            .local_storage()
+            .map_err(|_| "Failed to get localStorage".to_string())?
+            .ok_or_else(|| "localStorage not available".to_string())?;
 
-        let yaml_content = if yaml_path.exists() {
-            fs::read_to_string(&yaml_path)
-                .map_err(|e| format!("Failed to read YAML file: {:?}", e))?
+        let yaml_content = if let Ok(Some(content)) = storage.get_item(yaml_file) {
+            content
         } else {
             // Create default YAML content if file doesn't exist
             let default_yaml = Yaml {
@@ -188,25 +194,19 @@ impl YamlManager for WasmYamlManager {
                         start: "2000-01".to_string(),
                         color: "#5100FF".to_string(),
                         events: vec![],
-                        id: Uuid::nil(), // This will be replaced later
+                        id: Some(Uuid::nil()),
                     },
-                    // Add more default life periods as needed
                 ],
-                routines: vec![], // Empty routines for now
+                routines: vec![],
             };
 
             let default_content = serde_yaml::to_string(&default_yaml)
                 .map_err(|e| format!("Failed to create default YAML: {:?}", e))?;
 
-            // Create directory if it doesn't exist
-            if let Some(parent) = yaml_path.parent() {
-                fs::create_dir_all(parent)
-                    .map_err(|e| format!("Failed to create directory: {:?}", e))?;
-            }
-
-            // Write default content to file
-            fs::write(&yaml_path, &default_content)
-                .map_err(|e| format!("Failed to write default YAML: {:?}", e))?;
+            // Store default content in localStorage
+            storage
+                .set_item(yaml_file, &default_content)
+                .map_err(|_| "Failed to store default YAML in localStorage".to_string())?;
 
             default_content
         };
@@ -217,9 +217,9 @@ impl YamlManager for WasmYamlManager {
             Ok(mut yaml) => {
                 // Generate IDs for life periods and events
                 for period in &mut yaml.life_periods {
-                    period.id = Uuid::new_v4();
+                    period.id = Some(Uuid::new_v4());
                     for event in &mut period.events {
-                        event.id = Uuid::new_v4();
+                        event.id = Some(Uuid::new_v4());
                     }
                 }
                 Ok(yaml)
@@ -237,7 +237,8 @@ impl YamlManager for WasmYamlManager {
             }
         }
     }
-    fn export_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> Result<(), String> {
+
+    fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
         let yaml_content = serde_yaml::to_string(yaml)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
         let blob = Blob::new_with_str_sequence(&js_sys::Array::of1(&yaml_content.into()))
@@ -256,7 +257,7 @@ impl YamlManager for WasmYamlManager {
             .map_err(|_| "Failed to cast to HtmlAnchorElement".to_string())?;
 
         anchor.set_href(&url);
-        anchor.set_download("config.yaml");
+        anchor.set_download(yaml_file);
         anchor.click();
 
         Url::revoke_object_url(&url).map_err(|_| "Failed to revoke object URL".to_string())?;
@@ -308,7 +309,16 @@ pub fn get_yaml_manager() -> Box<dyn YamlManager> {
 pub fn get_yaml() -> Yaml {
     get_yaml_manager()
         .load_yaml("default.yaml")
-        .expect("Failed to load yaml")
+        .unwrap_or_else(|_| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                get_default_yaml()
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                panic!("Failed to load yaml")
+            }
+        })
 }
 
 pub fn export_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
@@ -318,7 +328,7 @@ pub fn export_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
 pub fn get_available_yamls() -> Vec<String> {
     get_yaml_manager()
         .get_available_yamls()
-        .expect("Failed to get available yamls")
+        .unwrap_or_else(|_| vec![])
 }
 
 pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
@@ -329,6 +339,14 @@ pub fn update_yaml(yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
 pub fn get_default_yaml() -> Yaml {
     serde_yaml::from_str(DEFAULT_YAML).expect("Failed to load default yaml")
 }
+
+
+#[cfg(target_arch = "wasm32")]
+pub async fn import_yaml() -> Option<(String, Yaml)> {
+    load_yaml_async().await
+}
+
+
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_yaml_async() -> Option<(String, Yaml)> {
@@ -417,9 +435,4 @@ pub fn import_yaml() -> Option<(String, Yaml)> {
     } else {
         None
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn import_yaml() -> Option<(String, Yaml)> {
-    load_yaml_async().await
 }
