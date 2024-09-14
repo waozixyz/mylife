@@ -136,7 +136,7 @@ jobs:
             mv target/release/mylife mylife-linux
           fi
 
-- name: Create AppImage (Linux)
+      - name: Create AppImage (Linux)
         if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
         run: |
           sudo apt-get install -y libfuse2
@@ -155,7 +155,7 @@ jobs:
           EOF
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --output appimage
           mv MyLife*.AppImage mylife-linux.AppImage
-          
+
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
