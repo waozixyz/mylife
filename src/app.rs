@@ -5,6 +5,7 @@ use crate::routes::Route;
 use crate::ui::WindowSizeManager;
 use dioxus::prelude::*;
 
+
 #[component]
 pub fn App() -> Element {
     let size_info = use_signal(|| SizeInfo {
@@ -21,8 +22,7 @@ pub fn App() -> Element {
         style { {include_str!("../assets/styles/views.css")} }
         style { {include_str!("../assets/styles/items.css")} }
         style { {include_str!("../assets/styles/main.css")} }
-
-        Router::<Route> {}
         WindowSizeManager {}
+        Router::<Route> {}
     }
 }
