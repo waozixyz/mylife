@@ -43,8 +43,11 @@ jobs:
             libsoup-3.0-dev \
             libwebkit2gtk-4.1-dev \
             libxdo-dev \
-            libwebp-dev \
-            libclang-dev
+            clang \
+            llvm \
+            libclang-dev \
+            libffi-dev \
+            zlib1g-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
