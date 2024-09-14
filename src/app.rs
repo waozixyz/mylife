@@ -5,7 +5,6 @@ use crate::routes::Route;
 use crate::ui::WindowSizeManager;
 use dioxus::prelude::*;
 
-
 #[component]
 pub fn App() -> Element {
     let size_info = use_signal(|| SizeInfo {

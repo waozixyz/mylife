@@ -33,11 +33,36 @@ jobs:
       - name: Install devenv.sh
         run: nix profile install nixpkgs#devenv
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo and Dioxus CLI
+        uses: actions/cache@v3
+        id: cache-cargo-dioxus
+        with:
+          path: |
+            ~/.cargo
+          key: ${{ runner.os }}-cargo-dioxus-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install dioxus-cli
-        run: cargo install dioxus-cli
+        run: cargo install dioxus-cli --locked
+        if: steps.cache-cargo-dioxus.outputs.cache-hit != 'true'
+
+      - name: Cache Dioxus build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            target
+            dist
+          key: ${{ runner.os }}-dioxus-web-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-dioxus-web-
 
       - name: Build with Devenv
         run: |
+          export PATH=$PATH:$HOME/.cargo/bin
           devenv shell 'dx build --release --platform web'
 
       - name: Create CNAME file
@@ -48,4 +73,3 @@ jobs:
         with:
           folder: dist
           single-commit: true
-          

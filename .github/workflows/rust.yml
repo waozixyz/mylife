@@ -36,8 +36,6 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            TARGET: web
-          - os: ubuntu-latest
             TARGET: desktop
     steps:
       - uses: actions/checkout@v4
@@ -81,24 +79,46 @@ jobs:
             libjpeg-dev \
             libpng-dev \
             libwebp-dev
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
           
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          key: ${{ runner.os }}-rust-${{ matrix.TARGET }}-${{ hashFiles('**/Cargo.lock') }}
       
-      - name: Cache Dioxus CLI
+      - name: Cache Cargo and Dioxus CLI
         uses: actions/cache@v3
+        id: cache-cargo-dioxus
         with:
-          path: ~/.cargo/bin/dx
-          key: ${{ runner.os }}-dioxus-cli-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo
+          key: ${{ runner.os }}-cargo-dioxus-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Dioxus CLI
-        run: cargo install dioxus-cli
-        if: steps.cache-dioxus-cli.outputs.cache-hit != 'true'
+        run: cargo install dioxus-cli --locked
+        if: steps.cache-cargo-dioxus.outputs.cache-hit != 'true'
+
+      - name: Cache Dioxus build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            target
+            dist
+          key: ${{ runner.os }}-dioxus-${{ matrix.TARGET }}-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-dioxus-${{ matrix.TARGET }}-
       
       - name: Build for ${{ matrix.TARGET }}
         run: dx build --release --platform ${{ matrix.TARGET }}
@@ -116,7 +136,7 @@ jobs:
             mv target/release/mylife mylife-linux
           fi
 
-      - name: Create AppImage (Linux)
+- name: Create AppImage (Linux)
         if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
         run: |
           sudo apt-get install -y libfuse2
@@ -124,7 +144,7 @@ jobs:
           chmod +x linuxdeploy-x86_64.AppImage
           mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
           cp mylife-linux AppDir/usr/bin/mylife
-          cp icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png
+          cp assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png
           cat > AppDir/usr/share/applications/mylife.desktop << EOF
           [Desktop Entry]
           Name=MyLife
@@ -135,7 +155,7 @@ jobs:
           EOF
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --output appimage
           mv MyLife*.AppImage mylife-linux.AppImage
-
+          
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}

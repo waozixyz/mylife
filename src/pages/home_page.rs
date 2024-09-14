@@ -75,7 +75,6 @@ fn get_random_background_image() -> String {
                 )
             })
             .unwrap_or_else(|| "".to_string())
-
     }
 
     #[cfg(not(target_arch = "wasm32"))]
