@@ -38,18 +38,6 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Cache Cargo and Dioxus CLI
-        uses: actions/cache@v3
-        id: cache-cargo-dioxus
-        with:
-          path: |
-            ~/.cargo
-          key: ${{ runner.os }}-cargo-dioxus-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install dioxus-cli
-        run: cargo install dioxus-cli --locked
-        if: steps.cache-cargo-dioxus.outputs.cache-hit != 'true'
-
       - name: Cache Dioxus build artifacts
         uses: actions/cache@v3
         with:
@@ -62,9 +50,7 @@ jobs:
 
       - name: Build with Devenv
         run: |
-          export PATH="/github/home/.cargo/bin:$PATH"
-          which dx
-          devenv shell "/github/home/.cargo/bin/dx build --release --platform web"
+          devenv shell "dx build --release --platform web"
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
