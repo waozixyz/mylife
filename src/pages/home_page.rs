@@ -1,13 +1,13 @@
 // src/pages/home_page.rs
 
-use crate::routes::Route;
 use crate::models::SizeInfo;
+use crate::routes::Route;
 use crate::state_manager::initialize_state;
 use crate::utils::image_utils::get_background_images;
+#[cfg(target_arch = "wasm32")]
+use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
 use rand::seq::SliceRandom;
-#[cfg(target_arch = "wasm32")]
-use base64::{Engine as _, engine::general_purpose};
 
 #[component]
 pub fn HomePage(y: String) -> Element {
@@ -68,7 +68,12 @@ fn get_random_background_image() -> String {
     {
         images
             .choose(&mut rand::thread_rng())
-            .map(|&img| format!("data:image/webp;base64,{}", general_purpose::STANDARD.encode(img)))
+            .map(|&img| {
+                format!(
+                    "data:image/webp;base64,{}",
+                    general_purpose::STANDARD.encode(img)
+                )
+            })
             .unwrap_or_else(|| "".to_string())
     }
 
