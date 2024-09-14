@@ -82,12 +82,32 @@ jobs:
           else
             mv target/release/mylife mylife-linux
           fi
+      - name: Create AppImage (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
+        run: |
+          sudo apt-get install -y libfuse2
+          wget -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp mylife-linux AppDir/usr/bin/mylife
+          cp icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png
+          cat > AppDir/usr/share/applications/mylife.desktop << EOF
+          [Desktop Entry]
+          Name=MyLife
+          Exec=mylife
+          Icon=mylife
+          Type=Application
+          Categories=Utility;
+          EOF
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --output appimage
+          mv MyLife*.AppImage mylife-linux.AppImage
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
           path: |
             mylife-*
             *.tar.gz
+            *.AppImage
       - uses: svenstaro/upload-release-action@v2
         if: ${{ github.event_name == 'push' }}
         with:

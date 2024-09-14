@@ -41,6 +41,10 @@
     gdk-pixbuf
     librsvg
     libsoup
+    # Add these for AppImage creation
+    appimage-run
+    fuse
+    gcc
   ];
   env = {
     LD_LIBRARY_PATH = with pkgs; lib.makeLibraryPath [
@@ -59,6 +63,8 @@
       gdk-pixbuf
       librsvg
       libsoup
+      # Add these for AppImage creation
+      fuse
     ];
     RUST_BACKTRACE = "1";
     PKG_CONFIG_PATH = with pkgs; lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
@@ -71,6 +77,7 @@
     echo "Rust WASM development environment with Dioxus and Tauri ready!"
     echo "You can now use 'cargo' to build your project."
     echo "For WASM development, use 'rustup target add wasm32-unknown-unknown' to add the WASM target."
+    echo "For AppImage creation, use 'linuxdeploy' (you'll need to download it separately)."
     export PATH="${pkgs.lld}/bin:$PATH"
     rustup target list --installed | grep wasm32-unknown-unknown || rustup target add wasm32-unknown-unknown
   '';
