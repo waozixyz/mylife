@@ -26,11 +26,15 @@ jobs:
           . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
           nix-env -iA nixpkgs.cachix
 
-      - name: Build with Nix
+      - name: Install Devenv
+        run: |
+          nix-env -iA nixpkgs.devenv
+
+      - name: Build with Devenv
         run: |
           . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
-          nix-shell --pure --run 'dx build --release --platform web'
-        
+          devenv run 'dx build --release --platform web'
+
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
       
