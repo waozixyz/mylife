@@ -21,15 +21,16 @@ chrono = "0.4"
 rfd = "0.14.1"
 brotli = "3.4"
 base64 = "0.21.0"
-usvg = "0.43.0"
-resvg = "0.43.0"
-tiny-skia = "0.11.4"
 webp = "0.3"
 rand = "0.8.5"
 rusttype = "0.9.3"
 imageproc = "0.25.0"
 hex_color = "3.0.0"
 qrcode = "0.14.1"
+usvg = "0.43.0"
+resvg = "0.43.0"
+tiny-skia = "0.11.4"
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dioxus = { version = "0.5", features = ["desktop", "router"] }

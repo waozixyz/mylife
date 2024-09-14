@@ -66,15 +66,14 @@ fn get_random_background_image() -> String {
         let images = get_background_images(is_landscape);
         images
             .choose(&mut rand::thread_rng())
-            .cloned()
+            .map(|&img| format!("data:image/webp;base64,{}", base64::encode(img)))
             .unwrap_or_else(|| "".to_string())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // For non-wasm, we'll assume landscape for simplicity
-        // In a real-world scenario, you might want to pass this information from the platform-specific code
-        let is_landscape = true;
+        let size_info = use_context::<Signal<SizeInfo>>().unwrap();
+        let is_landscape = size_info.get().window_width > size_info.get().window_height;
         let images = get_background_images(is_landscape);
         images
             .choose(&mut rand::thread_rng())

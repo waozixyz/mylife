@@ -1,15 +1,25 @@
 // utils/imag_utils.rs
 
 use crate::models::LegendItem;
-use dioxus_logger::tracing::{error, info};
+use dioxus_logger::tracing::info;
+#[cfg(not(target_arch = "wasm32"))]
+use dioxus_logger::tracing::error;
+
 use hex_color::HexColor;
+#[cfg(not(target_arch = "wasm32"))]
 use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
+#[cfg(target_arch = "wasm32")]
+use image::codecs::png::PngEncoder;
+
 use rand::seq::SliceRandom;
+
+use rusttype::{Font, Scale};
+#[cfg(not(target_arch = "wasm32"))]
+use std::fs;
+
 use resvg::render;
 use resvg::usvg::{Options, Tree};
-use rusttype::{Font, Scale};
-use std::fs;
 use tiny_skia::{Pixmap, Transform};
 
 #[cfg(target_arch = "wasm32")]
@@ -150,6 +160,18 @@ pub fn draw_text_mut(
         }
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+pub fn get_background_images(is_landscape: bool) -> Vec<&'static [u8]> {
+    if is_landscape {
+        LANDSCAPE_IMAGES.to_vec()
+    } else {
+        PORTRAIT_IMAGES.to_vec()
+    }
+
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn get_background_images(is_landscape: bool) -> Vec<String> {
     let folder_path = if is_landscape {
         "assets/cards/landscape"
@@ -176,7 +198,6 @@ pub fn get_background_images(is_landscape: bool) -> Vec<String> {
         }
     }
 }
-
 pub fn process_svg_content(svg_content: String) -> Result<String, String> {
     info!("SVG content length: {}", svg_content.len());
 
@@ -194,7 +215,7 @@ pub fn process_svg_content(svg_content: String) -> Result<String, String> {
 
 #[cfg(target_arch = "wasm32")]
 pub fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String> {
-    let images = if is_landscape { &LANDSCAPE_IMAGES } else { &PORTRAIT_IMAGES };
+    let images = get_background_images(is_landscape);
     
     let chosen_image = images
         .choose(&mut rand::thread_rng())
@@ -219,6 +240,63 @@ pub fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String>
 
     image::open(chosen_image).map_err(|e| format!("Failed to open background image: {:?}", e))
 }
+
+
+
+fn encode_to_webp(image: &RgbaImage) -> Result<Vec<u8>, String> {
+    let mut webp_data = Vec::new();
+    let (width, height) = image.dimensions();
+    
+    image::codecs::webp::WebPEncoder::new(&mut webp_data)
+        .encode(
+            image.as_raw(),
+            width,
+            height,
+            image::ColorType::Rgba8,
+        )
+        .map_err(|e| format!("Failed to encode WebP: {:?}", e))?;
+    
+    Ok(webp_data)
+}
+
+
+#[cfg(target_arch = "wasm32")]
+fn encode_image(image: &DynamicImage) -> Result<Vec<u8>, String> {
+    let rgba_image = image.to_rgba8();
+    let (width, height) = rgba_image.dimensions();
+    
+    let mut png_data = Vec::new();
+    PngEncoder::new(&mut png_data)
+        .encode(
+            rgba_image.as_raw(),
+            width,
+            height,
+            image::ColorType::Rgba8
+        )
+        .map_err(|e| format!("Failed to encode PNG: {:?}", e))?;
+    
+    Ok(png_data)
+}
+
+
+#[cfg(not(target_arch = "wasm32"))]
+fn encode_image(image: &DynamicImage) -> Result<Vec<u8>, String> {
+    let mut webp_data = Vec::new();
+    let rgba_image = image.to_rgba8();
+    let (width, height) = rgba_image.dimensions();
+    
+    WebPEncoder::new_lossless(&mut webp_data)
+        .encode(
+            &rgba_image,
+            width,
+            height,
+            image::ColorType::Rgba8,
+        )
+        .map_err(|e| format!("Failed to encode WebP: {:?}", e))?;
+    
+    Ok(webp_data)
+}
+
 
 pub fn render_svg_to_image(
     svg_content: &str,
@@ -316,16 +394,6 @@ pub fn render_svg_to_image(
     let legend_y = bg_height - legend_height;
     image::imageops::overlay(&mut final_image, &legend_image, 0, legend_y.into());
 
-    // Encode to WebP
-    let mut webp_data = Vec::new();
-    WebPEncoder::new_lossless(&mut webp_data)
-        .encode(
-            &final_image.to_rgba8(),
-            final_width,
-            final_height,
-            image::ColorType::Rgba8,
-        )
-        .map_err(|e| format!("Failed to encode WebP: {:?}", e))?;
-
-    Ok(webp_data)
+    // Encode to WebP using our new function
+    encode_image(&final_image)
 }
