@@ -62,8 +62,9 @@ jobs:
 
       - name: Build with Devenv
         run: |
-          export PATH=$PATH:$HOME/.cargo/bin
-           devenv shell '$HOME/.cargo/bin/dx build --release --platform web'
+          export PATH="/github/home/.cargo/bin:$PATH"
+          which dx
+          devenv shell "/github/home/.cargo/bin/dx build --release --platform web"
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
