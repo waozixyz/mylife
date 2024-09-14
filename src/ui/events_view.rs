@@ -11,7 +11,7 @@ pub fn EventView(selected_life_period_id: Uuid) -> Element {
         yaml_state()
             .life_periods
             .iter()
-            .find(|p| p.id == selected_life_period_id)
+            .find(|p| p.id == Some(selected_life_period_id))
             .cloned()
     });
 

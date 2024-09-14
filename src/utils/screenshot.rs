@@ -3,6 +3,7 @@ use crate::utils::image_utils::*;
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{error, info};
+use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Array, Object, Promise};
@@ -42,7 +43,7 @@ pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
         .life_periods
         .iter()
         .map(|period| LegendItem {
-            id: period.id,
+            id: period.id.unwrap_or_else(Uuid::new_v4),
             name: period.name.clone(),
             start: period.start.clone(),
             color: period.color.clone(),

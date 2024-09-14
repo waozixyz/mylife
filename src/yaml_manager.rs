@@ -1,5 +1,6 @@
-use crate::models::{MyLifeApp, Yaml};
+use crate::models::{LifePeriod, MyLifeApp, Yaml};
 use dioxus::prelude::*;
+use uuid::Uuid;
 
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
@@ -40,9 +41,70 @@ impl NativeYamlManager {
 impl YamlManager for NativeYamlManager {
     fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String> {
         let yaml_path = Path::new(&self.data_folder).join(yaml_file);
-        let yaml_content = fs::read_to_string(yaml_path)
-            .map_err(|e| format!("Failed to read YAML file: {:?}", e))?;
-        serde_yaml::from_str(&yaml_content).map_err(|e| format!("Failed to parse YAML: {:?}", e))
+
+        let yaml_content = if yaml_path.exists() {
+            fs::read_to_string(&yaml_path)
+                .map_err(|e| format!("Failed to read YAML file: {:?}", e))?
+        } else {
+            // Create default YAML content if file doesn't exist
+            let default_yaml = Yaml {
+                name: "John Doe".to_string(),
+                date_of_birth: "2000-01".to_string(),
+                life_expectancy: 92,
+                life_periods: vec![
+                    LifePeriod {
+                        name: "Childhood".to_string(),
+                        start: "2000-01".to_string(),
+                        color: "#5100FF".to_string(),
+                        events: vec![],
+                        id: Some(Uuid::nil()),
+                    },
+                    // Add more default life periods as needed
+                ],
+                routines: vec![], // Empty routines for now
+            };
+
+            let default_content = serde_yaml::to_string(&default_yaml)
+                .map_err(|e| format!("Failed to create default YAML: {:?}", e))?;
+
+            // Create directory if it doesn't exist
+            if let Some(parent) = yaml_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory: {:?}", e))?;
+            }
+
+            // Write default content to file
+            fs::write(&yaml_path, &default_content)
+                .map_err(|e| format!("Failed to write default YAML: {:?}", e))?;
+
+            default_content
+        };
+
+        let yaml_result: Result<Yaml, serde_yaml::Error> = serde_yaml::from_str(&yaml_content);
+
+        match yaml_result {
+            Ok(mut yaml) => {
+                // Generate IDs for life periods and events
+                for period in &mut yaml.life_periods {
+                    period.id = Some(Uuid::new_v4());
+                    for event in &mut period.events {
+                        event.id = Some(Uuid::new_v4());
+                    }
+                }
+                Ok(yaml)
+            }
+            Err(e) => {
+                eprintln!("Error parsing YAML: {:?}", e);
+                // Return a minimal valid YAML if parsing fails
+                Ok(Yaml {
+                    name: "Default User".to_string(),
+                    date_of_birth: "2000-01".to_string(),
+                    life_expectancy: 80,
+                    life_periods: vec![],
+                    routines: vec![],
+                })
+            }
+        }
     }
 
     fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
@@ -63,12 +125,27 @@ impl YamlManager for NativeYamlManager {
     }
 
     fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
-        let yaml_content = serde_yaml::to_string(yaml)
+        let mut yaml_to_save = yaml.clone();
+
+        // Remove IDs before saving
+        for period in &mut yaml_to_save.life_periods {
+            period.id = Some(Uuid::nil());
+            for event in &mut period.events {
+                event.id = Some(Uuid::nil());
+            }
+        }
+
+        let yaml_content = serde_yaml::to_string(&yaml_to_save)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
+
         let file_path = Path::new(&self.data_folder).join(yaml_file);
+        fs::create_dir_all(file_path.parent().unwrap())
+            .map_err(|e| format!("Failed to create directory: {:?}", e))?;
+
         fs::write(file_path, yaml_content)
             .map_err(|e| format!("Failed to update YAML file: {:?}", e))
     }
+
     fn get_available_yamls(&self) -> Result<Vec<String>, String> {
         let data_folder = Path::new(&self.data_folder);
         let yamls = fs::read_dir(data_folder)
@@ -93,21 +170,73 @@ pub struct WasmYamlManager;
 
 #[cfg(target_arch = "wasm32")]
 impl YamlManager for WasmYamlManager {
-    fn load_yaml(&self, _yaml_file: &str) -> Result<Yaml, String> {
-        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
-        let storage = window
-            .local_storage()
-            .map_err(|_| "Failed to get localStorage".to_string())?
-            .ok_or_else(|| "localStorage not available".to_string())?;
+    pub fn load_yaml(&self, yaml_file: &str) -> Result<Yaml, String> {
+        let yaml_path = Path::new(&self.data_folder).join(yaml_file);
 
-        if let Ok(Some(yaml_content)) = storage.get_item("current_yaml") {
-            serde_yaml::from_str(&yaml_content)
-                .map_err(|e| format!("Failed to parse YAML: {:?}", e))
+        let yaml_content = if yaml_path.exists() {
+            fs::read_to_string(&yaml_path)
+                .map_err(|e| format!("Failed to read YAML file: {:?}", e))?
         } else {
-            Ok(get_default_yaml())
+            // Create default YAML content if file doesn't exist
+            let default_yaml = Yaml {
+                name: "John Doe".to_string(),
+                date_of_birth: "2000-01".to_string(),
+                life_expectancy: 92,
+                life_periods: vec![
+                    LifePeriod {
+                        name: "Childhood".to_string(),
+                        start: "2000-01".to_string(),
+                        color: "#5100FF".to_string(),
+                        events: vec![],
+                        id: Uuid::nil(), // This will be replaced later
+                    },
+                    // Add more default life periods as needed
+                ],
+                routines: vec![], // Empty routines for now
+            };
+
+            let default_content = serde_yaml::to_string(&default_yaml)
+                .map_err(|e| format!("Failed to create default YAML: {:?}", e))?;
+
+            // Create directory if it doesn't exist
+            if let Some(parent) = yaml_path.parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory: {:?}", e))?;
+            }
+
+            // Write default content to file
+            fs::write(&yaml_path, &default_content)
+                .map_err(|e| format!("Failed to write default YAML: {:?}", e))?;
+
+            default_content
+        };
+
+        let yaml_result: Result<Yaml, serde_yaml::Error> = serde_yaml::from_str(&yaml_content);
+
+        match yaml_result {
+            Ok(mut yaml) => {
+                // Generate IDs for life periods and events
+                for period in &mut yaml.life_periods {
+                    period.id = Uuid::new_v4();
+                    for event in &mut period.events {
+                        event.id = Uuid::new_v4();
+                    }
+                }
+                Ok(yaml)
+            }
+            Err(e) => {
+                eprintln!("Error parsing YAML: {:?}", e);
+                // Return a minimal valid YAML if parsing fails
+                Ok(Yaml {
+                    name: "Default User".to_string(),
+                    date_of_birth: "2000-01".to_string(),
+                    life_expectancy: 80,
+                    life_periods: vec![],
+                    routines: vec![],
+                })
+            }
         }
     }
-
     fn export_yaml(&self, yaml: &Yaml, _yaml_file: &str) -> Result<(), String> {
         let yaml_content = serde_yaml::to_string(yaml)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;

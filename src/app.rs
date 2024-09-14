@@ -1,10 +1,9 @@
 // src/app.rs
 
 use crate::models::SizeInfo;
-use crate::pages::{HomePage, TimelinePage};
-use dioxus::prelude::*;
 use crate::routes::Route;
 use crate::ui::WindowSizeManager;
+use dioxus::prelude::*;
 
 #[component]
 pub fn App() -> Element {

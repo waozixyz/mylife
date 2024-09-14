@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::pages::{HomePage, TimelinePage};
+use dioxus::prelude::*;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {

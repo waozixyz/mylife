@@ -30,7 +30,7 @@
     margin-top: 2rem;
 }
 
-.view-timeline-button {
+.home-page-button {
     font-family: 'Handjet', sans-serif;
     padding: 1rem 2rem;
     font-size: 2rem;  /* Increased size for better visibility */
@@ -42,7 +42,7 @@
     border: 2px solid white;  /* Added border for better contrast */
 }
 
-.view-timeline-button:hover {
+.home-page-button:hover {
     background-color: var(--button-hover-color);
     transform: scale(1.05);  /* Slight grow effect on hover */
 }

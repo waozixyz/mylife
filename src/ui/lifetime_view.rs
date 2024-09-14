@@ -99,7 +99,8 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                 {cell_data.iter().enumerate().map(|(index, cell)| {
                     let row = index / cols;
                     let col = index % cols;
-                    let is_hovered = cell.period.as_ref().map_or(false, |p| Some(p.id) == (*hovered_period)());
+                    let is_hovered = cell.period.as_ref().map_or(false, |p| p.id == (*hovered_period)());
+
                     let x = col as f32 * (cell_size + gap);
                     let y = row as f32 * (cell_size + gap);
                     rsx! {
@@ -117,13 +118,13 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
                                 let on_period_click = on_period_click;
                                 move |_| {
                                     if let Some(period) = &period {
-                                        on_period_click.call(period.id);
+                                        on_period_click.call(period.id.unwrap_or_default());
                                     }
                                 }
                             },
                             onmouseenter: {
                                 let period_id = cell.period.as_ref().map(|p| p.id);
-                                move |_| hovered_period.set(period_id)
+                                move |_| hovered_period.set(period_id.flatten())
                             },
                         }
                     }

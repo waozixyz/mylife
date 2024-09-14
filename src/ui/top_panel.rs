@@ -1,4 +1,5 @@
 use crate::models::{MyLifeApp, SizeInfo, Yaml};
+use crate::routes::Route;
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
 use crate::yaml_manager::{export_yaml, get_available_yamls, get_yaml_manager, import_yaml};
 use arboard::Clipboard;
@@ -133,33 +134,27 @@ pub fn TopPanel() -> Element {
     rsx! {
         div {
             class: "top-panel",
-
-            // Back button (only in EventView)
             if app_state().view == "EventView" {
+
                 button {
-                    class: "back-button",
                     onclick: move |_| {
                         app_state.write().view = "Lifetime".to_string();
                     },
                     span { "⬅" },
                 }
-            }
-
-            // Quit button
-            button {
-                class: "quit-button",
-                onclick: move |_| {
-                    #[cfg(not(target_arch = "wasm32"))]
-                    std::process::exit(0);
-                },
-                "✖"
+            } else {
+                Link {
+                    class: "button",
+                    to: Route::HomePage { y: String::new() },
+                    span { "⬅" },
+                }
             }
 
             if app_state().view == "Lifetime" {
                 div {
                     class: "action-buttons",
-                    button { onclick: load_yaml, "📥 Import YAML" }
-                    button { onclick: export_yaml_action, "📤 Export YAML" }
+                    button { onclick: load_yaml, "📥 Import" }
+                    button { onclick: export_yaml_action, "📤 Export" }
                     button { onclick: share_yaml, "🔗 Share" }
                     button { onclick: take_screenshot, "📸 Screenshot" }
                 }

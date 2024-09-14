@@ -1,9 +1,9 @@
 // src/state_manager.rs
 
 use crate::models::{MyLifeApp, Yaml};
-use crate::yaml_manager::{get_yaml, get_yaml_manager};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
+use crate::yaml_manager::{get_yaml, get_yaml_manager};
 use dioxus::prelude::*;
 use dioxus_logger::tracing::error;
 

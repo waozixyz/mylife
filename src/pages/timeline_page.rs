@@ -1,10 +1,8 @@
 // src/pages/timeline_page.rs
 
-use crate::models::{MyLifeApp, Yaml};
-use crate::ui::{TopPanel, CentralPanel, BottomPanel};
 use crate::state_manager::initialize_state;
+use crate::ui::{BottomPanel, CentralPanel, TopPanel};
 use dioxus::prelude::*;
-use crate::routes::Route;
 
 #[component]
 pub fn TimelinePage(y: String) -> Element {
@@ -21,10 +19,6 @@ pub fn TimelinePage(y: String) -> Element {
             TopPanel {}
             CentralPanel {}
             BottomPanel {}
-        }
-        Link {
-            to: Route::HomePage { y: String::new() },
-            "Go to Home"
         }
     }
 }

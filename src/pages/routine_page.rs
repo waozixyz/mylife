@@ -18,9 +18,5 @@ pub fn RoutinePage(y: String) -> Element {
         div {
             class: "app-container",
         }
-        Link {
-            to: Route::HomePage { y: String::new() },
-            "Go to Home"
-        }
     }
 }

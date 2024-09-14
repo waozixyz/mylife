@@ -40,28 +40,35 @@ pub struct Yaml {
     pub date_of_birth: String,
     pub life_expectancy: u32,
     pub life_periods: Vec<LifePeriod>,
+    pub routines: Vec<Routine>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+pub struct Routine {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct LifePeriod {
-    #[serde(default = "Uuid::new_v4")]
-    pub id: Uuid,
     pub name: String,
     pub start: String,
     pub color: String,
     #[serde(default)]
     pub events: Vec<LifePeriodEvent>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct LifePeriodEvent {
-    #[serde(default = "Uuid::new_v4")]
-    pub id: Uuid,
     pub name: String,
     pub color: String,
     pub start: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<Uuid>,
 }
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LegendItem {
     pub id: Uuid,

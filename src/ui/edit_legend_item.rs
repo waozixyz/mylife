@@ -23,7 +23,7 @@ pub fn EditLegendItem() -> Element {
                 if let Some(period) = yaml_state()
                     .life_periods
                     .iter()
-                    .find(|p| p.id == app_state().selected_life_period.unwrap())
+                    .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                 {
                     let period_start =
                         NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
@@ -58,7 +58,7 @@ pub fn EditLegendItem() -> Element {
                     if let Some(period) = yaml_state()
                         .life_periods
                         .iter()
-                        .find(|p| p.id == app_state().selected_life_period.unwrap())
+                        .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                     {
                         let period_start =
                             NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
@@ -138,15 +138,17 @@ pub fn EditLegendItem() -> Element {
                     if let Some(period) = new_yaml
                         .life_periods
                         .iter_mut()
-                        .find(|p| p.id == app_state().selected_life_period.unwrap())
+                        .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                     {
-                        if let Some(event) = period.events.iter_mut().find(|e| e.id == item.id) {
+                        if let Some(event) =
+                            period.events.iter_mut().find(|e| e.id == Some(item.id))
+                        {
                             event.name = item.name.clone();
                             event.color = item.color.clone();
                             event.start = item.start.clone();
                         } else {
                             period.events.push(LifePeriodEvent {
-                                id: item.id,
+                                id: Some(item.id),
                                 name: item.name.clone(),
                                 color: item.color.clone(),
                                 start: item.start.clone(),
@@ -155,14 +157,17 @@ pub fn EditLegendItem() -> Element {
                         period.events.sort_by(|a, b| a.start.cmp(&b.start));
                     }
                 } else {
-                    if let Some(period) = new_yaml.life_periods.iter_mut().find(|p| p.id == item.id)
+                    if let Some(period) = new_yaml
+                        .life_periods
+                        .iter_mut()
+                        .find(|p| p.id == Some(item.id))
                     {
                         period.name = item.name.clone();
                         period.start = item.start.clone();
                         period.color = item.color.clone();
                     } else {
                         new_yaml.life_periods.push(LifePeriod {
-                            id: item.id,
+                            id: Some(item.id),
                             name: item.name.clone(),
                             start: item.start.clone(),
                             color: item.color.clone(),
@@ -261,12 +266,12 @@ pub fn EditLegendItem() -> Element {
                 if let Some(period) = new_yaml
                     .life_periods
                     .iter_mut()
-                    .find(|p| p.id == app_state().selected_life_period.unwrap())
+                    .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                 {
-                    period.events.retain(|e| e.id != item.id);
+                    period.events.retain(|e| e.id != Some(item.id));
                 }
             } else {
-                new_yaml.life_periods.retain(|p| p.id != item.id);
+                new_yaml.life_periods.retain(|p| p.id != Some(item.id));
             }
             yaml_state.set(new_yaml);
             let _ = update_yaml(&yaml_state(), &app_state().selected_yaml);

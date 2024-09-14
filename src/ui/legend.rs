@@ -1,5 +1,6 @@
 use crate::models::{LegendItem, MyLifeApp, Yaml};
 use dioxus::prelude::*;
+use uuid::Uuid;
 
 #[component]
 pub fn Legend() -> Element {
@@ -11,8 +12,6 @@ pub fn Legend() -> Element {
         app_state.write().item_state = Some(item.clone());
         app_state.write().temp_start_date = item.start.clone();
     };
-
-    // Directly handle rendering without `legend_items` variable
     let legend_items = {
         let mut legend_items = Vec::new();
         match app_state().view.as_str() {
@@ -22,7 +21,7 @@ pub fn Legend() -> Element {
 
                 for period in sorted_periods {
                     let item = LegendItem {
-                        id: period.id,
+                        id: period.id.unwrap_or_else(Uuid::new_v4),
                         name: period.name,
                         start: period.start,
                         color: period.color,
@@ -45,12 +44,14 @@ pub fn Legend() -> Element {
             }
             "EventView" => {
                 if let Some(period_id) = app_state().selected_life_period {
-                    if let Some(period) =
-                        yaml_state().life_periods.iter().find(|p| p.id == period_id)
+                    if let Some(period) = yaml_state()
+                        .life_periods
+                        .iter()
+                        .find(|p| p.id == Some(period_id))
                     {
                         for event in &period.events {
                             let item = LegendItem {
-                                id: event.id,
+                                id: event.id.unwrap_or_else(Uuid::new_v4),
                                 name: event.name.clone(),
                                 start: event.start.clone(),
                                 color: event.color.clone(),
