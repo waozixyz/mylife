@@ -19,6 +19,7 @@ jobs:
       - name: Install Nix
         run: |
           sh <(curl -L https://nixos.org/nix/install) --no-daemon
+          echo ". /home/runner/.nix-profile/etc/profile.d/nix.sh" >> ~/.bashrc
           . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
 
       - name: Install Nix dependencies
@@ -28,6 +29,7 @@ jobs:
 
       - name: Install Devenv
         run: |
+          . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
           nix-env -iA nixpkgs.devenv
 
       - name: Build with Devenv
