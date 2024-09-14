@@ -1,10 +1,13 @@
 // src/pages/home_page.rs
 
 use crate::routes::Route;
+use crate::models::SizeInfo;
 use crate::state_manager::initialize_state;
 use crate::utils::image_utils::get_background_images;
 use dioxus::prelude::*;
 use rand::seq::SliceRandom;
+#[cfg(target_arch = "wasm32")]
+use base64::{Engine as _, engine::general_purpose};
 
 #[component]
 pub fn HomePage(y: String) -> Element {
@@ -57,24 +60,20 @@ pub fn HomePage(y: String) -> Element {
 }
 
 fn get_random_background_image() -> String {
+    let size_info = use_context::<Signal<SizeInfo>>();
+    let is_landscape = size_info().window_width > size_info().window_height;
+    let images = get_background_images(is_landscape);
+
     #[cfg(target_arch = "wasm32")]
     {
-        use web_sys::window;
-        let window = window().unwrap();
-        let is_landscape = window.inner_width().unwrap().as_f64().unwrap()
-            > window.inner_height().unwrap().as_f64().unwrap();
-        let images = get_background_images(is_landscape);
         images
             .choose(&mut rand::thread_rng())
-            .map(|&img| format!("data:image/webp;base64,{}", base64::encode(img)))
+            .map(|&img| format!("data:image/webp;base64,{}", general_purpose::STANDARD.encode(img)))
             .unwrap_or_else(|| "".to_string())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let size_info = use_context::<Signal<SizeInfo>>().unwrap();
-        let is_landscape = size_info.get().window_width > size_info.get().window_height;
-        let images = get_background_images(is_landscape);
         images
             .choose(&mut rand::thread_rng())
             .cloned()

@@ -1,6 +1,6 @@
-use crate::models::{LifePeriod, Yaml};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::models::MyLifeApp;
+use crate::models::{LifePeriod, Yaml};
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::*;
 use uuid::Uuid;
@@ -188,15 +188,13 @@ impl YamlManager for WasmYamlManager {
                 name: "John Doe".to_string(),
                 date_of_birth: "2000-01".to_string(),
                 life_expectancy: 92,
-                life_periods: vec![
-                    LifePeriod {
-                        name: "Childhood".to_string(),
-                        start: "2000-01".to_string(),
-                        color: "#5100FF".to_string(),
-                        events: vec![],
-                        id: Some(Uuid::nil()),
-                    },
-                ],
+                life_periods: vec![LifePeriod {
+                    name: "Childhood".to_string(),
+                    start: "2000-01".to_string(),
+                    color: "#5100FF".to_string(),
+                    events: vec![],
+                    id: Some(Uuid::nil()),
+                }],
                 routines: vec![],
             };
 
@@ -340,13 +338,10 @@ pub fn get_default_yaml() -> Yaml {
     serde_yaml::from_str(DEFAULT_YAML).expect("Failed to load default yaml")
 }
 
-
 #[cfg(target_arch = "wasm32")]
 pub async fn import_yaml() -> Option<(String, Yaml)> {
     load_yaml_async().await
 }
-
-
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_yaml_async() -> Option<(String, Yaml)> {

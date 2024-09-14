@@ -69,7 +69,9 @@ pub fn WindowSizeManager() -> Element {
                 size_info.set(calculate_size_info(new_width, new_height));
             }) as Box<dyn FnMut(_)>);
 
-            window.add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref()).unwrap();
+            window
+                .add_event_listener_with_callback("resize", closure.as_ref().unchecked_ref())
+                .unwrap();
             closure.forget(); // Prevents the closure from being dropped
         });
     }

@@ -87,10 +87,10 @@ pub fn TopPanel() -> Element {
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen_futures::JsFuture;
-        
+
             let window = web_sys::window().expect("No global `window` exists");
             let navigator = window.navigator();
-            
+
             let clipboard = navigator.clipboard();
             let url_clone = url.clone();
             wasm_bindgen_futures::spawn_local(async move {
@@ -98,14 +98,14 @@ pub fn TopPanel() -> Element {
                 match JsFuture::from(promise).await {
                     Ok(_) => {
                         log::info!("URL copied to clipboard successfully");
-                    },
+                    }
                     Err(e) => {
                         error!("Failed to copy URL to clipboard: {:?}", e);
                     }
                 }
             });
         }
-    
+
         #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
         {
             let opts = WlOptions::new();
@@ -125,7 +125,7 @@ pub fn TopPanel() -> Element {
                 }
             }
         }
-    
+
         #[cfg(all(not(target_os = "linux"), not(target_arch = "wasm32")))]
         {
             if let Ok(mut clipboard) = Clipboard::new() {
