@@ -2,6 +2,7 @@ use crate::models::SizeInfo;
 use dioxus::prelude::*;
 use dioxus_desktop::tao::dpi::PhysicalSize;
 
+#[allow(dead_code)]
 fn calculate_size_info(size: PhysicalSize<u32>) -> SizeInfo {
     let cell_size = size.width.min(size.height) as f64 / 20.0;
 
