@@ -47,7 +47,11 @@ jobs:
             llvm \
             libclang-dev \
             libffi-dev \
-            zlib1g-dev
+            libc6-dev \
+            zlib1g-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libwebp-dev
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable

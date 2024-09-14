@@ -77,8 +77,10 @@ jobs:
             libclang-dev \
             libffi-dev \
             libc6-dev \
-            zlib1g-dev
-
+            zlib1g-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libwebp-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
