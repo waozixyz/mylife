@@ -247,7 +247,7 @@ fn encode_image(image: &DynamicImage) -> Result<Vec<u8>, String> {
 
     let mut png_data = Vec::new();
 
-    PngEncoder::write_image(&mut png_data)
+    PngEncoder::new(&mut png_data)
         .encode(rgba_image.as_raw(), width, height, image::ColorType::Rgba8)
         .map_err(|e| format!("Failed to encode PNG: {:?}", e))?;
 
