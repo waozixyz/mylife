@@ -51,7 +51,24 @@ jobs:
             zlib1g-dev \
             libjpeg-dev \
             libpng-dev \
-            libwebp-dev
+            libwebp-dev \
+            pkg-config \
+            openssl \
+            cmake \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libglvnd-dev \
+            libvulkan-dev \
+            vulkan-tools \
+            vulkan-validationlayers \
+            fuse \
+            gcc
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
