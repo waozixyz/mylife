@@ -41,9 +41,15 @@ jobs:
             TARGET: desktop
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache system dependencies
+        uses: actions/cache@v3
         with:
-          targets: wasm32-unknown-unknown
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -65,11 +71,36 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             libsoup-3.0-dev \
             libwebkit2gtk-4.1-dev \
-            libxdo-dev
+            libxdo-dev \
+            clang \
+            llvm \
+            libclang-dev \
+            libffi-dev \
+            libc6-dev \
+            zlib1g-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      
+      - name: Cache Dioxus CLI
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/dx
+          key: ${{ runner.os }}-dioxus-cli-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli
+        if: steps.cache-dioxus-cli.outputs.cache-hit != 'true'
+      
       - name: Build for ${{ matrix.TARGET }}
         run: dx build --release --platform ${{ matrix.TARGET }}
+
       - name: Rename and package
         shell: bash
         run: |
@@ -82,6 +113,7 @@ jobs:
           else
             mv target/release/mylife mylife-linux
           fi
+
       - name: Create AppImage (Linux)
         if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
         run: |
@@ -101,6 +133,7 @@ jobs:
           EOF
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --output appimage
           mv MyLife*.AppImage mylife-linux.AppImage
+
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
@@ -108,6 +141,7 @@ jobs:
             mylife-*
             *.tar.gz
             *.AppImage
+            
       - uses: svenstaro/upload-release-action@v2
         if: ${{ github.event_name == 'push' }}
         with:
