@@ -22,7 +22,8 @@ jobs:
         run: nix profile install nixpkgs#devenv
 
       - name: Build with Devenv
-        run: devenv shell 'dx build --release --platform web'
+        run: |
+          devenv run 'dx build --release --platform web'
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
