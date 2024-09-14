@@ -24,7 +24,7 @@ jobs:
       - name: Build with Devenv
         run: |
           . /home/runner/.nix-profile/etc/profile.d/nix.sh # Ensure Nix is in the PATH
-          devenv run 'dx build --release --platform web'
+          devenv shell 'dx build --release --platform web'
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
