@@ -11,6 +11,26 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: "Dioxus Deploy"
-        uses: DioxusLabs/deploy-action@0.1.1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        run: |
+          sh <(curl -L https://nixos.org/nix/install) --no-daemon
+          
+      - name: Install Nix dependencies
+        run: nix-env -iA nixpkgs.cachix
+          
+      - name: Build with Nix
+        run: nix-shell --pure --run 'dx build --release --platform web'
+        
+      - name: Create CNAME file
+        run: echo "mylife.waozi.xyz" > dist/CNAME
+      
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist
+          single-commit: true
