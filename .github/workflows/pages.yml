@@ -21,21 +21,6 @@ jobs:
       - name: Cache Nix store
         uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Add Cargo bin to PATH
-        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Install latest dioxus-cli
-        run: |
-          nix develop --command bash -c '
-            cargo install --force dioxus-cli
-          '
-
-      - name: Install wasm-bindgen-cli
-        run: |
-          nix develop --command bash -c '
-            cargo install --force wasm-bindgen-cli
-          '
-
       - name: Build with Nix
         run: |
           nix develop --command bash -c '
@@ -60,3 +45,4 @@ jobs:
         with:
           folder: dist
           single-commit: true
+          
