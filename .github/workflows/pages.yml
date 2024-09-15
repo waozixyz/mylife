@@ -15,28 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Nix
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/nix
-            ~/.nix-profile
-          key: ${{ runner.os }}-nix-${{ hashFiles('.devenv/**') }}
-          restore-keys: |
-            ${{ runner.os }}-nix-
-
-      - uses: cachix/install-nix-action@v26
-      - uses: cachix/cachix-action@v14
-        with:
-          name: devenv
-
-      - name: Install devenv.sh
-        run: nix profile install nixpkgs#devenv
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache Dioxus build artifacts
         uses: actions/cache@v3
@@ -48,11 +38,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dioxus-web-
 
+      - name: Install latest Dioxus CLI
+        run: cargo install --force dioxus-cli
 
-      - name: Build with Devenv
-        shell: devenv shell bash -- -e {0}
-        run: |
-          dx build --release --platform web
+      - name: Build for web
+        run: dx build --release --platform web
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
