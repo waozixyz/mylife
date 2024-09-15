@@ -50,7 +50,7 @@ jobs:
 
 
       - name: Build with Devenv
-        shell: devenv shell bash -e {0}
+        shell: devenv shell bash -- -e {0}
         run: |
           dx build --release --platform web
 
