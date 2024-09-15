@@ -8,6 +8,15 @@ use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
 use rand::seq::SliceRandom;
 
+
+#[component]
+pub fn HomePageNoParam() -> Element {
+    rsx! {
+        HomePage { y: String::new() }
+    }
+}
+
+
 #[component]
 pub fn HomePage(y: String) -> Element {
     let (yaml_state, app_state) = initialize_state(&y);
@@ -33,7 +42,7 @@ pub fn HomePage(y: String) -> Element {
             div {
                 class: "button-container",
                 Link {
-                    to: Route::TimelinePage { y: String::new() },
+                    to: Route::TimelinePage { y: y },
                     class: "button home-page-button",
                     "View Timeline"
                 }

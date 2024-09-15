@@ -40,7 +40,7 @@ pub struct Yaml {
     pub date_of_birth: String,
     pub life_expectancy: u32,
     pub life_periods: Vec<LifePeriod>,
-    pub routines: Vec<Routine>,
+    pub routines: Option<Vec<Routine>>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]

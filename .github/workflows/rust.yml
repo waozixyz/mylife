@@ -214,7 +214,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_preview_release.outputs.upload_url }}
-          asset_path: ./mylife-${{ matrix.TARGET }}-${{ matrix.os }}
+          asset_path: |
+            mylife-linux
+            mylife-linux.AppImage
           asset_name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
           asset_content_type: application/octet-stream
 

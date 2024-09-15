@@ -16,9 +16,18 @@ pub fn TimelinePage(y: String) -> Element {
     rsx! {
         div {
             class: "app-container",
-            TopPanel {}
+            TopPanel {y}
             CentralPanel {}
             BottomPanel {}
         }
     }
+}
+
+
+#[component]
+pub fn TimelinePageNoParam() -> Element {
+    rsx! { 
+        TimelinePage { y: String::new() }
+    }
+
 }

@@ -64,7 +64,7 @@ impl YamlManager for NativeYamlManager {
                     },
                     // Add more default life periods as needed
                 ],
-                routines: vec![], // Empty routines for now
+                routines: Some(vec![]),
             };
 
             let default_content = serde_yaml::to_string(&default_yaml)
@@ -104,7 +104,7 @@ impl YamlManager for NativeYamlManager {
                     date_of_birth: "2000-01".to_string(),
                     life_expectancy: 80,
                     life_periods: vec![],
-                    routines: vec![],
+                    routines: Some(vec![]),
                 })
             }
         }
@@ -195,7 +195,7 @@ impl YamlManager for WasmYamlManager {
                     events: vec![],
                     id: Some(Uuid::nil()),
                 }],
-                routines: vec![],
+                routines: Some(vec![]),
             };
 
             let default_content = serde_yaml::to_string(&default_yaml)
@@ -230,7 +230,7 @@ impl YamlManager for WasmYamlManager {
                     date_of_birth: "2000-01".to_string(),
                     life_expectancy: 80,
                     life_periods: vec![],
-                    routines: vec![],
+                    routines: Some(vec![]),
                 })
             }
         }

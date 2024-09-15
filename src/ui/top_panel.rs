@@ -17,7 +17,7 @@ use crate::utils::compression::compress_and_encode;
 use crate::utils::screenshot::share_screenshot;
 
 #[component]
-pub fn TopPanel() -> Element {
+pub fn TopPanel(y: String) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
     let mut yaml_state = use_context::<Signal<Yaml>>();
     let mut show_screenshot_modal = use_signal(|| false);
@@ -158,7 +158,7 @@ pub fn TopPanel() -> Element {
             } else {
                 Link {
                     class: "button",
-                    to: Route::HomePage { y: String::new() },
+                    to: Route::HomePage { y: y },
                     span { "⬅" },
                 }
             }
