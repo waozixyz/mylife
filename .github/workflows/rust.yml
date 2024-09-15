@@ -44,12 +44,6 @@ jobs:
         include:
           - os: ubuntu-latest
             TARGET: desktop
-          - os: macos-latest
-            TARGET: desktop
-          - os: windows-latest
-            TARGET: desktop
-          - os: ubuntu-latest
-            TARGET: web
     steps:
       - uses: actions/checkout@v4
 
