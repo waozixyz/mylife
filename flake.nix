@@ -55,7 +55,6 @@
             fuse
             gcc
           ];
-
           shellHook = ''
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
               pkgs.wayland
@@ -78,22 +77,30 @@
             export PKG_CONFIG_PATH=${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
               pkgs.webkitgtk
             ]}
-            export PATH="${pkgs.lld}/bin:$PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
 
             echo "Rust WASM development environment with Dioxus ready!"
-            echo "You can now use 'cargo' to build your project."
-            echo "For WASM development, use 'rustup target add wasm32-unknown-unknown' to add the WASM target."
-            echo "For AppImage creation, use 'linuxdeploy' (you'll need to download it separately)."
 
-            # Install latest dioxus-cli
-            cargo install --force dioxus-cli
+            if ! command -v dx &> /dev/null; then
+              echo "Installing dioxus-cli..."
+              cargo install dioxus-cli
+            else
+              echo "dioxus-cli (dx) is already installed."
+            fi
 
-            # Install latest wasm-bindgen-cli
-            cargo install --force wasm-bindgen-cli
+            if ! command -v wasm-bindgen &> /dev/null; then
+              echo "Installing wasm-bindgen-cli..."
+              cargo install wasm-bindgen-cli
+            else
+              echo "wasm-bindgen-cli is already installed."
+            fi
 
             # Ensure wasm32 target is installed
-            rustup target add wasm32-unknown-unknown
+            if ! rustup target list --installed | grep -q "wasm32-unknown-unknown"; then
+              rustup target add wasm32-unknown-unknown
+            fi
           '';
+
         };
       }
     );

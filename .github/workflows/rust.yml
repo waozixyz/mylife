@@ -1,6 +1,13 @@
 name: Dioxus Builds
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'  # Trigger for version tags, adjust if necessary
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -37,6 +44,12 @@ jobs:
         include:
           - os: ubuntu-latest
             TARGET: desktop
+          - os: macos-latest
+            TARGET: desktop
+          - os: windows-latest
+            TARGET: desktop
+          - os: ubuntu-latest
+            TARGET: web
     steps:
       - uses: actions/checkout@v4
 
@@ -128,9 +141,9 @@ jobs:
         run: |
           if [ "${{ matrix.TARGET }}" = "web" ]; then
             tar -czvf mylife-web.tar.gz dist
-          elif [ "${{ matrix.OS }}" = "windows-latest" ]; then
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv target/release/mylife.exe mylife-windows.exe
-          elif [ "${{ matrix.OS }}" = "macos-latest" ]; then
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
             mv target/release/mylife mylife-macos
           else
             mv target/release/mylife mylife-linux
