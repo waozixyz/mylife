@@ -23,11 +23,9 @@ pub fn TimelinePage(y: String) -> Element {
     }
 }
 
-
 #[component]
 pub fn TimelinePageNoParam() -> Element {
-    rsx! { 
+    rsx! {
         TimelinePage { y: String::new() }
     }
-
 }

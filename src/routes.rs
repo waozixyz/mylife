@@ -12,4 +12,3 @@ pub enum Route {
     #[route("/timeline")]
     TimelinePageNoParam,
 }
-

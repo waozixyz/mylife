@@ -8,14 +8,12 @@ use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
 use rand::seq::SliceRandom;
 
-
 #[component]
 pub fn HomePageNoParam() -> Element {
     rsx! {
         HomePage { y: String::new() }
     }
 }
-
 
 #[component]
 pub fn HomePage(y: String) -> Element {
