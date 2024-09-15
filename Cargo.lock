@@ -3329,6 +3329,7 @@ dependencies = [
  "js-sys",
  "log",
  "manganis",
+ "manganis-macro",
  "qrcode",
  "rand 0.8.5",
  "resvg",

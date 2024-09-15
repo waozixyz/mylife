@@ -170,24 +170,55 @@ jobs:
             mylife-*
             *.tar.gz
             *.AppImage
-            
-      - name: Delete existing release
-        if: startsWith(github.ref, 'refs/tags/')
+
+      - name: Update preview tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -f preview
+          git push -f origin preview
+
+      - name: Delete existing preview release
+        if: github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag_name="${GITHUB_REF#refs/tags/}"
           release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$tag_name" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/preview" \
             | jq -r '.id')
           if [ "$release_id" != "null" ]; then
             curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id"
-            echo "Deleted existing release for tag $tag_name"
+            echo "Deleted existing preview release"
           else
-            echo "No existing release found for tag $tag_name"
+            echo "No existing preview release found"
           fi
 
+      - name: Create Preview Release
+        if: github.ref == 'refs/heads/main'
+        id: create_preview_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: preview
+          release_name: Preview Release
+          draft: false
+          prerelease: true
+
+      - name: Upload Preview Release Asset
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_preview_release.outputs.upload_url }}
+          asset_path: ./mylife-${{ matrix.TARGET }}-${{ matrix.os }}
+          asset_name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
+          asset_content_type: application/octet-stream
+
+      # Keep the existing release upload for tagged releases
       - uses: svenstaro/upload-release-action@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
