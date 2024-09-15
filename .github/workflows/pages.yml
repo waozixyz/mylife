@@ -49,10 +49,10 @@ jobs:
             ${{ runner.os }}-dioxus-web-
 
 
-    - name: Build with Devenv
-      shell: devenv shell bash -e {0}
-      run: |
-        dx build --release --platform web
+      - name: Build with Devenv
+        shell: devenv shell bash -e {0}
+        run: |
+          dx build --release --platform web
 
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
