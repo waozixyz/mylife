@@ -23,7 +23,7 @@ jobs:
 
       - name: Build with Nix
         run: |
-          nix develop --command bash -c '
+          nix develop .#custom --command bash -c '
             dx build --release --platform web
           '
 
