@@ -15,18 +15,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Cache cargo registry
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache Nix store
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build with Nix
+        run: |
+          nix develop --command bash -c '
+            dx build --release --platform web
+          '
 
       - name: Cache Dioxus build artifacts
         uses: actions/cache@v3
@@ -38,12 +37,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dioxus-web-
 
-      - name: Install latest Dioxus CLI
-        run: cargo install --force dioxus-cli
-
-      - name: Build for web
-        run: dx build --release --platform web
-
       - name: Create CNAME file
         run: echo "mylife.waozi.xyz" > dist/CNAME
       
@@ -52,3 +45,4 @@ jobs:
         with:
           folder: dist
           single-commit: true
+          
