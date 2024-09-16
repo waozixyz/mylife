@@ -1,6 +1,6 @@
 [package]
 name = "mylife"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Martin Schiller <hello@waozi.xyz>"]
 edition = "2021"
 
