@@ -11,6 +11,7 @@ title = "MyLife Timeline"
 [web.watcher]
 reload_html = true
 watch_path = ["src", "assets"]
+index_on_404 = true
 
 # include `assets` in web platform
 [web.resource]
