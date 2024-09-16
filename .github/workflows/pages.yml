@@ -1,4 +1,4 @@
-name: GitHub Pages
+name: Deploy to Netlify
 
 on:
   push:
@@ -37,12 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dioxus-web-
 
-      - name: Create CNAME file
-        run: echo "mylife.waozi.xyz" > dist/CNAME
-      
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: dist
-          single-commit: true
-          
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+
+      - name: Deploy to Netlify
+        run: netlify deploy --prod --dir=dist --site=$NETLIFY_SITE_ID
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
