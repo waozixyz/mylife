@@ -161,7 +161,7 @@ jobs:
           EOF
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
           mv MyLife*.AppImage mylife-linux.AppImage
-          
+          git 
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
@@ -223,7 +223,8 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: mylife-*
           file_glob: true
-          tag: ${{ github.ref }}
+          tag: ${{ github.ref_name }}   # Extract only the tag name
           overwrite: true
-          release_name: Release ${{ github.ref }}
-          body: "This is a new release for ${{ github.ref }}"
+          release_name: Release ${{ github.ref_name }}   # Use just the tag name in the release title
+          body: "This is a new release for ${{ github.ref_name }}"   # Use just the tag name in the release description
+
