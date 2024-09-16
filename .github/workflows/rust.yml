@@ -140,12 +140,14 @@ jobs:
           else
             mv target/release/mylife mylife-linux
           fi
+
       - name: Create AppImage (Linux)
         if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
         run: |
-          sudo apt-get install -y libfuse2
+          sudo apt-get install -y libfuse2 libxdo-dev
           wget -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage
+          wget -O linuxdeploy-plugin-gtk.sh https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
           mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
           cp mylife-linux AppDir/usr/bin/mylife
           cp assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png
@@ -157,8 +159,9 @@ jobs:
           Type=Application
           Categories=Utility;
           EOF
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --output appimage
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
           mv MyLife*.AppImage mylife-linux.AppImage
+          
       - uses: actions/upload-artifact@v3
         with:
           name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
