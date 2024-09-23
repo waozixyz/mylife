@@ -132,6 +132,12 @@
             appimage-run
             fuse
             gcc
+      
+            graphite2
+            xorg.libXft
+            xorg.libXinerama
+            cups
+            gmp
           ];
 
           shellHook = ''
@@ -150,11 +156,21 @@
               pkgs.gdk-pixbuf
               pkgs.librsvg
               pkgs.libsoup
-              pkgs.fuse
+              pkgs.fuse                    
+              pkgs.graphite2
+              pkgs.xorg.libXft
+              pkgs.xorg.libXinerama
+              pkgs.cups
+              pkgs.gmp
             ]}
             export RUST_BACKTRACE="1"
             export PKG_CONFIG_PATH=${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
               pkgs.webkitgtk
+              pkgs.graphite2
+              pkgs.xorg.libXft
+              pkgs.xorg.libXinerama
+              pkgs.cups
+              pkgs.gmp
             ]}
             export PATH="$HOME/.cargo/bin:$PATH"
 

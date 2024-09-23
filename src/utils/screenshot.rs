@@ -17,7 +17,7 @@ use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorEl
 #[cfg(not(target_arch = "wasm32"))]
 use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
-use image::io::Reader as ImageReader;
+use image::ImageReader;
 #[cfg(not(target_arch = "wasm32"))]
 use rfd::FileDialog;
 #[cfg(not(target_arch = "wasm32"))]

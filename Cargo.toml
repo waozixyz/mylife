@@ -10,18 +10,16 @@ asset-dir = "assets"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-image = { version = "0.24", features = ["png", "jpeg"] }
+image = { version = "0.25.2", features = ["png", "jpeg"] }
 uuid = { version = "1.4", features = ["v4", "serde"] }
 serde_yaml = "0.9"
 serde_json = "1.0"
 dioxus-logger = "0.5.1"
 log = "0.4.6"
-manganis = "0.2.2" 
-manganis-macro = "0.2.2"
 chrono = "0.4"
-rfd = "0.14.1"
-brotli = "3.4"
-base64 = "0.21.0"
+rfd = "0.15.0"
+brotli = "6.0.0"
+base64 = "0.22.1"
 webp = "0.3"
 rand = "0.8.5"
 rusttype = "0.9.3"
@@ -38,7 +36,7 @@ dioxus = { version = "0.5", features = ["desktop", "router"] }
 tokio = { version = "1.0", features = ["time"] }
 dioxus-desktop = "0.5.6"
 arboard = "3.4.1"
-image = { version = "0.24", features = ["webp", "webp-encoder"] }
+image = { version = "0.25.2", features = ["webp"] }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -52,4 +50,4 @@ wasm-bindgen-futures = "0.4.43"
 js-sys = "0.3.70"
 
 [target.'cfg(all(target_os = "linux", not(target_arch = "wasm32")))'.dependencies]
-wl-clipboard-rs = "0.7"
+wl-clipboard-rs = "0.9.0"
