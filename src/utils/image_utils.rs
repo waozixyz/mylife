@@ -11,7 +11,7 @@ use image::codecs::png::PngEncoder;
 #[cfg(not(target_arch = "wasm32"))]
 use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
-#[cfg(not(target_arch = "wasm32"))]
+
 use image::ImageEncoder;
 
 use rand::seq::SliceRandom;
@@ -19,6 +19,8 @@ use rand::seq::SliceRandom;
 use rusttype::{Font, Scale};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
+
+
 
 use resvg::render;
 use resvg::usvg::{Options, Tree};
