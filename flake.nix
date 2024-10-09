@@ -20,7 +20,7 @@
         };
       in
       {
-        # Default devShell
+        # for github actions devShell
         devShells.custom = pkgs.mkShell {
           buildInputs = with pkgs; [
             rustToolchain
@@ -97,7 +97,7 @@
           '';
         };
 
-        # Custom devShell
+        # default devShell
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             rustToolchain
@@ -122,7 +122,6 @@
             libayatana-appindicator
             librsvg
             gtk3
-            webkitgtk
             glib
             cairo
             pango
@@ -138,6 +137,7 @@
             xorg.libXinerama
             cups
             gmp
+            webkitgtk_4_1
           ];
 
           shellHook = ''
@@ -148,7 +148,7 @@
               pkgs.libGL
               pkgs.libglvnd
               pkgs.gtk3
-              pkgs.webkitgtk
+              pkgs.webkitgtk_4_1
               pkgs.glib
               pkgs.cairo
               pkgs.pango
@@ -165,7 +165,7 @@
             ]}
             export RUST_BACKTRACE="1"
             export PKG_CONFIG_PATH=${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
-              pkgs.webkitgtk
+              pkgs.webkitgtk_4_1
               pkgs.graphite2
               pkgs.xorg.libXft
               pkgs.xorg.libXinerama
@@ -173,6 +173,7 @@
               pkgs.gmp
             ]}
             export PATH="$HOME/.cargo/bin:$PATH"
+
 
             echo "Custom Rust WASM development environment with Dioxus ready!"
 
