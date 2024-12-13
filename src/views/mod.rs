@@ -1,5 +1,8 @@
 mod home;
-pub use home::Home;
+pub use home::HomePage;
 
-mod blog;
-pub use blog::Blog;
+mod habits;
+pub use habits::HabitsPage;
+
+mod todos;
+pub use todos::TodosPage;

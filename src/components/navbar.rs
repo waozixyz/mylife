@@ -11,12 +11,16 @@ pub fn Navbar() -> Element {
         div {
             id: "navbar",
             Link {
-                to: Route::Home {},
+                to: Route::HomePage {},
                 "Home"
             }
             Link {
-                to: Route::Blog { id: 1 },
-                "Blog"
+                to: Route::HabitsPage {},
+                "Habits"
+            }
+            Link {
+                to: Route::TodosPage {},
+                "Todos"
             }
         }
 

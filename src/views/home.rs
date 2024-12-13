@@ -1,9 +1,10 @@
-use crate::components::{HabitTracker};
 use dioxus::prelude::*;
 
 #[component]
-pub fn Home() -> Element {
+pub fn HomePage() -> Element {
     rsx! {
-        HabitTracker {}
+        div {
+           "hello"
+        }
     }
 }

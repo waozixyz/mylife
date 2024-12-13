@@ -1,0 +1,154 @@
+.todos-container {
+    max-width: 800px;
+    width: 90%;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: rgba(20, 20, 40, 0.8);
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(255, 58, 134, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.tabs {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+
+.tabs button {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tabs button .symbol {
+    font-size: 1.2em;
+}
+
+.tabs button:hover {
+    transform: scale(0.95);
+}
+
+.tabs button.active {
+    background-color: var(--accent-color);
+}
+
+.todo-list {
+    background-color: rgba(30, 30, 60, 0.6);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.todo-form {
+    display: flex;
+    margin-bottom: 1.5rem;
+}
+
+.todo-form input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 10px 0 0 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+.todo-form button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0 10px 10px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.todo-form button:hover {
+    background-color: #ff1a4b;
+}
+
+.todos {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.drag-handle {
+    cursor: move;
+    padding: 0 10px;
+    color: var(--secondary-color);
+}
+
+.todo-content {
+    flex: 1;
+    padding: 0 10px;
+}
+
+.delete-btn {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--text-color);
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.delete-btn:hover {
+    background-color: var(--text-color);
+    color: var(--secondary-color);
+}
+
+.drop-placeholder {
+    height: 2rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin: 0.25rem 0;
+}
+
+@media (max-width: 850px) {
+    .tabs {
+        flex-wrap: wrap;
+        justify-content: space-around;
+    }
+
+    .tabs button .name {
+        display: none;
+    }
+
+    .tabs button {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 650px) {
+    .todos-container {
+        width: 95%;
+        padding: 1rem;
+    }
+
+    .todo-list {
+        padding: 1rem;
+    }
+}

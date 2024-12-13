@@ -4,20 +4,25 @@
     padding: 20px;
 }
 
+
+
 .calendar-header {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, 1fr);  /* Changed to 1fr */
     text-align: center;
     font-weight: bold;
     margin-bottom: 10px;
+    gap: 10px;  /* Increased gap */
+    padding: 0 10px;  /* Added padding */
 }
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(7, 1fr);  /* Changed to 1fr */
+    gap: 10px;  /* Increased gap */
+    width: 100%;
+    padding: 10px;  /* Added padding */
 }
-
 .calendar-cell {
     aspect-ratio: 1;
     border: 1px solid #ddd;
@@ -26,6 +31,12 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 1rem;
+    min-width: 40px;
+    min-height: 40px;
+    width: 100%;  /* Added width */
+    height: 100%;  /* Added height */
+    box-sizing: border-box;  /* Added box-sizing */
 }
 
 .calendar-cell.disabled {
@@ -35,12 +46,12 @@
 }
 
 .calendar-cell.completed {
-    background-color: purple;
+    background-color: var(--selected-color);
     color: white;
 }
 
 .calendar-cell.current-day {
-    border: 2px solid #007bff;
+    border: 2px solid  var(--selected-color);
 }
 
 .calendar-cell.future {
@@ -66,4 +77,19 @@
 
 .date-picker label {
     margin-left: 20px;
+}
+
+
+.color-input {
+    width: 50px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.color-input:hover {
+    border-color: #999;
 }
