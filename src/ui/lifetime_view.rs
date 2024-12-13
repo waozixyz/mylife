@@ -169,7 +169,6 @@ pub fn get_svg_content() -> Option<String> {
     let size_info = size_info();
     Some(generate_svg_content(&yaml, &size_info))
 }
-
 fn get_color_and_period_for_date(
     date: NaiveDate,
     life_periods: &[LifePeriod],
@@ -177,32 +176,44 @@ fn get_color_and_period_for_date(
 ) -> (String, Option<LifePeriod>) {
     debug!("Searching for period for date: {}", date);
 
-    for (index, period) in life_periods.iter().rev().enumerate() {
-        let period_start = parse_date(
-            &period.start,
-            &format!("Failed to parse start date for period: {}", period.start),
+    // Return default if no periods
+    if life_periods.is_empty() {
+        return ("#fafafa".to_string(), None);
+    }
+
+    // Sort periods by start date
+    let mut periods = life_periods.to_vec();
+    periods.sort_by(|a, b| a.start.cmp(&b.start));
+
+    // Iterate through consecutive periods
+    for i in 0..periods.len() {
+        let current_period = &periods[i];
+        let current_start = parse_date(
+            &current_period.start,
+            &format!("Failed to parse start date for period: {}", current_period.start),
         );
-        let period_end = if index == 0 {
+
+        let period_end = if i == periods.len() - 1 {
+            // Last period extends to current date
             current_date
         } else {
+            // End of period is start of next period
             parse_date(
-                &life_periods[life_periods.len() - index].start,
-                &format!(
-                    "Failed to parse start date for next period: {}",
-                    life_periods[life_periods.len() - index].start
-                ),
+                &periods[i + 1].start,
+                &format!("Failed to parse start date for next period: {}", periods[i + 1].start),
             )
         };
 
-        if date >= period_start && date < period_end {
+        if date >= current_start && date < period_end {
             debug!(
                 "Found matching period: start={}, end={}, color={}",
-                period_start, period_end, period.color
+                current_start, period_end, current_period.color
             );
-            return (period.color.clone(), Some(period.clone()));
+            return (current_period.color.clone(), Some(current_period.clone()));
         }
     }
 
+    // No matching period found
     ("#fafafa".to_string(), None)
 }
 

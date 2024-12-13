@@ -126,29 +126,28 @@ impl YamlManager for NativeYamlManager {
             Err("File save cancelled".to_string())
         }
     }
-
     fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
         let mut yaml_to_save = yaml.clone();
-
-        // Remove IDs before saving
+    
+        // Remove IDs before saving by setting them to None
         for period in &mut yaml_to_save.life_periods {
-            period.id = Some(Uuid::nil());
+            period.id = None;  // Set to None instead of nil UUID
             for event in &mut period.events {
-                event.id = Some(Uuid::nil());
+                event.id = None;  // Set to None instead of nil UUID
             }
         }
-
+    
         let yaml_content = serde_yaml::to_string(&yaml_to_save)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
-
+    
         let file_path = Path::new(&self.data_folder).join(yaml_file);
         fs::create_dir_all(file_path.parent().unwrap())
             .map_err(|e| format!("Failed to create directory: {:?}", e))?;
-
+    
         fs::write(file_path, yaml_content)
             .map_err(|e| format!("Failed to update YAML file: {:?}", e))
     }
-
+    
     fn get_available_yamls(&self) -> Result<Vec<String>, String> {
         let data_folder = Path::new(&self.data_folder);
         let yamls = fs::read_dir(data_folder)
@@ -264,17 +263,23 @@ impl YamlManager for WasmYamlManager {
     }
 
     fn update_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
-        let yaml_content = serde_yaml::to_string(yaml)
+        let mut yaml_to_save = yaml.clone();
+        
+        // Remove IDs before saving
+        for period in &mut yaml_to_save.life_periods {
+            period.id = None;  // Clear period ID
+            for event in &mut period.events {
+                event.id = None;  // Clear event IDs
+            }
+        }
+    
+        let yaml_content = serde_yaml::to_string(&yaml_to_save)
             .map_err(|e| format!("Failed to serialize YAML: {:?}", e))?;
-        let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
-        let storage = window
-            .local_storage()
-            .map_err(|_| "Failed to get localStorage".to_string())?
-            .ok_or_else(|| "localStorage not available".to_string())?;
-
-        storage
-            .set_item(yaml_file, &yaml_content)
-            .map_err(|_| "Failed to set item in localStorage".to_string())
+    
+        // Save the YAML without IDs
+        let file_path = Path::new(&self.data_folder).join(yaml_file);
+        fs::write(file_path, yaml_content)
+            .map_err(|e| format!("Failed to update YAML file: {:?}", e))
     }
 
     fn get_available_yamls(&self) -> Result<Vec<String>, String> {
