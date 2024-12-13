@@ -1,7 +1,7 @@
 use crate::models::{CellData, LifePeriod, SizeInfo, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{debug, error};
+use tracing::{debug, error};
 use uuid::Uuid;
 
 fn calculate_grid_dimensions(size_info: &SizeInfo, life_expectancy: u32) -> (usize, usize) {

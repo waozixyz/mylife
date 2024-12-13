@@ -3,7 +3,7 @@ use crate::utils::date_utils::is_valid_date;
 use crate::yaml_manager::update_yaml;
 use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{debug, warn};
+use tracing::{debug, warn};
 
 fn is_valid_hex_color(color: &str) -> bool {
     color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit())

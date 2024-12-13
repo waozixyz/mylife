@@ -1,9 +1,10 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use brotli::enc::BrotliEncoderParams;
+use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use brotli::Decompressor;
 #[cfg(target_arch = "wasm32")]
-use dioxus_logger::tracing::error;
+use tracing::error;
 use serde_json;
 use serde_yaml;
 #[cfg(target_arch = "wasm32")]

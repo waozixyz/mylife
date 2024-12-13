@@ -5,7 +5,7 @@ use crate::yaml_manager::{export_yaml, get_available_yamls, get_yaml_manager, im
 #[cfg(not(target_arch = "wasm32"))]
 use arboard::Clipboard;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::error;
+use tracing::error;
 use qrcode::render::svg;
 use qrcode::QrCode;
 

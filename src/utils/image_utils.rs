@@ -2,8 +2,8 @@
 
 use crate::models::LegendItem;
 #[cfg(not(target_arch = "wasm32"))]
-use dioxus_logger::tracing::error;
-use dioxus_logger::tracing::info;
+use tracing::error;
+use tracing::info;
 
 use hex_color::HexColor;
 #[cfg(target_arch = "wasm32")]

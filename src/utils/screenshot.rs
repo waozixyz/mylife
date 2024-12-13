@@ -2,7 +2,7 @@ use crate::models::{LegendItem, Yaml};
 use crate::utils::image_utils::*;
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{error, info};
+use tracing::{error, info};
 use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
