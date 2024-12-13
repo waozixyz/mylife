@@ -1,0 +1,69 @@
+.habit-tracker {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendar-cell {
+    aspect-ratio: 1;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.calendar-cell.disabled {
+    background-color: #f0f0f0;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.calendar-cell.completed {
+    background-color: purple;
+    color: white;
+}
+
+.calendar-cell.current-day {
+    border: 2px solid #007bff;
+}
+
+.calendar-cell.future {
+    cursor: not-allowed;
+    color: #ccc;
+}
+
+.calendar-cell.past {
+    color: #999;
+}
+
+.date-picker input {
+    padding: 5px;
+    margin-left: 10px;
+}
+
+.date-picker select {
+    margin-left: 20px;
+    padding: 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.date-picker label {
+    margin-left: 20px;
+}
