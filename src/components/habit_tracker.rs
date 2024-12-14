@@ -1,6 +1,6 @@
 use crate::db::habits::{
     delete_completed_day, load_completed_days, load_habit, save_completed_day, update_habit_color,
-    update_habit_start_date, update_habit_title, update_habit_week_start,
+    update_habit_start_date, update_habit_week_start,
 };
 use crate::models::habit::{HabitData, WeekStart};
 use crate::state::AppState;
@@ -27,8 +27,6 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
         week_start: WeekStart::Sunday,
         color: String::from("#800080"),
     });
-
-    let mut is_editing_title = use_signal(|| false);
 
     let toggle_day = {
         let conn = conn.clone();
@@ -73,36 +71,6 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: HABIT_TRACKER_CSS }
         div { class: "habit-tracker",
-            // Title section
-            div { class: "habit-title",
-                {if *is_editing_title.read() {
-                    rsx! {
-                        input {
-                            r#type: "text",
-                            value: "{habit_data.read().title}",
-                            onblur: {
-                                let conn = conn.clone();
-                                move |_| {
-                                    is_editing_title.set(false);
-                                    let _ = update_habit_title(&conn, props.habit_id, &habit_data.read().title);
-                                }
-                            },
-                            oninput: move |evt| {
-                                let mut data = habit_data.read().clone();
-                                data.title = evt.data.value();
-                                habit_data.set(data);
-                            }
-                        }
-                    }
-                } else {
-                    rsx! {
-                        h2 {
-                            onclick: move |_| is_editing_title.set(true),
-                            "{habit_data.read().title}"
-                        }
-                    }
-                }}
-            }
 
             // Settings section
             div { class: "date-picker",
@@ -169,7 +137,7 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
                     }
                 }
             }
-
+            br {}
             // Calendar header with dynamic week start
             div { class: "calendar-header",
                 {["S", "M", "T", "W", "T", "F", "S"].iter().cycle()

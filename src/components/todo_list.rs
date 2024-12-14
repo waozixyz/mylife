@@ -12,7 +12,7 @@ pub fn TodoList(day: String) -> Element {
     let state = use_context::<AppState>();
     let conn = state.conn.clone();
 
-    let mut todos = use_signal(Vec::<Todo>::new);
+    let todos = use_signal(Vec::<Todo>::new);
     let mut new_todo = use_signal(String::new);
     let mut dragged_todo = use_signal(|| None::<Todo>);
     let mut drop_index = use_signal(|| None::<usize>);
@@ -121,7 +121,7 @@ pub fn TodoList(day: String) -> Element {
             drop_index.set(None);
         }
     };
-    let handle_drag_start = move |(ev, todo): (DragEvent, Todo)| {
+    let handle_drag_start = move |(_ev, todo): (DragEvent, Todo)| {
         dragged_todo.set(Some(todo));
     };
 

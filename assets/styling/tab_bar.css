@@ -1,0 +1,129 @@
+/* Tab Bar styling */
+.tab-bar {
+  border-bottom: 1px solid #333;
+  margin-bottom: 20px;
+  background-color: #1a1a1a;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 8px;
+}
+
+.tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid #333;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: #2a2a2a;
+  color: #ccc;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.tab:hover {
+  background: #333;
+}
+
+.tab.selected {
+  background: #333;
+  border-bottom: 1px solid #333;
+  margin-bottom: -1px;
+  color: #fff;
+}
+
+.new-tab {
+  padding: 8px 12px;
+  margin-left: 4px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ccc;
+  transition: all 0.2s ease;
+}
+
+.new-tab:hover {
+  background: #333;
+  color: #fff;
+}
+
+/* Edit mode styling */
+.tab-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tab-edit input[type="text"] {
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: calc(100% - 30px);
+  min-width: 80px;
+}
+
+.tab-edit input[type="text"]:focus {
+  outline: none;
+  border-color: #444;
+  background: #333;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.delete-btn:hover {
+  color: #ff4444;
+}
+
+/* Delete confirmation styling */
+.confirm-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.confirm-actions button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirm-yes {
+  background: #ff4444;
+  color: white;
+}
+
+.confirm-yes:hover {
+  background: #ff6666;
+}
+
+.confirm-no {
+  background: #333;
+  color: #ccc;
+}
+
+.confirm-no:hover {
+  background: #444;
+}

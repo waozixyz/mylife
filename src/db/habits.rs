@@ -117,3 +117,25 @@ pub fn update_habit_week_start(conn: &Connection, id: Uuid, week_start: &str) ->
     )?;
     Ok(())
 }
+
+pub fn load_all_habits(conn: &Connection) -> Result<Vec<Habit>> {
+    let mut stmt = conn.prepare("SELECT id, title, start_date, color, week_start FROM habits")?;
+    let habits = stmt.query_map([], |row| {
+        Ok(Habit {
+            id: Uuid::parse_str(&row.get::<_, String>(0)?).unwrap(),
+            title: row.get(1)?,
+            start_date: NaiveDate::parse_from_str(&row.get::<_, String>(2)?, "%Y-%m-%d").unwrap(),
+            color: row.get(3)?,
+            week_start: row.get(4)?,
+        })
+    })?
+    .filter_map(Result::ok)
+    .collect();
+    Ok(habits)
+}
+
+pub fn delete_habit(conn: &Connection, id: Uuid) -> Result<()> {
+    conn.execute("DELETE FROM habits WHERE id = ?1", [&id.to_string()])?;
+    conn.execute("DELETE FROM completed_days WHERE habit_id = ?1", [&id.to_string()])?;
+    Ok(())
+}
