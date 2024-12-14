@@ -1,6 +1,6 @@
 use crate::db::habits::{
-    delete_completed_day, load_completed_days, load_habit, save_completed_day, update_habit_color,
-    update_habit_start_date, update_habit_week_start,
+    delete_completed_day, save_completed_day, update_habit_color, update_habit_start_date,
+    update_habit_week_start,
 };
 use crate::models::habit::{HabitData, WeekStart};
 use crate::state::AppState;
@@ -13,79 +13,62 @@ const HABIT_TRACKER_CSS: Asset = asset!("/assets/styling/habit_tracker.css");
 #[derive(Props, Clone, PartialEq)]
 pub struct HabitTrackerProps {
     habit_id: Uuid,
+    habit_data: HabitData,
+    on_data_change: EventHandler<()>,
 }
 
 #[component]
 pub fn HabitTracker(props: HabitTrackerProps) -> Element {
+    println!("=== HabitTracker Component Start ===");
+    println!("Received props - habit_id: {:?}", props.habit_id);
+    println!(
+        "Received props - habit_data title: {}",
+        props.habit_data.title
+    );
+    println!(
+        "Received props - start_date: {}",
+        props.habit_data.start_date
+    );
+    println!(
+        "Received props - completed_days count: {}",
+        props.habit_data.completed_days.len()
+    );
+
     let state = use_context::<AppState>();
     let conn = state.conn.clone();
-
-    let mut habit_data = use_signal(|| HabitData {
-        title: String::from("Meditation"),
-        start_date: Local::now().date_naive(),
-        completed_days: Vec::new(),
-        week_start: WeekStart::Sunday,
-        color: String::from("#800080"),
-    });
+    let completed_days = props.habit_data.completed_days.clone();
 
     let toggle_day = {
         let conn = conn.clone();
+        let on_data_change = props.on_data_change.clone();
+        let completed_days = completed_days.clone();
         move |date: NaiveDate| {
             if date <= Local::now().date_naive() {
-                let mut data = habit_data.read().clone();
-                if let Some(pos) = data.completed_days.iter().position(|&d| d == date) {
-                    data.completed_days.remove(pos);
+                if props.habit_data.completed_days.contains(&date) {
                     let _ = delete_completed_day(&conn, props.habit_id, date);
                 } else {
-                    data.completed_days.push(date);
                     let _ = save_completed_day(&conn, props.habit_id, date);
                 }
-                habit_data.set(data);
+                on_data_change.call(());
             }
         }
     };
 
-    // Load initial data effect
-    {
-        let conn = conn.clone();
-        let habit_id = props.habit_id;
-
-        use_effect(move || {
-            let conn = conn.clone();
-            spawn(async move {
-                println!("Loading habit data for ID: {}", habit_id);
-                if let Ok(Some(habit)) = load_habit(&conn, habit_id) {
-                    let mut data = habit_data.read().clone();
-                    data.title = habit.title;
-                    data.start_date = habit.start_date;
-                    data.week_start = WeekStart::from_string(&habit.week_start);
-                    if let Ok(days) = load_completed_days(&conn, habit_id) {
-                        data.completed_days = days;
-                    }
-                    habit_data.set(data);
-                }
-            });
-        });
-    }
-
     rsx! {
         document::Link { rel: "stylesheet", href: HABIT_TRACKER_CSS }
         div { class: "habit-tracker",
-
-            // Settings section
             div { class: "date-picker",
                 label { "Start Date: " }
                 input {
                     r#type: "date",
-                    value: "{habit_data.read().start_date}",
+                    value: "{props.habit_data.start_date}",
                     oninput: {
-                        let conn = conn.clone();  // Clone conn here
+                        let conn = conn.clone();
+                        let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
                             if let Ok(date) = NaiveDate::parse_from_str(&evt.data.value(), "%Y-%m-%d") {
-                                let mut data = habit_data.read().clone();
-                                data.start_date = date;
                                 let _ = update_habit_start_date(&conn, props.habit_id, date);
-                                habit_data.set(data);
+                                on_data_change.call(());
                             }
                         }
                     }
@@ -93,10 +76,11 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
 
                 label { "Week Starts On: " }
                 select {
+                    value: props.habit_data.week_start.to_string(),
                     onchange: {
                         let conn = conn.clone();
+                        let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
-                            let mut data = habit_data.read().clone();
                             let week_start = match evt.data.value().as_str() {
                                 "monday" => WeekStart::Monday,
                                 "tuesday" => WeekStart::Tuesday,
@@ -107,8 +91,7 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
                                 _ => WeekStart::Sunday,
                             };
                             let _ = update_habit_week_start(&conn, props.habit_id, &week_start.to_string());
-                            data.week_start = week_start;
-                            habit_data.set(data);
+                            on_data_change.call(());
                         }
                     },
                     option { value: "sunday", "Sunday" }
@@ -123,37 +106,35 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
                 label { "Color: " }
                 input {
                     r#type: "color",
-                    value: "{habit_data.read().color}",
+                    value: "{props.habit_data.color}",
                     class: "color-input",
                     oninput: {
                         let conn = conn.clone();
+                        let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
-                            let mut data = habit_data.read().clone();
-                            let color = evt.data.value();  // Get the color value
-                            data.color = color.clone();    // Clone it for data
-                            let _ = update_habit_color(&conn, props.habit_id, &color);  // Use original color here
-                            habit_data.set(data);
+                            let color = evt.data.value();
+                            let _ = update_habit_color(&conn, props.habit_id, &color);
+                            on_data_change.call(());
                         }
                     }
                 }
             }
             br {}
-            // Calendar header with dynamic week start
+
             div { class: "calendar-header",
                 {["S", "M", "T", "W", "T", "F", "S"].iter().cycle()
-                    .skip(habit_data.read().week_start.to_weekday().num_days_from_sunday() as usize)
+                    .skip(props.habit_data.week_start.to_weekday().num_days_from_sunday() as usize)
                     .take(7)
                     .map(|day| rsx! { div { "{day}" } })}
             }
 
-            // Calendar grid
             div { class: "calendar-grid",
                 {render_calendar(
-                    habit_data.read().start_date,
+                    props.habit_data.start_date,
                     Local::now().date_naive(),
-                    &habit_data.read().completed_days,
-                    habit_data.read().color.clone(),
-                    habit_data.read().week_start.clone(),
+                    &completed_days,
+                    props.habit_data.color.clone(),
+                    props.habit_data.week_start.clone(),
                     toggle_day
                 )}
             }
