@@ -1,9 +1,11 @@
-use crate::db::habits::{delete_habit, load_all_habits, save_habit, update_habit_title};
 use crate::models::habit::Habit;
-use crate::state::AppState;
+use crate::server::habits::{
+    create_habit, delete_habit, get_habits, update_habit, update_habit_title,
+};
 use chrono::Local;
 use dioxus::prelude::*;
 use uuid::Uuid;
+use tracing::{debug, error, info};
 
 const TAB_BAR_CSS: Asset = asset!("/assets/styling/tab_bar.css");
 
@@ -15,30 +17,29 @@ pub struct TabBarProps {
 
 #[component]
 pub fn TabBar(props: TabBarProps) -> Element {
-    let state = use_context::<AppState>();
-    let conn = state.conn.clone();
-
     let mut habits = use_signal(Vec::<Habit>::new);
     let mut editing_tab_id = use_signal(|| None::<Uuid>);
     let mut show_delete_confirm = use_signal(|| None::<Uuid>);
 
-    // Load habits effect remains the same
+    // Load habits effect
     {
-        let conn = conn.clone();
         let mut habits = habits.clone();
         use_effect(move || {
-            let conn = conn.clone();
             spawn(async move {
-                if let Ok(loaded_habits) = load_all_habits(&conn) {
-                    habits.set(loaded_habits);
+                info!("Loading habits");
+                match get_habits().await {
+                    Ok(loaded_habits) => {
+                        info!("Successfully loaded {} habits", loaded_habits.len());
+                        habits.set(loaded_habits);
+                    }
+                    Err(e) => error!("Failed to load habits: {:?}", e),
                 }
             });
         });
     }
 
-    // Create new habit remains the same
+    // Create new habit
     let create_new_habit = {
-        let conn = conn.clone();
         let mut habits = habits.clone();
         let mut editing_tab_id = editing_tab_id.clone();
         move |_| {
@@ -50,13 +51,25 @@ pub fn TabBar(props: TabBarProps) -> Element {
                 week_start: "sunday".to_string(),
             };
 
-            let _ = save_habit(&conn, &new_habit);
-
-            let mut current_habits = habits.read().clone();
-            current_habits.push(new_habit.clone());
-            habits.set(current_habits);
-
-            editing_tab_id.set(Some(new_habit.id));
+            spawn({
+                let new_habit = new_habit.clone();
+                let mut habits = habits.clone();
+                let mut editing_tab_id = editing_tab_id.clone();
+                
+                async move {
+                    info!("Creating new habit with id: {}", new_habit.id);
+                    match create_habit(new_habit.clone()).await {
+                        Ok(_) => {
+                            let mut current_habits = habits.read().clone();
+                            current_habits.push(new_habit.clone());
+                            habits.set(current_habits);
+                            editing_tab_id.set(Some(new_habit.id));
+                            info!("Successfully created new habit");
+                        }
+                        Err(e) => error!("Failed to create habit: {:?}", e),
+                    }
+                }
+            });
         }
     };
 
@@ -67,9 +80,6 @@ pub fn TabBar(props: TabBarProps) -> Element {
         let showing_confirm = show_delete_confirm
             .read()
             .map_or(false, |id| id == habit.id);
-        let conn = conn.clone();
-        let conn_for_keydown = conn.clone(); // Clone for keydown handler
-        let conn_for_blur = conn.clone(); // Clone for blur handler
 
         rsx! {
             div {
@@ -98,17 +108,43 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                     if evt.key() == Key::Enter {
                                         let habits_read = habits.read();
                                         if let Some(habit) = habits_read.iter().find(|h| h.id == habit_id) {
-                                            let _ = update_habit_title(&conn_for_keydown, habit_id, &habit.title);
+                                            spawn({
+                                                let title = habit.title.clone();
+                                                let habit_id = habit_id;
+                                                let mut editing_tab_id = editing_tab_id.clone();
+                                                
+                                                async move {
+                                                    match update_habit_title(habit_id, title).await {
+                                                        Ok(_) => {
+                                                            editing_tab_id.set(None);
+                                                            info!("Successfully updated habit title");
+                                                        }
+                                                        Err(e) => error!("Failed to update habit title: {:?}", e),
+                                                    }
+                                                }
+                                            });
                                         }
-                                        editing_tab_id.set(None);
                                     }
                                 },
                                 onblur: move |_| {
                                     let habits_read = habits.read();
                                     if let Some(habit) = habits_read.iter().find(|h| h.id == habit_id) {
-                                        let _ = update_habit_title(&conn_for_blur, habit_id, &habit.title);
+                                        spawn({
+                                            let title = habit.title.clone();
+                                            let habit_id = habit_id;
+                                            let mut editing_tab_id = editing_tab_id.clone();
+                                            
+                                            async move {
+                                                match update_habit_title(habit_id, title).await {
+                                                    Ok(_) => {
+                                                        editing_tab_id.set(None);
+                                                        info!("Successfully updated habit title on blur");
+                                                    }
+                                                    Err(e) => error!("Failed to update habit title on blur: {:?}", e),
+                                                }
+                                            }
+                                        });
                                     }
-                                    editing_tab_id.set(None);
                                 },
                                 oninput: move |evt: Event<FormData>| {
                                     let mut current_habits = habits.read().clone();
@@ -133,12 +169,25 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                 button {
                                     class: "confirm-yes",
                                     onclick: move |_| {
-                                        let conn = conn.clone();
-                                        let _ = delete_habit(&conn, habit.id);
-                                        let mut current_habits = habits.read().clone();
-                                        current_habits.retain(|h| h.id != habit.id);
-                                        habits.set(current_habits);
-                                        show_delete_confirm.set(None);
+                                        spawn({
+                                            let habit_id = habit.id;
+                                            let mut habits = habits.clone();
+                                            let mut show_delete_confirm = show_delete_confirm.clone();
+                                            
+                                            async move {
+                                                info!("Deleting habit: {}", habit_id);
+                                                match delete_habit(habit_id).await {
+                                                    Ok(_) => {
+                                                        let mut current_habits = habits.read().clone();
+                                                        current_habits.retain(|h| h.id != habit_id);
+                                                        habits.set(current_habits);
+                                                        show_delete_confirm.set(None);
+                                                        info!("Successfully deleted habit");
+                                                    }
+                                                    Err(e) => error!("Failed to delete habit: {:?}", e),
+                                                }
+                                            }
+                                        });
                                     },
                                     "Yes"
                                 }

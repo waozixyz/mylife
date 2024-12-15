@@ -1,13 +1,9 @@
-use crate::db::habits::{
-    delete_completed_day, save_completed_day, update_habit_color, update_habit_start_date,
-    update_habit_week_start,
-};
 use crate::models::habit::{HabitData, WeekStart};
-use crate::state::AppState;
+use crate::server::habits::{update_habit_color, update_habit_week_start, update_habit_start_date, delete_completed_day, save_completed_day};
 use chrono::{Datelike, Duration, Local, NaiveDate};
 use dioxus::prelude::*;
 use uuid::Uuid;
-
+use tracing::info;
 const HABIT_TRACKER_CSS: Asset = asset!("/assets/styling/habit_tracker.css");
 
 #[derive(Props, Clone, PartialEq)]
@@ -19,66 +15,72 @@ pub struct HabitTrackerProps {
 
 #[component]
 pub fn HabitTracker(props: HabitTrackerProps) -> Element {
-    println!("=== HabitTracker Component Start ===");
-    println!("Received props - habit_id: {:?}", props.habit_id);
-    println!(
-        "Received props - habit_data title: {}",
-        props.habit_data.title
-    );
-    println!(
-        "Received props - start_date: {}",
-        props.habit_data.start_date
-    );
-    println!(
-        "Received props - completed_days count: {}",
-        props.habit_data.completed_days.len()
-    );
 
-    let state = use_context::<AppState>();
-    let conn = state.conn.clone();
     let completed_days = props.habit_data.completed_days.clone();
 
     let toggle_day = {
-        let conn = conn.clone();
         let on_data_change = props.on_data_change.clone();
         let completed_days = completed_days.clone();
         move |date: NaiveDate| {
             if date <= Local::now().date_naive() {
-                if props.habit_data.completed_days.contains(&date) {
-                    let _ = delete_completed_day(&conn, props.habit_id, date);
-                } else {
-                    let _ = save_completed_day(&conn, props.habit_id, date);
-                }
-                on_data_change.call(());
+                spawn({
+                    let on_data_change = on_data_change.clone();
+                    let habit_id = props.habit_id;
+                    let is_completed = completed_days.contains(&date);
+                    async move {
+                        let result = if is_completed {
+                            delete_completed_day(habit_id, date).await
+                        } else {
+                            save_completed_day(habit_id, date).await
+                        };
+                        
+                        match result {
+                            Ok(_) => on_data_change.call(()),
+                            Err(e) => println!("Failed to toggle day: {:?}", e),
+                        }
+                    }
+                });
             }
         }
     };
+    
+    let color_clone = props.habit_data.color.clone();
+    use_effect(move || {
+        info!("HabitTracker color changed to: {}", color_clone);
+    });
 
     rsx! {
         document::Link { rel: "stylesheet", href: HABIT_TRACKER_CSS }
         div { class: "habit-tracker",
             div { class: "date-picker",
                 label { "Start Date: " }
+
                 input {
                     r#type: "date",
                     value: "{props.habit_data.start_date}",
                     oninput: {
-                        let conn = conn.clone();
                         let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
                             if let Ok(date) = NaiveDate::parse_from_str(&evt.data.value(), "%Y-%m-%d") {
-                                let _ = update_habit_start_date(&conn, props.habit_id, date);
-                                on_data_change.call(());
+                                spawn({
+                                    let on_data_change = on_data_change.clone();
+                                    let habit_id = props.habit_id;
+                                    async move {
+                                        match update_habit_start_date(habit_id, date).await {
+                                            Ok(_) => on_data_change.call(()),
+                                            Err(e) => println!("Failed to update start date: {:?}", e),
+                                        }
+                                    }
+                                });
                             }
                         }
                     }
                 }
-
+                
                 label { "Week Starts On: " }
                 select {
                     value: props.habit_data.week_start.to_string(),
                     onchange: {
-                        let conn = conn.clone();
                         let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
                             let week_start = match evt.data.value().as_str() {
@@ -90,8 +92,17 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
                                 "saturday" => WeekStart::Saturday,
                                 _ => WeekStart::Sunday,
                             };
-                            let _ = update_habit_week_start(&conn, props.habit_id, &week_start.to_string());
-                            on_data_change.call(());
+                            spawn({
+                                let on_data_change = on_data_change.clone();
+                                let habit_id = props.habit_id;
+                                let week_start = week_start.to_string();
+                                async move {
+                                    match update_habit_week_start(habit_id, week_start).await {
+                                        Ok(_) => on_data_change.call(()),
+                                        Err(e) => println!("Failed to update week start: {:?}", e),
+                                    }
+                                }
+                            });
                         }
                     },
                     option { value: "sunday", "Sunday" }
@@ -109,12 +120,28 @@ pub fn HabitTracker(props: HabitTrackerProps) -> Element {
                     value: "{props.habit_data.color}",
                     class: "color-input",
                     oninput: {
-                        let conn = conn.clone();
                         let on_data_change = props.on_data_change.clone();
                         move |evt: Event<FormData>| {
                             let color = evt.data.value();
-                            let _ = update_habit_color(&conn, props.habit_id, &color);
-                            on_data_change.call(());
+                            
+                            // Spawn the async server function call
+                            spawn({
+                                let color = color.clone();
+                                let habit_id = props.habit_id;
+                                let on_data_change = on_data_change.clone();
+                                
+                                async move {
+                                    match update_habit_color(habit_id, color).await {
+                                        Ok(_) => {
+                                            // Only call on_data_change after successful update
+                                            on_data_change.call(());
+                                        }
+                                        Err(e) => {
+                                            println!("Failed to update color: {:?}", e);
+                                        }
+                                    }
+                                }
+                            });
                         }
                     }
                 }

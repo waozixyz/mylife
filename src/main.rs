@@ -1,17 +1,10 @@
 use dioxus::prelude::*;
-use std::sync::Arc;
-use views::{HabitsPage, HomePage, TodosPage};
-
+use views::{HabitsPage, HomePage, TodosPage, TestPage};
 mod components;
-mod db;
 mod models;
-mod state;
+mod server;
 mod views;
-
 use components::navbar::Navbar;
-
-use db::core::init_db;
-use state::AppState;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -23,6 +16,8 @@ enum Route {
     HabitsPage {},
     #[route("/todos")]
     TodosPage {},
+    #[route("/test")]
+    TestPage {},
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -34,14 +29,11 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let state = use_context_provider(|| AppState {
-        conn: Arc::new(init_db().expect("Failed to initialize database")),
-    });
-
     rsx! {
-        // Global app resources
-        document::Link { rel: "icon", href: FAVICON }
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
-        Router::<Route> {}
+        div {
+            document::Link { rel: "icon", href: FAVICON }
+            document::Link { rel: "stylesheet", href: MAIN_CSS }
+            Router::<Route> {}
+        }
     }
 }

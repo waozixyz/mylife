@@ -22,6 +22,10 @@ pub fn Navbar() -> Element {
                 to: Route::TodosPage {},
                 "Todos"
             }
+            Link {
+                to: Route::TestPage {},
+                "Test"
+            }
         }
 
         Outlet::<Route> {}

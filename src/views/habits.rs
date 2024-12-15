@@ -1,85 +1,110 @@
 use crate::components::habit_tracker::HabitTracker;
-use crate::components::tab_bar::TabBar; // Add this import
-use crate::db::habits::{load_completed_days, load_first_habit, load_habit, save_habit};
+use crate::components::tab_bar::TabBar;
 use crate::models::habit::{Habit, HabitData, WeekStart};
-use crate::state::AppState;
+use crate::server::habits::{
+    create_habit, get_completed_days, get_first_habit, get_habit, update_habit, update_habit_color,
+};
 use chrono::Local;
 use dioxus::prelude::*;
 use uuid::Uuid;
+use tracing::{debug, error, info};
 
 #[component]
 pub fn HabitsPage() -> Element {
-    let state = use_context::<AppState>();
-    let state_for_first_effect = state.clone();
-    let state_for_second_effect = state.clone();
-
     let mut selected_habit_id = use_signal(|| None::<Uuid>);
     let mut current_habit_data = use_signal(|| None::<HabitData>);
 
-    println!(
+    info!(
         "HabitsPage rendering with selected_habit_id: {:?}",
         selected_habit_id.read()
     );
 
     // Initialize default habit if none exists
     use_effect(move || {
-        let conn = state_for_first_effect.conn.clone();
         let mut current_habit_data = current_habit_data.clone();
+        let mut selected_habit_id = selected_habit_id.clone();
 
         spawn(async move {
             if selected_habit_id.read().is_none() {
-                if let Ok(Some(first_habit)) = load_first_habit(&conn) {
-                    selected_habit_id.set(Some(first_habit.id));
+                info!("No habit selected, attempting to load first habit");
+                match get_first_habit().await {
+                    Ok(Some(first_habit)) => {
+                        info!("Found first habit: {:?}", first_habit.id);
+                        selected_habit_id.set(Some(first_habit.id));
 
-                    // Load habit data
-                    if let Ok(Some(habit)) = load_habit(&conn, first_habit.id) {
-                        let data = HabitData {
-                            title: habit.title,
-                            start_date: habit.start_date,
-                            week_start: WeekStart::from_string(&habit.week_start),
-                            color: habit.color,
-                            completed_days: load_completed_days(&conn, first_habit.id)
-                                .unwrap_or_default(),
+                        // Load habit data
+                        let habit_result = get_habit(first_habit.id).await;
+                        let days_result = get_completed_days(first_habit.id).await;
+                        
+                        match (habit_result, days_result) {
+                            (Ok(habit), Ok(days)) => {
+                                info!("Successfully loaded habit data and completed days");
+                                let data = HabitData {
+                                    title: habit.title,
+                                    start_date: habit.start_date,
+                                    week_start: WeekStart::from_string(&habit.week_start),
+                                    color: habit.color,
+                                    completed_days: days,
+                                };
+                                current_habit_data.set(Some(data));
+                            }
+                            (Err(e), _) => error!("Failed to load habit: {:?}", e),
+                            (_, Err(e)) => error!("Failed to load completed days: {:?}", e),
+                        }
+                    }
+                    Ok(None) => {
+                        info!("No habits found, creating default habit");
+                        let new_habit = Habit {
+                            id: Uuid::new_v4(),
+                            title: "Meditation".to_string(),
+                            start_date: Local::now().date_naive(),
+                            color: "#800080".to_string(),
+                            week_start: "sunday".to_string(),
                         };
-                        current_habit_data.set(Some(data));
+                        
+                        match create_habit(new_habit.clone()).await {
+                            Ok(()) => {
+                                info!("Successfully created default habit");
+                                selected_habit_id.set(Some(new_habit.id));
+                            }
+                            Err(e) => error!("Failed to create default habit: {:?}", e),
+                        }
                     }
-                } else {
-                    // Create new habit if none exists
-                    let new_habit = Habit {
-                        id: Uuid::new_v4(),
-                        title: "Meditation".to_string(),
-                        start_date: Local::now().date_naive(),
-                        color: "#800080".to_string(),
-                        week_start: "sunday".to_string(),
-                    };
-                    if let Ok(()) = save_habit(&conn, &new_habit) {
-                        selected_habit_id.set(Some(new_habit.id));
-                    }
+                    Err(e) => error!("Failed to get first habit: {:?}", e),
                 }
             }
         });
     });
 
     use_effect(move || {
-        let conn = state_for_second_effect.conn.clone();
         let habit_id = selected_habit_id.read();
         let mut current_habit_data = current_habit_data.clone();
 
         if let Some(id) = *habit_id {
             spawn(async move {
-                if let Ok(Some(habit)) = load_habit(&conn, id) {
-                    let data = HabitData {
-                        title: habit.title,
-                        start_date: habit.start_date,
-                        week_start: WeekStart::from_string(&habit.week_start),
-                        color: habit.color,
-                        completed_days: load_completed_days(&conn, id).unwrap_or_default(),
-                    };
-                    current_habit_data.set(Some(data));
+                info!("Loading data for habit: {}", id);
+                let habit_result = get_habit(id).await;
+                let days_result = get_completed_days(id).await;
+                
+                match (habit_result, days_result) {
+                    (Ok(habit), Ok(days)) => {
+                        info!("Successfully loaded habit data and completed days");
+                        let data = HabitData {
+                            title: habit.title,
+                            start_date: habit.start_date,
+                            week_start: WeekStart::from_string(&habit.week_start),
+                            color: habit.color,
+                            completed_days: days,
+                        };
+                        current_habit_data.set(Some(data));
+                    }
+                    (Err(e), _) => error!("Failed to load habit: {:?}", e),
+                    (_, Err(e)) => error!("Failed to load completed days: {:?}", e),
                 }
             });
         }
     });
+
     rsx! {
         div { class: "habits-container",
             TabBar {
@@ -94,19 +119,27 @@ pub fn HabitsPage() -> Element {
                         habit_id: id,
                         habit_data: data.clone(),
                         on_data_change: move |_| {
-                            let conn = state.conn.clone();
                             let id = id;
                             let mut current_habit_data = current_habit_data.clone();
                             spawn(async move {
-                                if let Ok(Some(habit)) = load_habit(&conn, id) {
-                                    let data = HabitData {
-                                        title: habit.title,
-                                        start_date: habit.start_date,
-                                        week_start: WeekStart::from_string(&habit.week_start),
-                                        color: habit.color,
-                                        completed_days: load_completed_days(&conn, id).unwrap_or_default(),
-                                    };
-                                    current_habit_data.set(Some(data));
+                                info!("Refreshing habit data for id: {}", id);
+                                let habit_result = get_habit(id).await;
+                                let days_result = get_completed_days(id).await;
+                                
+                                match (habit_result, days_result) {
+                                    (Ok(habit), Ok(days)) => {
+                                        info!("Successfully refreshed habit data");
+                                        let data = HabitData {
+                                            title: habit.title,
+                                            start_date: habit.start_date,
+                                            week_start: WeekStart::from_string(&habit.week_start),
+                                            color: habit.color,
+                                            completed_days: days,
+                                        };
+                                        current_habit_data.set(Some(data));
+                                    }
+                                    (Err(e), _) => error!("Failed to refresh habit: {:?}", e),
+                                    (_, Err(e)) => error!("Failed to refresh completed days: {:?}", e),
                                 }
                             });
                         }

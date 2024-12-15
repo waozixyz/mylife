@@ -1,7 +1,6 @@
 use crate::components::todo_item::TodoItem;
-use crate::db::todos::{delete_todo, load_todos_by_day, save_todo, update_todo_positions};
 use crate::models::todo::Todo;
-use crate::state::AppState;
+use crate::server::todos::{create_todo, delete_todo, get_todos_by_day, update_positions};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -9,9 +8,6 @@ const TODO_LIST_CSS: Asset = asset!("/assets/styling/todo_list.css");
 
 #[component]
 pub fn TodoList(day: String) -> Element {
-    let state = use_context::<AppState>();
-    let conn = state.conn.clone();
-
     let todos = use_signal(Vec::<Todo>::new);
     let mut new_todo = use_signal(String::new);
     let mut dragged_todo = use_signal(|| None::<Todo>);
@@ -19,16 +15,14 @@ pub fn TodoList(day: String) -> Element {
 
     // Initial load effect
     {
-        let conn = conn.clone();
         let day = day.clone();
 
         use_effect(move || {
-            let conn = conn.clone();
             let mut todos = todos.clone();
             let day = day.clone();
 
             spawn(async move {
-                if let Ok(loaded_todos) = load_todos_by_day(&conn, &day) {
+                if let Ok(loaded_todos) = get_todos_by_day(day).await {
                     todos.set(loaded_todos);
                 }
             });
@@ -38,9 +32,7 @@ pub fn TodoList(day: String) -> Element {
     }
 
     let add_todo = {
-        let conn = conn.clone();
         move |ev: FormEvent| {
-            let conn = conn.clone();
             let mut todos = todos.clone();
             let day = day.clone();
 
@@ -58,7 +50,7 @@ pub fn TodoList(day: String) -> Element {
                 let todo = Todo::new(content, day);
 
                 spawn(async move {
-                    if let Ok(()) = save_todo(&conn, &todo) {
+                    if let Ok(()) = create_todo(todo.clone()).await {
                         let mut current_todos = todos.read().clone();
                         current_todos.push(todo);
                         todos.set(current_todos);
@@ -69,13 +61,11 @@ pub fn TodoList(day: String) -> Element {
     };
 
     let handle_delete = {
-        let conn = conn.clone();
         move |id: Uuid| {
-            let conn = conn.clone();
             let mut todos = todos.clone();
 
             spawn(async move {
-                if let Ok(()) = delete_todo(&conn, id) {
+                if let Ok(()) = delete_todo(id).await {
                     let mut current_todos = todos.read().clone();
                     current_todos.retain(|todo| todo.id != id);
                     todos.set(current_todos);
@@ -85,10 +75,8 @@ pub fn TodoList(day: String) -> Element {
     };
 
     let handle_drop = {
-        let conn = conn.clone();
         move |ev: DragEvent| {
             ev.prevent_default();
-            let conn = conn.clone();
             let mut todos = todos.clone();
 
             let dragged = dragged_todo.read().clone();
@@ -109,9 +97,8 @@ pub fn TodoList(day: String) -> Element {
 
                         todos.set(current_todos);
 
-                        let conn = conn.clone();
                         spawn(async move {
-                            let _ = update_todo_positions(&conn, &updates);
+                            let _ = update_positions(updates);
                         });
                     }
                 }
