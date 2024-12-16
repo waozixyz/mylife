@@ -24,7 +24,7 @@ use rfd::FileDialog;
 use std::io::{Cursor, Write};
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::components::lifetime_grid::get_svg_content;
+use crate::components::timeline::lifetime_view::get_svg_content;
 
 pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
     #[cfg(target_arch = "wasm32")]

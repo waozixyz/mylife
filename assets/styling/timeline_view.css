@@ -1,0 +1,126 @@
+:root {
+    --bg-color: #1a0f1f;
+    --text-color: #e0e0e0;
+    --primary-color: #8e24aa;
+    --secondary-color: #3d2a42;
+    --accent-color: #ff4081;
+    --panel-bg-color: #2d1f33;
+    --input-bg-color: #241a28;
+    --input-border-color: #4a3655;
+    --input-focus-color: #b039c9;
+    --button-hover-color: #b039c9;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    transition: all 0.3s ease;
+    overflow-x: none;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Top Panel Styles */
+.top-panel {
+    background-color: var(--panel-bg-color);
+    padding: 16px 24px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.top-row, .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.flex {
+    display: flex;
+}
+
+/* Central Panel Styles */
+.central-panel {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: var(--bg-color);
+}
+
+.central-content {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+/* Bottom Panel Styles */
+.bottom-panel {
+    background-color: var(--panel-bg-color);
+    padding: 16px 24px;
+    box-shadow: 0 -2px 4px var(--shadow-color);
+}
+
+.central-panel {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.central-content {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    width: 100%;
+    max-width: 1200px;
+    min-width: 600px;
+    height: 100%;
+}
+
+
+
+.lifetime-view-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.lifetime-view-svg {
+    width: 100%;
+    height: auto;
+    max-width: 1200px; 
+}
+
+
+.event-view {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.event-cell {
+    aspect-ratio: 1;
+    border: 1px solid gray;
+}
+
+.event-view-empty, .event-view-not-found {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    font-style: italic;
+    color: var(--text-color);
+}

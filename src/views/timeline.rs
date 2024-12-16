@@ -2,6 +2,14 @@
 
 use dioxus::prelude::*;
 use crate::state::life_state::initialize_state;
+use crate::components::timeline::top_panel::TopPanel;
+use crate::components::timeline::central_panel::CentralPanel;
+use crate::components::timeline::bottom_panel::BottomPanel;
+
+const TIMELINE_VIEW_CSS: Asset = asset!("/assets/styling/timeline_view.css");
+const TIMELINE_INPUT_CSS: Asset = asset!("/assets/styling/timeline_input.css");
+const TIMELINE_ITEMS_CSS: Asset = asset!("/assets/styling/timeline_items.css");
+const TIMELINE_MODAL_CSS: Asset = asset!("/assets/styling/timeline_modal.css");
 
 #[component]
 pub fn TimelinePage(y: String) -> Element {
@@ -14,7 +22,12 @@ pub fn TimelinePage(y: String) -> Element {
 
     rsx! {
         div {
-            class: "app-container"
+            class: "app-container",
+            TopPanel {y},
+            CentralPanel {}
+            BottomPanel {}
+
+
         }
     }
 }
@@ -22,6 +35,11 @@ pub fn TimelinePage(y: String) -> Element {
 #[component]
 pub fn TimelinePageNoParam() -> Element {
     rsx! {
+        document::Link { rel: "stylesheet", href: TIMELINE_VIEW_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_INPUT_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_ITEMS_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_MODAL_CSS }
+
         TimelinePage { y: String::new() }
     }
 }
