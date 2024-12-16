@@ -1,9 +1,12 @@
 use dioxus::prelude::*;
-use views::{HabitsPage, HomePage, TodosPage, TestPage};
+use views::{HabitsPage, HomePage, TodosPage, LifePage, TestPage};
 mod components;
 mod models;
 mod server;
 mod views;
+mod state;
+mod utils;
+
 use components::navbar::Navbar;
 use server::state::initialize_db;
 
@@ -19,6 +22,9 @@ enum Route {
     
     #[route("/todos")]
     TodosPage {},
+    
+    #[route("/timeline")]
+    LifePage {},
     
     #[route("/test")]
     TestPage {},

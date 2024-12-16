@@ -1,5 +1,5 @@
 use crate::components::habit_tracker::HabitTracker;
-use crate::components::tab_bar::TabBar;
+use crate::components::habit_tab_bar::TabBar;
 use crate::models::habit::{Habit, HabitData, WeekStart};
 use crate::server::habits::{
     create_habit, get_completed_days, get_first_habit, get_habit, update_habit, update_habit_color,

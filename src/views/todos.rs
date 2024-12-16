@@ -1,4 +1,4 @@
-use crate::components::day_tabs::DayTabs;
+use crate::components::todo_day_tabs::DayTabs;
 use crate::components::todo_list::TodoList;
 use dioxus::prelude::*;
 

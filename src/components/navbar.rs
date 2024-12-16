@@ -23,6 +23,10 @@ pub fn Navbar() -> Element {
                 "Todos"
             }
             Link {
+                to: Route::LifePage {},
+                "Life"
+            }
+            Link {
                 to: Route::TestPage {},
                 "Test"
             }
