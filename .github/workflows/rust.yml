@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'  # Trigger for version tags, adjust if necessary
+      - "v*.*.*" # Trigger for version tags, adjust if necessary
   pull_request:
   workflow_dispatch:
 
@@ -88,7 +88,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-          
+
       - name: Cache cargo registry
         uses: actions/cache@v3
         with:
@@ -102,7 +102,7 @@ jobs:
         with:
           cache-on-failure: true
           key: ${{ runner.os }}-rust-${{ matrix.TARGET }}-${{ hashFiles('**/Cargo.lock') }}
-      
+
       - name: Cache Cargo and Dioxus CLI
         uses: actions/cache@v3
         id: cache-cargo-dioxus
@@ -124,7 +124,7 @@ jobs:
           key: ${{ runner.os }}-dioxus-${{ matrix.TARGET }}-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
           restore-keys: |
             ${{ runner.os }}-dioxus-${{ matrix.TARGET }}-
-      
+
       - name: Build for ${{ matrix.TARGET }}
         run: dx build --release --platform ${{ matrix.TARGET }}
 
@@ -132,13 +132,13 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.TARGET }}" = "web" ]; then
-            tar -czvf mylife-web.tar.gz dist
+            tar -czvf myquest-web.tar.gz dist
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv target/release/mylife.exe mylife-windows.exe
+            mv target/release/myquest.exe myquest-windows.exe
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            mv target/release/mylife mylife-macos
+            mv target/release/myquest myquest-macos
           else
-            mv target/release/mylife mylife-linux
+            mv target/release/myquest myquest-linux
           fi
 
       - name: Create AppImage (Linux)
@@ -149,27 +149,27 @@ jobs:
           wget -O linuxdeploy-plugin-gtk.sh https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
           mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
-          cp mylife-linux AppDir/usr/bin/mylife
-          cp assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png
-          cat > AppDir/usr/share/applications/mylife.desktop << EOF
+          cp myquest-linux AppDir/usr/bin/myquest
+          cp assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/myquest.png
+          cat > AppDir/usr/share/applications/myquest.desktop << EOF
           [Desktop Entry]
-          Name=MyLife
-          Exec=mylife
-          Icon=mylife
+          Name=myQuest
+          Exec=myquest
+          Icon=myquest
           Type=Application
           Categories=Utility;
           EOF
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/mylife.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/mylife.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
-          mv MyLife*.AppImage mylife-linux.AppImage
-          git 
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/myquest.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/myquest.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
+          mv myQuest*.AppImage myquest-linux.AppImage
+          git
       - uses: actions/upload-artifact@v3
         with:
-          name: mylife-${{ matrix.TARGET }}-${{ matrix.os }}
+          name: myquest-${{ matrix.TARGET }}-${{ matrix.os }}
           path: |
-            mylife-*
+            myquest-*
             *.tar.gz
             *.AppImage
-            
+
       - name: Get version from Cargo.toml
         id: get_version
         run: |
@@ -183,12 +183,12 @@ jobs:
         run: |
           tag_name="v${{ env.VERSION }}-pre"
           release_name="Pre-release ${{ env.VERSION }}"
-          
+
           # Check if the release already exists
           release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$tag_name" \
             | jq -r '.id')
-          
+
           if [ "$release_id" = "null" ]; then
             # Create new pre-release
             response=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
@@ -201,7 +201,7 @@ jobs:
               -d "{\"name\":\"$release_name\",\"prerelease\":true}" \
               "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id"
           fi
-          
+
           echo "RELEASE_ID=$release_id" >> $GITHUB_ENV
           echo "RELEASE_TAG=$tag_name" >> $GITHUB_ENV
 
@@ -210,7 +210,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for file in mylife-linux mylife-linux.AppImage; do
+          for file in myquest-linux myquest-linux.AppImage; do
             curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
               -H "Content-Type: application/octet-stream" \
               --data-binary @"$file" \
@@ -221,10 +221,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: mylife-*
+          file: myquest-*
           file_glob: true
-          tag: ${{ github.ref_name }}   # Extract only the tag name
+          tag: ${{ github.ref_name }} # Extract only the tag name
           overwrite: true
-          release_name: Release ${{ github.ref_name }}   # Use just the tag name in the release title
-          body: "This is a new release for ${{ github.ref_name }}"   # Use just the tag name in the release description
-
+          release_name: Release ${{ github.ref_name }} # Use just the tag name in the release title
+          body: "This is a new release for ${{ github.ref_name }}" # Use just the tag name in the release description

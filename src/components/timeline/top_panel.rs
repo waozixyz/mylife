@@ -74,7 +74,7 @@ pub fn TopPanel(y: String) -> Element {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
         let encoded_yaml = compress_and_encode(&yaml_content);
 
-        let base_url = "https://mylife.waozi.xyz";
+        let base_url = "https://myquest.waozi.xyz";
         let url = format!("{}?y={}", base_url, encoded_yaml);
 
         share_url.set(url);

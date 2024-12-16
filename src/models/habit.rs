@@ -1,5 +1,4 @@
 use chrono::{Datelike, NaiveDate, Weekday};
-use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +11,7 @@ pub struct Habit {
     pub week_start: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WeekStart {
     Sunday,
     Monday,
@@ -79,7 +78,7 @@ impl WeekStart {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone, PartialEq, Deserialize)]
 pub struct HabitData {
     pub title: String,
     pub start_date: NaiveDate,

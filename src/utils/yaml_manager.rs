@@ -47,14 +47,12 @@ impl Storage for FileStorage {
         let file_path = Path::new(&self.data_folder).join(path);
         fs::create_dir_all(file_path.parent().unwrap())
             .map_err(|e| format!("Failed to create directory: {:?}", e))?;
-        fs::write(file_path, content)
-            .map_err(|e| format!("Failed to write file: {:?}", e))
+        fs::write(file_path, content).map_err(|e| format!("Failed to write file: {:?}", e))
     }
 
     fn load(&self, path: &str) -> Result<String, String> {
         let file_path = Path::new(&self.data_folder).join(path);
-        fs::read_to_string(&file_path)
-            .map_err(|e| format!("Failed to read file: {:?}", e))
+        fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {:?}", e))
     }
 
     fn list_files(&self) -> Result<Vec<String>, String> {
@@ -72,7 +70,7 @@ impl Storage for FileStorage {
                 })
             })
             .collect::<Vec<String>>();
-        Ok(yamls)  
+        Ok(yamls)
     }
 }
 
@@ -127,7 +125,7 @@ pub trait YamlManager {
 
 fn process_yaml_for_storage(yaml: &Yaml) -> Result<String, String> {
     let mut yaml_to_save = yaml.clone();
-    
+
     // Remove IDs before saving
     for period in &mut yaml_to_save.life_periods {
         period.id = None;
@@ -136,8 +134,7 @@ fn process_yaml_for_storage(yaml: &Yaml) -> Result<String, String> {
         }
     }
 
-    serde_yaml::to_string(&yaml_to_save)
-        .map_err(|e| format!("Failed to serialize YAML: {:?}", e))
+    serde_yaml::to_string(&yaml_to_save).map_err(|e| format!("Failed to serialize YAML: {:?}", e))
 }
 
 fn create_default_yaml() -> Yaml {
@@ -180,7 +177,7 @@ impl<S: Storage> YamlManager for YamlManagerImpl<S> {
         };
 
         let yaml_result: Result<Yaml, serde_yaml::Error> = serde_yaml::from_str(&yaml_content);
-        
+
         match yaml_result {
             Ok(mut yaml) => {
                 // Generate IDs for life periods and events if they don't exist
@@ -205,7 +202,7 @@ impl<S: Storage> YamlManager for YamlManagerImpl<S> {
 
     fn export_yaml(&self, yaml: &Yaml, yaml_file: &str) -> Result<(), String> {
         let yaml_content = process_yaml_for_storage(yaml)?;
-        
+
         #[cfg(target_arch = "wasm32")]
         {
             // Web-specific export implementation
@@ -215,7 +212,9 @@ impl<S: Storage> YamlManager for YamlManagerImpl<S> {
                 .map_err(|_| "Failed to create object URL".to_string())?;
 
             let window = web_sys::window().ok_or_else(|| "Failed to get window".to_string())?;
-            let document = window.document().ok_or_else(|| "Failed to get document".to_string())?;
+            let document = window
+                .document()
+                .ok_or_else(|| "Failed to get document".to_string())?;
             let anchor: HtmlAnchorElement = document
                 .create_element("a")
                 .map_err(|_| "Failed to create anchor element".to_string())?
@@ -397,4 +396,3 @@ pub fn import_yaml() -> Option<(String, Yaml)> {
         None
     }
 }
-

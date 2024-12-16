@@ -1,6 +1,7 @@
 use crate::components::todo_item::TodoItem;
 use crate::models::todo::Todo;
-use crate::server::todos::{create_todo, delete_todo, get_todos_by_day, update_positions};
+use crate::storage::todos::get_todo_manager;
+use chrono::Local;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -16,14 +17,24 @@ pub fn TodoList(day: String) -> Element {
     // Initial load effect
     {
         let day = day.clone();
-
         use_effect(move || {
             let mut todos = todos.clone();
             let day = day.clone();
 
             spawn(async move {
-                if let Ok(loaded_todos) = get_todos_by_day(day).await {
-                    todos.set(loaded_todos);
+                let manager = get_todo_manager();
+                if let Ok(loaded_todos) = manager.get_todos_by_day(&day).await {
+                    let todos_vec = loaded_todos
+                        .into_iter()
+                        .map(|data| Todo {
+                            id: data.id,
+                            content: data.content,
+                            day: day.clone(),
+                            created_at: data.created_at,
+                            position: data.position,
+                        })
+                        .collect();
+                    todos.set(todos_vec);
                 }
             });
 
@@ -32,6 +43,7 @@ pub fn TodoList(day: String) -> Element {
     }
 
     let add_todo = {
+        let day = day.clone();
         move |ev: FormEvent| {
             let mut todos = todos.clone();
             let day = day.clone();
@@ -47,13 +59,22 @@ pub fn TodoList(day: String) -> Element {
             };
 
             if !content.is_empty() {
-                let todo = Todo::new(content, day);
-
                 spawn(async move {
-                    if let Ok(()) = create_todo(todo.clone()).await {
-                        let mut current_todos = todos.read().clone();
-                        current_todos.push(todo);
-                        todos.set(current_todos);
+                    let manager = get_todo_manager();
+                    if let Ok(()) = manager.create_todo(content.clone(), day.clone()).await {
+                        if let Ok(updated_todos) = manager.get_todos_by_day(&day).await {
+                            let todos_vec = updated_todos
+                                .into_iter()
+                                .map(|data| Todo {
+                                    id: data.id,
+                                    content: data.content,
+                                    day: day.clone(),
+                                    created_at: data.created_at,
+                                    position: data.position,
+                                })
+                                .collect();
+                            todos.set(todos_vec);
+                        }
                     }
                 });
             }
@@ -61,23 +82,38 @@ pub fn TodoList(day: String) -> Element {
     };
 
     let handle_delete = {
+        let day = day.clone();
         move |id: Uuid| {
             let mut todos = todos.clone();
+            let day = day.clone();
 
             spawn(async move {
-                if let Ok(()) = delete_todo(id).await {
-                    let mut current_todos = todos.read().clone();
-                    current_todos.retain(|todo| todo.id != id);
-                    todos.set(current_todos);
+                let manager = get_todo_manager();
+                if let Ok(()) = manager.delete_todo(id).await {
+                    if let Ok(updated_todos) = manager.get_todos_by_day(&day).await {
+                        let todos_vec = updated_todos
+                            .into_iter()
+                            .map(|data| Todo {
+                                id: data.id,
+                                content: data.content,
+                                day: day.clone(),
+                                created_at: data.created_at,
+                                position: data.position,
+                            })
+                            .collect();
+                        todos.set(todos_vec);
+                    }
                 }
             });
         }
     };
 
     let handle_drop = {
+        let day = day.clone();
         move |ev: DragEvent| {
             ev.prevent_default();
             let mut todos = todos.clone();
+            let day = day.clone();
 
             let dragged = dragged_todo.read().clone();
             let drop_idx = drop_index.read().clone();
@@ -95,10 +131,23 @@ pub fn TodoList(day: String) -> Element {
                             .map(|(i, t)| (t.id, i as i32))
                             .collect();
 
-                        todos.set(current_todos);
-
                         spawn(async move {
-                            let _ = update_positions(updates);
+                            let manager = get_todo_manager();
+                            if let Ok(()) = manager.update_positions(&day, updates).await {
+                                if let Ok(updated_todos) = manager.get_todos_by_day(&day).await {
+                                    let todos_vec = updated_todos
+                                        .into_iter()
+                                        .map(|data| Todo {
+                                            id: data.id,
+                                            content: data.content,
+                                            day: day.clone(),
+                                            created_at: data.created_at,
+                                            position: data.position,
+                                        })
+                                        .collect();
+                                    todos.set(todos_vec);
+                                }
+                            }
                         });
                     }
                 }
@@ -108,6 +157,7 @@ pub fn TodoList(day: String) -> Element {
             drop_index.set(None);
         }
     };
+
     let handle_drag_start = move |(_ev, todo): (DragEvent, Todo)| {
         dragged_todo.set(Some(todo));
     };

@@ -25,7 +25,7 @@
     --star-sparkle: #ff97b7;
     --shimmer: rgba(255, 107, 151, 0.1);
 
-    /* MyLife */
+    /* myQuest */
     --panel-bg-color: #2d1f33;
     --input-bg-color: #241a28;
     --input-border-color: #4a3655;
@@ -37,6 +37,12 @@
     --input-text: var(--text-color);
     --input-placeholder: rgba(230, 221, 233, 0.5);
     --input-bg: #241a28;
+
+    /* Todo specific colors */
+    --todo-bg: var(--panel-bg);
+    --todo-item-border: rgba(255, 255, 255, 0.1);
+    --todo-hover: var(--card-hover);
+    --drag-placeholder: rgba(255, 255, 255, 0.1);
 }
 
 body {
