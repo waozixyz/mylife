@@ -1,0 +1,155 @@
+/* Tab Bar styling */
+.tab-bar {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+    background-color: var(--card-bg);
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 12px;
+}
+
+.tab {
+    padding: 12px 24px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: var(--panel-bg);
+    color: var(--text-color);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+    min-width: 120px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.tab:hover {
+    background: var(--card-hover);
+}
+
+.tab.selected {
+    background: var(--card-bg);
+    border-color: var(--primary-color);
+    margin-bottom: -1px;
+    color: var(--primary-color);
+    position: relative;
+}
+
+.tab.selected::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+.new-tab {
+    padding: 8px 16px;
+    margin-left: 8px;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.new-tab:hover {
+    background: var(--card-hover);
+    border-color: var(--primary-color);
+}
+
+/* Edit mode styling */
+.tab-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.tab-edit input[type="text"] {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    width: calc(100% - 30px);
+    min-width: 80px;
+    transition: border-color 0.2s ease;
+}
+
+.tab-edit input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 4px;
+    transition:
+        opacity 0.2s ease,
+        color 0.2s ease;
+}
+
+.delete-btn:hover {
+    color: #ff4444;
+    opacity: 1;
+}
+
+/* Delete confirmation styling */
+.confirm-delete {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.confirm-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-weight: 500;
+}
+
+.confirm-yes {
+    background: #ff4444;
+    color: white;
+}
+
+.confirm-yes:hover {
+    background: #ff6666;
+}
+
+.confirm-no {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.confirm-no:hover {
+    background: var(--card-hover);
+}

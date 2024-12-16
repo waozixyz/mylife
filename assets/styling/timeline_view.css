@@ -1,28 +1,3 @@
-:root {
-    --bg-color: #1a0f1f;
-    --text-color: #e0e0e0;
-    --primary-color: #8e24aa;
-    --secondary-color: #3d2a42;
-    --accent-color: #ff4081;
-    --panel-bg-color: #2d1f33;
-    --input-bg-color: #241a28;
-    --input-border-color: #4a3655;
-    --input-focus-color: #b039c9;
-    --button-hover-color: #b039c9;
-    --shadow-color: rgba(0, 0, 0, 0.2);
-}
-
-
-body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    font-family: 'Roboto', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    transition: all 0.3s ease;
-    overflow-x: none;
-}
-
 .app-container {
     display: flex;
     flex-direction: column;
@@ -36,7 +11,8 @@ body {
     box-shadow: 0 2px 4px var(--shadow-color);
 }
 
-.top-row, .bottom-row {
+.top-row,
+.bottom-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -87,8 +63,6 @@ body {
     height: 100%;
 }
 
-
-
 .lifetime-view-container {
     width: 100%;
     display: flex;
@@ -99,9 +73,8 @@ body {
 .lifetime-view-svg {
     width: 100%;
     height: auto;
-    max-width: 1200px; 
+    max-width: 1200px;
 }
-
 
 .event-view {
     display: grid;
@@ -115,7 +88,8 @@ body {
     border: 1px solid gray;
 }
 
-.event-view-empty, .event-view-not-found {
+.event-view-empty,
+.event-view-not-found {
     display: flex;
     flex-direction: column;
     justify-content: center;

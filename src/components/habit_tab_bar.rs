@@ -4,10 +4,10 @@ use crate::server::habits::{
 };
 use chrono::Local;
 use dioxus::prelude::*;
-use uuid::Uuid;
 use tracing::{debug, error, info};
+use uuid::Uuid;
 
-const TAB_BAR_CSS: Asset = asset!("/assets/styling/tab_bar.css");
+const TAB_BAR_CSS: Asset = asset!("/assets/styling/habits_tab_bar.css");
 
 #[derive(Props, Clone, PartialEq)]
 pub struct TabBarProps {
@@ -55,7 +55,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
                 let new_habit = new_habit.clone();
                 let mut habits = habits.clone();
                 let mut editing_tab_id = editing_tab_id.clone();
-                
+
                 async move {
                     info!("Creating new habit with id: {}", new_habit.id);
                     match create_habit(new_habit.clone()).await {
@@ -112,7 +112,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                                 let title = habit.title.clone();
                                                 let habit_id = habit_id;
                                                 let mut editing_tab_id = editing_tab_id.clone();
-                                                
+
                                                 async move {
                                                     match update_habit_title(habit_id, title).await {
                                                         Ok(_) => {
@@ -133,7 +133,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                             let title = habit.title.clone();
                                             let habit_id = habit_id;
                                             let mut editing_tab_id = editing_tab_id.clone();
-                                            
+
                                             async move {
                                                 match update_habit_title(habit_id, title).await {
                                                     Ok(_) => {
@@ -173,7 +173,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                             let habit_id = habit.id;
                                             let mut habits = habits.clone();
                                             let mut show_delete_confirm = show_delete_confirm.clone();
-                                            
+
                                             async move {
                                                 info!("Deleting habit: {}", habit_id);
                                                 match delete_habit(habit_id).await {

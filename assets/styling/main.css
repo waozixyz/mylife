@@ -1,7 +1,81 @@
+/* main.css */
+:root {
+    /* Base colors */
+    --bg-color: #1a0f1f;
+    --bg-gradient: linear-gradient(135deg, #1a0f1f 0%, #2d1a2c 100%);
+    --text-color: #e6dde9;
+
+    /* Theme colors */
+    --primary-color: #942f4a;
+    --primary-hover: #b13658;
+    --secondary-color: #4a2639;
+    --accent-color: #ff6b97;
+
+    /* UI Elements */
+    --card-bg: #2d1f33;
+    --card-hover: #3d2a42;
+    --panel-bg: rgba(45, 31, 51, 0.95);
+
+    /* Borders and shadows */
+    --border-color: #4a3655;
+    --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.2);
+    --shadow-strong: 0 8px 16px rgba(0, 0, 0, 0.3);
+
+    /* Special effects */
+    --star-sparkle: #ff97b7;
+    --shimmer: rgba(255, 107, 151, 0.1);
+
+    /* MyLife */
+    --panel-bg-color: #2d1f33;
+    --input-bg-color: #241a28;
+    --input-border-color: #4a3655;
+    --input-focus-color: #b039c9;
+    --button-hover-color: #b039c9;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+
+    /* Input fields */
+    --input-text: var(--text-color);
+    --input-placeholder: rgba(230, 221, 233, 0.5);
+    --input-bg: #241a28;
+}
+
 body {
-    background-color: #1a1a1a;
-    color: #ccc;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-color);
+    font-family: "Roboto", Arial, sans-serif;
     margin: 0;
-    padding: 15px;
+    padding: 0;
+    transition: all 0.3s ease;
+    overflow-x: none;
+    min-height: 100vh;
+}
+
+input,
+select,
+textarea {
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: border-color 0.2s ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+    border-color: var(--primary-color);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+    color-scheme: dark;
 }
