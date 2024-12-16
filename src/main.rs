@@ -1,11 +1,14 @@
 use dioxus::prelude::*;
-use views::{HabitsPage, HomePage, TodosPage, TimelinePage, TimelinePageNoParam, TestPage};
+use views::{HabitsPage, HomePage, TodosPage, TimelinePage, TimelinePageNoParam};
 mod components;
 mod models;
 mod server;
 mod views;
 mod state;
 mod utils;
+
+use crate::models::timeline::SizeInfo;
+use crate::components::window_manager::WindowSizeManager;
 
 use components::navbar::Navbar;
 use server::state::initialize_db;
@@ -29,8 +32,6 @@ enum Route {
     #[route("/timeline")]
     TimelinePageNoParam,
 
-    #[route("/test")]
-    TestPage {},
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -44,6 +45,14 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    let size_info = use_signal(|| SizeInfo {
+        cell_size: 40.0,
+        window_width: 800.0,
+        window_height: 600.0,
+    });
+
+    use_context_provider(|| size_info);
+
     use_effect(move || {
         // Initialize the database when the app starts
         initialize_db();
@@ -53,6 +62,8 @@ fn App() -> Element {
         div {
             document::Link { rel: "icon", href: FAVICON }
             document::Link { rel: "stylesheet", href: MAIN_CSS }
+            WindowSizeManager {}
+
             Router::<Route> {}
         }
     }

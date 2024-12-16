@@ -11,6 +11,4 @@ mod timeline;
 pub use timeline::TimelinePage;
 pub use timeline::TimelinePageNoParam;
 
-mod test;
-pub use test::TestPage;
 

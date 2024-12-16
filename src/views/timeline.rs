@@ -21,13 +21,16 @@ pub fn TimelinePage(y: String) -> Element {
     use_context_provider(|| app_state);
 
     rsx! {
+        document::Link { rel: "stylesheet", href: TIMELINE_VIEW_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_INPUT_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_ITEMS_CSS }
+        document::Link { rel: "stylesheet", href: TIMELINE_MODAL_CSS }
+
         div {
             class: "app-container",
             TopPanel {y},
-            CentralPanel {}
+            CentralPanel {},
             BottomPanel {}
-
-
         }
     }
 }
@@ -35,11 +38,6 @@ pub fn TimelinePage(y: String) -> Element {
 #[component]
 pub fn TimelinePageNoParam() -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: TIMELINE_VIEW_CSS }
-        document::Link { rel: "stylesheet", href: TIMELINE_INPUT_CSS }
-        document::Link { rel: "stylesheet", href: TIMELINE_ITEMS_CSS }
-        document::Link { rel: "stylesheet", href: TIMELINE_MODAL_CSS }
-
         TimelinePage { y: String::new() }
     }
 }

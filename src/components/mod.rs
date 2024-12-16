@@ -5,3 +5,4 @@ pub mod navbar;
 pub mod todo_item;
 pub mod todo_list;
 pub mod timeline;
+pub mod window_manager;

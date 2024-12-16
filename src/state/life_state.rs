@@ -1,4 +1,4 @@
-// src/state_manager.rs
+// src/life_state.rs
 
 use crate::models::timeline::{MyLifeApp, Yaml};
 #[cfg(target_arch = "wasm32")]

@@ -26,10 +26,6 @@ pub fn Navbar() -> Element {
                 to: Route::TimelinePageNoParam {},
                 "Life"
             }
-            Link {
-                to: Route::TestPage {},
-                "Test"
-            }
         }
 
         Outlet::<Route> {}
