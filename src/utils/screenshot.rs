@@ -1,4 +1,4 @@
-use crate::models::{LegendItem, Yaml};
+use crate::models::timeline::{LegendItem, Yaml};
 use crate::utils::image_utils::*;
 use base64::{engine::general_purpose, Engine as _};
 use dioxus::prelude::*;

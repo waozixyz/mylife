@@ -1,6 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::models::MyLifeApp;
-use crate::models::{LifePeriod, Yaml};
+use crate::models::timeline::MyLifeApp;
+use crate::models::timeline::{LifePeriod, Yaml};
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::*;
 use uuid::Uuid;

@@ -1,4 +1,4 @@
-use crate::models::{LifePeriodEvent, Yaml};
+use crate::models::timeline::{LifePeriodEvent, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
 use uuid::Uuid;

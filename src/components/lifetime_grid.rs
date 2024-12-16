@@ -1,4 +1,4 @@
-use crate::models::{CellData, LifePeriod, SizeInfo, Yaml};
+use crate::models::timeline::{CellData, LifePeriod, SizeInfo, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
 use tracing::{debug, error};

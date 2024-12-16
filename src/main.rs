@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use views::{HabitsPage, HomePage, TodosPage, LifePage, TestPage};
+use views::{HabitsPage, HomePage, TodosPage, TimelinePage, TimelinePageNoParam, TestPage};
 mod components;
 mod models;
 mod server;
@@ -22,10 +22,13 @@ enum Route {
     
     #[route("/todos")]
     TodosPage {},
-    
+
+    #[route("/timeline?:y")]
+    TimelinePage { y: String },
+
     #[route("/timeline")]
-    LifePage {},
-    
+    TimelinePageNoParam,
+
     #[route("/test")]
     TestPage {},
 }

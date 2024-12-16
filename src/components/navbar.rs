@@ -23,7 +23,7 @@ pub fn Navbar() -> Element {
                 "Todos"
             }
             Link {
-                to: Route::LifePage {},
+                to: Route::TimelinePageNoParam {},
                 "Life"
             }
             Link {

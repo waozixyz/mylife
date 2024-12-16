@@ -7,8 +7,9 @@ pub use habits::HabitsPage;
 mod todos;
 pub use todos::TodosPage;
 
-mod life;
-pub use life::LifePage;
+mod timeline;
+pub use timeline::TimelinePage;
+pub use timeline::TimelinePageNoParam;
 
 mod test;
 pub use test::TestPage;

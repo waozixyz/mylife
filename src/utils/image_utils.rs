@@ -1,6 +1,6 @@
 // utils/imag_utils.rs
 
-use crate::models::LegendItem;
+use crate::models::timeline::LegendItem;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing::error;
 use tracing::info;
