@@ -1,11 +1,11 @@
 /* Tab Bar styling */
-.tab-bar {
+.habits-tab-bar {
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 20px;
     background-color: var(--card-bg);
 }
 
-.tabs {
+.habits-tabs {
     display: flex;
     gap: 4px;
     align-items: center;
@@ -13,7 +13,7 @@
     padding: 0 12px;
 }
 
-.tab {
+.habits-tab {
     padding: 12px 24px;
     cursor: pointer;
     border: 1px solid var(--border-color);
@@ -29,11 +29,11 @@
     font-weight: 500;
 }
 
-.tab:hover {
+.habits-tab:hover {
     background: var(--card-hover);
 }
 
-.tab.selected {
+.habits-tab.selected {
     background: var(--card-bg);
     border-color: var(--primary-color);
     margin-bottom: -1px;
@@ -41,7 +41,7 @@
     position: relative;
 }
 
-.tab.selected::after {
+.habits-tab.selected::after {
     content: "";
     position: absolute;
     bottom: 0;
@@ -51,7 +51,7 @@
     background-color: var(--primary-color);
 }
 
-.new-tab {
+.new-habits-tab {
     padding: 8px 16px;
     margin-left: 8px;
     cursor: pointer;
@@ -64,20 +64,20 @@
         background-color 0.2s ease;
 }
 
-.new-tab:hover {
+.new-habits-tab:hover {
     background: var(--card-hover);
     border-color: var(--primary-color);
 }
 
 /* Edit mode styling */
-.tab-edit {
+.habits-tab-edit {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
 }
 
-.tab-edit input[type="text"] {
+.habits-tab-edit input[type="text"] {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -88,7 +88,7 @@
     transition: border-color 0.2s ease;
 }
 
-.tab-edit input[type="text"]:focus {
+.habits-tab-edit input[type="text"]:focus {
     outline: none;
     border-color: var(--primary-color);
 }

@@ -1,13 +1,12 @@
 // src/pages/timeline_page.rs
 
-use dioxus::prelude::*;
-use crate::state::life_state::initialize_state;
-use crate::components::timeline::top_panel::TopPanel;
-use crate::components::timeline::central_panel::CentralPanel;
 use crate::components::timeline::bottom_panel::BottomPanel;
+use crate::components::timeline::central_panel::CentralPanel;
+use crate::components::timeline::top_panel::TopPanel;
+use crate::state::life_state::initialize_state;
+use dioxus::prelude::*;
 
 const TIMELINE_VIEW_CSS: Asset = asset!("/assets/styling/timeline_view.css");
-const TIMELINE_INPUT_CSS: Asset = asset!("/assets/styling/timeline_input.css");
 const TIMELINE_ITEMS_CSS: Asset = asset!("/assets/styling/timeline_items.css");
 const TIMELINE_MODAL_CSS: Asset = asset!("/assets/styling/timeline_modal.css");
 
@@ -22,7 +21,6 @@ pub fn TimelinePage(y: String) -> Element {
 
     rsx! {
         document::Link { rel: "stylesheet", href: TIMELINE_VIEW_CSS }
-        document::Link { rel: "stylesheet", href: TIMELINE_INPUT_CSS }
         document::Link { rel: "stylesheet", href: TIMELINE_ITEMS_CSS }
         document::Link { rel: "stylesheet", href: TIMELINE_MODAL_CSS }
 

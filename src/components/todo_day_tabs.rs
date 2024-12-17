@@ -41,7 +41,7 @@ pub const DAYS: [DayInfo; 7] = [
 pub fn DayTabs(active_day: String, on_day_change: EventHandler<String>) -> Element {
     rsx! {
         div {
-            class: "tabs",
+            class: "todo-tabs",
             { DAYS.iter().map(|day| {
                 let is_active = day.name == active_day;
                 rsx! {

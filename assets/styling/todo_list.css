@@ -8,13 +8,13 @@
     box-shadow: var(--shadow-soft);
 }
 
-.tabs {
+.todo-tabs {
     display: flex;
     justify-content: space-between;
     margin-bottom: 2rem;
 }
 
-.tabs button {
+.todo-tabs button {
     background-color: var(--card-bg);
     color: var(--text-color);
     border: none;
@@ -28,15 +28,15 @@
     gap: 0.5rem;
 }
 
-.tabs button .symbol {
+.todo-tabs button .symbol {
     font-size: 1.2em;
 }
 
-.tabs button:hover {
+.todo-tabs button:hover {
     background-color: var(--card-hover);
 }
 
-.tabs button.active {
+.todo-tabs button.active {
     background-color: var(--primary-color);
     color: white;
 }
@@ -140,17 +140,17 @@
 }
 
 @media (max-width: 850px) {
-    .tabs {
+    .todo-tabs {
         flex-wrap: wrap;
         justify-content: space-around;
         gap: 0.5rem;
     }
 
-    .tabs button .name {
+    .todo-tabs button .name {
         display: none;
     }
 
-    .tabs button {
+    .todo-tabs button {
         padding: 0.5rem;
     }
 }

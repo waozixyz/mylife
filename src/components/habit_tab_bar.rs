@@ -103,7 +103,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
         rsx! {
             div {
                 key: habit.id.to_string(),
-                class: if is_selected { "tab selected" } else { "tab" },
+                class: if is_selected { "habits-tab selected" } else { "habits-tab" },
                 onclick: move |_| {
                     if !is_editing && !showing_confirm {
                         editing_tab_id.set(None);
@@ -119,7 +119,7 @@ pub fn TabBar(props: TabBarProps) -> Element {
                 {if is_editing {
                     let habit_id = habit.id;
                     rsx! {
-                        div { class: "tab-edit",
+                        div { class: "habits-tab-edit",
                             input {
                                 r#type: "text",
                                 value: habit.title.clone(),
@@ -209,11 +209,11 @@ pub fn TabBar(props: TabBarProps) -> Element {
 
     rsx! {
         document::Link { rel: "stylesheet", href: TAB_BAR_CSS }
-        div { class: "tab-bar",
-            div { class: "tabs",
+        div { class: "habits-tab-bar",
+            div { class: "habits-tabs",
                 {habits.read().iter().map(render_habit)}
                 button {
-                    class: "new-tab",
+                    class: "new-habits-tab",
                     onclick: create_new_habit,
                     "+"
                 }
