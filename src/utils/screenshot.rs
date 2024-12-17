@@ -32,7 +32,6 @@ pub fn take_screenshot(is_landscape: bool) -> Result<String, String> {
 
     #[cfg(not(target_arch = "wasm32"))]
     let svg_content = get_svg_content().ok_or_else(|| "Yaml context not found".to_string())?;
-
     let processed_svg = process_svg_content(svg_content)?;
 
     info!("Processed SVG content length: {}", processed_svg.len());

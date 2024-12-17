@@ -1,8 +1,8 @@
 // TodosPage
 use crate::components::todo_day_tabs::DayTabs;
 use crate::components::todo_list::TodoList;
+use crate::managers::todo_manager::get_todo_manager;
 use crate::models::todo::Todo;
-use crate::storage::todos::get_todo_manager;
 use dioxus::prelude::*;
 
 #[component]

@@ -1,6 +1,6 @@
 use crate::components::todo_item::TodoItem;
+use crate::managers::todo_manager::get_todo_manager;
 use crate::models::todo::Todo;
-use crate::storage::todos::get_todo_manager;
 use dioxus::prelude::*;
 use tracing::debug;
 use uuid::Uuid;
@@ -19,6 +19,7 @@ pub fn TodoList(props: TodoListProps) -> Element {
     let mut new_todo = use_signal(String::new);
     let mut dragged_todo = use_signal(|| None::<Todo>);
     let mut drop_index = use_signal(|| None::<usize>);
+    let todo_manager = get_todo_manager();
 
     let add_todo = {
         let on_todos_change = props.on_todos_change.clone();
@@ -35,11 +36,10 @@ pub fn TodoList(props: TodoListProps) -> Element {
             };
 
             if !content.is_empty() {
-                let day = day.clone(); // Clone day here
-                let on_todos_change = on_todos_change.clone(); // Clone the event handler
+                let day = day.clone();
+                let on_todos_change = on_todos_change.clone();
                 spawn(async move {
-                    let manager = get_todo_manager();
-                    if let Ok(()) = manager.create_todo(content.clone(), day).await {
+                    if let Ok(()) = todo_manager.create_todo(content, day).await {
                         on_todos_change.call(());
                     }
                 });
@@ -50,10 +50,9 @@ pub fn TodoList(props: TodoListProps) -> Element {
     let handle_delete = {
         let on_todos_change = props.on_todos_change.clone();
         move |id: Uuid| {
-            let on_todos_change = on_todos_change.clone(); // Clone inside the closure
+            let on_todos_change = on_todos_change.clone();
             spawn(async move {
-                let manager = get_todo_manager();
-                if let Ok(()) = manager.delete_todo(id).await {
+                if let Ok(()) = todo_manager.delete_todo(id).await {
                     on_todos_change.call(());
                 }
             });
@@ -71,7 +70,7 @@ pub fn TodoList(props: TodoListProps) -> Element {
             let drop_idx = drop_index.read().clone();
 
             if let (Some(todo), Some(new_index)) = (dragged, drop_idx) {
-                let mut current_todos = todos.clone(); // Use cloned todos
+                let mut current_todos = todos.clone();
                 if let Some(old_index) = current_todos.iter().position(|t| t.id == todo.id) {
                     if old_index != new_index {
                         let item = current_todos.remove(old_index);
@@ -83,11 +82,10 @@ pub fn TodoList(props: TodoListProps) -> Element {
                             .map(|(i, t)| (t.id, i as i32))
                             .collect();
 
-                        let day = day.clone(); // Clone day here
-                        let on_todos_change = on_todos_change.clone(); // Clone the event handler
+                        let day = day.clone();
+                        let on_todos_change = on_todos_change.clone();
                         spawn(async move {
-                            let manager = get_todo_manager();
-                            if let Ok(()) = manager.update_positions(&day, updates).await {
+                            if let Ok(()) = todo_manager.update_positions(&day, updates).await {
                                 on_todos_change.call(());
                             }
                         });

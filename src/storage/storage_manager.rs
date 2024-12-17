@@ -1,18 +1,19 @@
+use super::{DataFormat, StorageConfig};
 use serde::{de::DeserializeOwned, Serialize};
+use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs as async_fs;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
-/// Error type for FileManager operations
 #[derive(Debug, thiserror::Error)]
-pub enum FileError {
+pub enum StorageError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     #[error("Lock acquisition failed")]
     LockError,
@@ -21,108 +22,102 @@ pub enum FileError {
     InitError(String),
 }
 
-/// Result type for FileManager operations
-pub type FileResult<T> = Result<T, FileError>;
+pub type StorageResult<T> = Result<T, StorageError>;
 
-/// Configuration for FileManager
-#[derive(Debug, Clone)]
-pub struct FileManagerConfig {
-    pub create_dirs: bool,
-    pub backup_on_save: bool,
-    pub max_backups: usize,
-}
-
-impl Default for FileManagerConfig {
-    fn default() -> Self {
-        Self {
-            create_dirs: true,
-            backup_on_save: true,
-            max_backups: 5,
-        }
-    }
-}
-
-/// A thread-safe file manager for handling persistent data storage
-pub struct FileManager<T> {
-    /// Path to the data file
+pub struct StorageManager<T, F: DataFormat> {
     file_path: PathBuf,
-    /// In-memory data storage
     data: Arc<RwLock<T>>,
-    /// Configuration options
-    config: FileManagerConfig,
+    _format: PhantomData<F>,
+    config: StorageConfig,
 }
 
-impl<T> FileManager<T>
+impl<T, F> StorageManager<T, F>
 where
     T: Default + Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
+    F: DataFormat,
 {
-    /// Creates a new FileManager instance synchronously
-    pub fn new(file_path: PathBuf) -> FileResult<Self> {
-        Self::with_config(file_path, FileManagerConfig::default())
+    pub fn new(file_path: PathBuf) -> StorageResult<Self> {
+        Self::with_config_and_default(file_path, StorageConfig::default(), None)
     }
 
-    /// Creates a new FileManager instance with custom configuration synchronously
-    pub fn with_config(file_path: PathBuf, config: FileManagerConfig) -> FileResult<Self> {
-        debug!("Initializing FileManager for path: {:?}", file_path);
+    pub fn with_config(file_path: PathBuf, config: StorageConfig) -> StorageResult<Self> {
+        Self::with_config_and_default(file_path, config, None)
+    }
 
-        // Ensure parent directories exist if configured
+    pub fn with_config_and_default(
+        file_path: PathBuf,
+        config: StorageConfig,
+        default_data: Option<T>,
+    ) -> StorageResult<Self> {
+        debug!("Initializing StorageManager for path: {:?}", file_path);
+
         if config.create_dirs {
             if let Some(parent) = file_path.parent() {
                 std::fs::create_dir_all(parent).map_err(|e| {
-                    FileError::InitError(format!("Failed to create directory structure: {}", e))
+                    StorageError::InitError(format!("Failed to create directory structure: {}", e))
                 })?;
             }
         }
 
-        // Initialize data from file or default
         let data = if file_path.exists() {
             debug!("Loading existing data file");
             let content = std::fs::read_to_string(&file_path)?;
-            match serde_json::from_str(&content) {
+            match F::deserialize(&content) {
                 Ok(data) => {
                     info!("Successfully loaded data from file");
                     data
                 }
                 Err(e) => {
-                    warn!("Failed to parse file, using default data: {}", e);
-                    T::default()
+                    error!("Failed to parse file, using default data: {}", e);
+                    default_data.unwrap_or_default()
                 }
             }
         } else {
             debug!("No existing file found, using default data");
-            T::default()
+            let data = default_data.unwrap_or_default();
+            if config.create_dirs {
+                let content = F::serialize(&data).map_err(|e| {
+                    error!("Failed to serialize default data: {}", e);
+                    StorageError::Serialization(e.to_string())
+                })?;
+                
+                std::fs::write(&file_path, &content).map_err(|e| {
+                    error!("Failed to write default data to file: {}", e);
+                    StorageError::Io(e)
+                })?;
+                
+                debug!("Successfully wrote default data to file: {:?}", file_path);
+            }
+            data
         };
-
+        
         Ok(Self {
             file_path,
             data: Arc::new(RwLock::new(data)),
+            _format: PhantomData,
             config,
         })
     }
 
-    /// Reads data using the provided closure
-    pub async fn read<F, R>(&self, f: F) -> FileResult<R>
+    pub async fn read<R, Func>(&self, f: Func) -> StorageResult<R>
     where
-        F: FnOnce(&T) -> R,
+        Func: FnOnce(&T) -> R,
     {
         let guard = self.data.read().await;
         Ok(f(&guard))
     }
 
-    /// Writes data using the provided closure and persists changes
-    pub async fn write<F, R>(&self, f: F) -> FileResult<R>
+    pub async fn write<R, Func>(&self, f: Func) -> StorageResult<R>
     where
-        F: FnOnce(&mut T) -> R,
+        Func: FnOnce(&mut T) -> R,
     {
         let mut guard = self.data.write().await;
         let result = f(&mut guard);
 
-        // Clone data for async saving
         let data_clone = (*guard).clone();
         let file_path = self.file_path.clone();
         let config = self.config.clone();
 
-        // Spawn async task to save data
         tokio::spawn(async move {
             if let Err(e) = Self::save_to_disk(&file_path, &data_clone, &config).await {
                 error!("Failed to save data: {}", e);
@@ -132,36 +127,30 @@ where
         Ok(result)
     }
 
-    /// Gets a clone of the current data
-    pub async fn get_data(&self) -> FileResult<T> {
+    pub async fn get_data(&self) -> StorageResult<T> {
         let guard = self.data.read().await;
         Ok((*guard).clone())
     }
 
-    /// Saves the current state to disk
     async fn save_to_disk(
         file_path: &PathBuf,
         data: &T,
-        config: &FileManagerConfig,
-    ) -> FileResult<()> {
-        // Create backup if configured
+        config: &StorageConfig,
+    ) -> StorageResult<()> {
         if config.backup_on_save && file_path.exists() {
             Self::create_backup(file_path, config.max_backups).await?;
         }
 
-        // Serialize and save data
-        let content = serde_json::to_string_pretty(data)?;
+        let content = F::serialize(data).map_err(StorageError::Serialization)?;
         async_fs::write(file_path, content).await?;
         debug!("Successfully saved data to disk");
 
         Ok(())
     }
 
-    /// Creates a backup of the current file
-    async fn create_backup(file_path: &PathBuf, max_backups: usize) -> FileResult<()> {
+    async fn create_backup(file_path: &PathBuf, max_backups: usize) -> StorageResult<()> {
         let backup_path = file_path.with_extension("backup");
 
-        // Rotate existing backups
         for i in (1..max_backups).rev() {
             let current = backup_path.with_extension(format!("backup{}", i));
             let next = backup_path.with_extension(format!("backup{}", i + 1));
@@ -170,7 +159,6 @@ where
             }
         }
 
-        // Create new backup
         if file_path.exists() {
             async_fs::copy(file_path, backup_path.with_extension("backup1")).await?;
             debug!("Created backup of data file");
@@ -179,16 +167,14 @@ where
         Ok(())
     }
 
-    /// Forces an immediate save to disk
-    pub async fn force_save(&self) -> FileResult<()> {
+    pub async fn force_save(&self) -> StorageResult<()> {
         let data = self.data.read().await;
         Self::save_to_disk(&self.file_path, &data, &self.config).await
     }
 
-    /// Reloads data from disk, discarding any unsaved changes
-    pub async fn reload(&self) -> FileResult<()> {
+    pub async fn reload(&self) -> StorageResult<()> {
         let content = async_fs::read_to_string(&self.file_path).await?;
-        let new_data: T = serde_json::from_str(&content)?;
+        let new_data = F::deserialize(&content).map_err(StorageError::Serialization)?;
         let mut guard = self.data.write().await;
         *guard = new_data;
         Ok(())

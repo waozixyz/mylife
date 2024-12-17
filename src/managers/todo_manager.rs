@@ -1,10 +1,11 @@
+// managers/todo_manager.rs
 use crate::models::todo::Todo;
-use crate::storage::{file_manager::FileManager, paths::get_path_manager};
+use crate::storage::{get_path_manager, JsonStorage};
 use chrono::NaiveDateTime;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, error, info};
+use tracing::debug;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -52,21 +53,20 @@ impl TodoStore {
 }
 
 pub struct TodoManager {
-    file_manager: FileManager<TodoStore>,
+    storage: JsonStorage<TodoStore>,
 }
 
 impl TodoManager {
-    pub fn new() -> Self {
-        let file_path = get_path_manager().todos_file();
-        debug!("Creating new TodoManager with path: {:?}", file_path);
-        Self {
-            file_manager: FileManager::new(file_path).unwrap(),
-        }
+    pub fn new() -> Result<Self, String> {
+        Ok(Self {
+            storage: JsonStorage::new(get_path_manager().todos_file())
+                .map_err(|e| e.to_string())?,
+        })
     }
 
     pub async fn get_todos_by_day(&self, day: &str) -> Result<Vec<Todo>, String> {
         debug!("Getting todos for day: {}", day);
-        self.file_manager
+        self.storage
             .read(|store| {
                 let day_todos = store.get_day(day);
                 let mut todos = day_todos.todos.clone();
@@ -76,12 +76,13 @@ impl TodoManager {
             .await
             .map_err(|e| e.to_string())
     }
+
     pub async fn create_todo(&self, content: String, day: String) -> Result<(), String> {
         debug!("Creating new todo for day: {}", day);
         let day_clone = day.clone();
         let created_at = chrono::Local::now().naive_local();
 
-        self.file_manager
+        self.storage
             .write(|store| {
                 let day_todos = store.get_day_mut(&day_clone);
                 let position = day_todos.todos.len() as i32 + 1;
@@ -97,9 +98,10 @@ impl TodoManager {
             .await
             .map_err(|e| e.to_string())
     }
+
     pub async fn delete_todo(&self, id: Uuid) -> Result<(), String> {
         debug!("Deleting todo with id: {}", id);
-        self.file_manager
+        self.storage
             .write(|store| {
                 let days = vec![
                     "monday",
@@ -134,7 +136,7 @@ impl TodoManager {
     ) -> Result<(), String> {
         debug!("Updating positions for day: {}", day);
         let day_clone = day.to_string();
-        self.file_manager
+        self.storage
             .write(|store| {
                 let day_todos = store.get_day_mut(&day_clone);
                 let position_map: HashMap<_, _> = updates.into_iter().collect();
@@ -152,7 +154,7 @@ impl TodoManager {
     pub async fn move_todo(&self, id: Uuid, new_day: String) -> Result<(), String> {
         debug!("Moving todo {} to day: {}", id, new_day);
         let new_day_clone = new_day.clone();
-        self.file_manager
+        self.storage
             .write(|store| {
                 let days = vec![
                     "monday",
@@ -190,9 +192,19 @@ impl TodoManager {
             .await
             .map_err(|e| e.to_string())
     }
+
+    // Additional helper methods
+    pub async fn force_save(&self) -> Result<(), String> {
+        self.storage.force_save().await.map_err(|e| e.to_string())
+    }
+
+    pub async fn reload(&self) -> Result<(), String> {
+        self.storage.reload().await.map_err(|e| e.to_string())
+    }
 }
 
-static TODO_MANAGER: Lazy<TodoManager> = Lazy::new(|| TodoManager::new());
+static TODO_MANAGER: Lazy<TodoManager> =
+    Lazy::new(|| TodoManager::new().expect("Failed to create todo manager"));
 
 pub fn get_todo_manager() -> &'static TodoManager {
     &*TODO_MANAGER

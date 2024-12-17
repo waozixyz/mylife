@@ -1,7 +1,7 @@
 use crate::components::habit_tab_bar::TabBar;
 use crate::components::habit_tracker::HabitTracker;
+use crate::managers::habit_manager::get_habit_manager;
 use crate::models::habit::{Habit, HabitData, WeekStart};
-use crate::storage::habits::get_habit_manager;
 use chrono::Local;
 use dioxus::prelude::*;
 use tracing::{debug, error, info};

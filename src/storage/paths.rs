@@ -1,5 +1,6 @@
 // storage/paths.rs
 use directories::UserDirs;
+use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use tracing::{debug, error, info};
 
@@ -22,17 +23,14 @@ impl PathManager {
                 format!("/data/data/{}/files", APP_NAME),
                 format!("/data/user/0/{}/files", APP_NAME),
             ];
-
             for path in potential_paths {
                 let dir_path = PathBuf::from(&path);
                 if let Ok(_) = std::fs::create_dir_all(&dir_path) {
                     return dir_path;
                 }
             }
-
             PathBuf::from(".")
         }
-
         #[cfg(not(target_os = "android"))]
         {
             if let Some(user_dirs) = UserDirs::new() {
@@ -40,14 +38,11 @@ impl PathManager {
                     .document_dir()
                     .unwrap_or_else(|| user_dirs.home_dir())
                     .to_path_buf();
-
                 let myquest_dir = documents_dir.join("myquest");
-
                 if let Err(e) = std::fs::create_dir_all(&myquest_dir) {
                     error!("Failed to create myquest directory: {}", e);
                     return PathBuf::from(".");
                 }
-
                 myquest_dir
             } else {
                 error!("Could not determine user directories");
@@ -64,6 +59,14 @@ impl PathManager {
         habits_dir
     }
 
+    pub fn timelines_dir(&self) -> PathBuf {
+        let timelines_dir = self.root_dir.join("timelines");
+        if let Err(e) = std::fs::create_dir_all(&timelines_dir) {
+            error!("Failed to create timelines directory: {}", e);
+        }
+        timelines_dir
+    }
+
     pub fn habits_file(&self) -> PathBuf {
         self.habits_dir().join("habits.json")
     }
@@ -71,9 +74,12 @@ impl PathManager {
     pub fn todos_file(&self) -> PathBuf {
         self.root_dir.join("todos.json")
     }
+
+    pub fn timeline_file(&self, name: &str) -> PathBuf {
+        self.timelines_dir().join(format!("{}.yaml", name))
+    }
 }
 
-use once_cell::sync::Lazy;
 static PATH_MANAGER: Lazy<PathManager> = Lazy::new(PathManager::new);
 
 pub fn get_path_manager() -> &'static PathManager {

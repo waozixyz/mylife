@@ -1,13 +1,15 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, MyLifeApp, Yaml};
-use crate::storage::yaml_manager::update_yaml;
+use crate::managers::timeline_manager::get_timeline_manager;
 use crate::utils::date_utils::is_valid_date;
 use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 fn is_valid_hex_color(color: &str) -> bool {
     color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
+
 
 #[component]
 pub fn EditLegendItem() -> Element {
@@ -16,6 +18,7 @@ pub fn EditLegendItem() -> Element {
     let mut color_input = use_signal(String::new);
     let mut date_error = use_signal(String::new);
     let mut current_date = use_signal(String::new);
+    let mut pending_update = use_signal(|| None::<(Option<LifePeriod>, Option<(Uuid, LifePeriodEvent)>)>);
 
     let (min_date, max_date) = use_memo(move || {
         if let Some(item) = &app_state().item_state {
@@ -47,117 +50,84 @@ pub fn EditLegendItem() -> Element {
         (None, None)
     })();
     use_effect(move || {
-        if let Some(item) = &app_state().item_state {
-            debug!("Item state: {:?}", item);
-            let initial_date = if !item.start.is_empty() {
-                debug!("Using existing start date: {}", item.start);
-                item.start.clone()
-            } else {
-                let default_date = if item.is_event {
-                    debug!("Getting default date for new event");
-                    if let Some(period) = yaml_state()
-                        .life_periods
-                        .iter()
-                        .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
-                    {
-                        let period_start =
-                            NaiveDate::parse_from_str(&format!("{}-01", period.start), "%Y-%m-%d")
-                                .unwrap_or_default();
-                        let period_end = yaml_state()
-                            .life_periods
-                            .iter()
-                            .find(|p| p.start > period.start)
-                            .map(|next_period| {
-                                NaiveDate::parse_from_str(
-                                    &format!("{}-01", next_period.start),
-                                    "%Y-%m-%d",
-                                )
-                                .unwrap_or_default()
-                            })
-                            .unwrap_or_else(|| chrono::Local::now().date_naive());
-
-                        // Choose a date in the middle of the period
-                        let days_in_period = (period_end - period_start).num_days();
-                        let middle_date = period_start + chrono::Duration::days(days_in_period / 2);
-
-                        debug!(
-                            "Found period start date: {}, end date: {}, chosen date: {}",
-                            period_start, period_end, middle_date
-                        );
-                        Some(middle_date.format("%Y-%m-%d").to_string())
+        to_owned![pending_update, yaml_state];
+        
+        spawn(async move {
+            if let Some((period, event)) = pending_update() {
+                // Handle period updates
+                if let Some(period) = period {
+                    let result = if period.id.is_some() {
+                        get_timeline_manager().update_life_period(period).await
                     } else {
-                        None
-                    }
-                } else {
-                    debug!("Using current date for new life period");
-                    Some(Local::now().format("%Y-%m").to_string())
-                };
-                default_date.unwrap_or_else(|| {
-                    warn!("Failed to get default date");
-                    String::new()
-                })
-            };
-
-            debug!("Initial date set to: {}", initial_date);
-            current_date.set(initial_date.clone());
-
-            // Check if the initial date is valid
-            let is_event = item.is_event;
-            if is_valid_date(&initial_date, !is_event) {
-                if is_event {
-                    if let (Some(min), Some(max)) = (min_date, max_date) {
-                        let input_date =
-                            NaiveDate::parse_from_str(&initial_date, "%Y-%m-%d").unwrap();
-                        if input_date < min || input_date >= max {
-                            date_error.set(format!(
-                                "Date must be between {} and {}",
-                                min.format("%Y-%m-%d"),
-                                max.format("%Y-%m-%d")
-                            ));
-                        }
+                        get_timeline_manager().add_life_period(period).await
+                    };
+    
+                    if let Err(e) = result {
+                        warn!("Failed to update/add life period: {}", e);
                     }
                 }
-            } else {
-                date_error.set("Invalid date format".to_string());
+    
+                // Handle event updates
+                if let Some((period_id, event)) = event {
+                    let result = if event.id.is_some() {
+                        get_timeline_manager().update_event(period_id, event).await
+                    } else {
+                        get_timeline_manager().add_event(period_id, event).await
+                    };
+    
+                    if let Err(e) = result {
+                        warn!("Failed to update/add event: {}", e);
+                    }
+                }
+    
+                // Update the entire timeline
+                if let Err(e) = get_timeline_manager()
+                    .update_timeline(&yaml_state())
+                    .await 
+                {
+                    warn!("Failed to update timeline: {}", e);
+                }
             }
-
-            color_input.set(item.color.clone());
-        } else {
-            debug!("No item state");
-        }
+        });
     });
-
+    
     let update_yaml_item = move |_| {
         debug!("Attempting to update yaml item");
         if date_error().is_empty() {
             if let Some(item) = app_state().item_state {
                 let mut new_yaml = yaml_state();
-
-                debug!("Updating item: {:?}", item);
+    
                 if item.is_event {
-                    if let Some(period) = new_yaml
+                    let mut new_yaml_event = new_yaml.clone();
+                    if let Some(period) = new_yaml_event
                         .life_periods
                         .iter_mut()
                         .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                     {
-                        if let Some(event) =
-                            period.events.iter_mut().find(|e| e.id == Some(item.id))
-                        {
+                        let event = if let Some(event) = period.events.iter_mut().find(|e| e.id == Some(item.id)) {
                             event.name = item.name.clone();
                             event.color = item.color.clone();
                             event.start = item.start.clone();
+                            event.clone()
                         } else {
-                            period.events.push(LifePeriodEvent {
+                            let new_event = LifePeriodEvent {
                                 id: Some(item.id),
                                 name: item.name.clone(),
                                 color: item.color.clone(),
                                 start: item.start.clone(),
-                            });
-                        }
+                            };
+                            period.events.push(new_event.clone());
+                            new_event
+                        };
                         period.events.sort_by(|a, b| a.start.cmp(&b.start));
+                        
+                        // Queue the update
+                        pending_update.set(Some((None, Some((app_state().selected_life_period.unwrap(), event)))));
                     }
+                    yaml_state.set(new_yaml_event);
                 } else {
-                    if let Some(period) = new_yaml
+                    let mut new_yaml_period = new_yaml.clone();
+                    let period = if let Some(period) = new_yaml_period
                         .life_periods
                         .iter_mut()
                         .find(|p| p.id == Some(item.id))
@@ -165,30 +135,30 @@ pub fn EditLegendItem() -> Element {
                         period.name = item.name.clone();
                         period.start = item.start.clone();
                         period.color = item.color.clone();
+                        period.clone()
                     } else {
-                        new_yaml.life_periods.push(LifePeriod {
+                        let new_period = LifePeriod {
                             id: Some(item.id),
                             name: item.name.clone(),
                             start: item.start.clone(),
                             color: item.color.clone(),
                             events: Vec::new(),
-                        });
-                    }
-                    new_yaml.life_periods.sort_by(|a, b| a.start.cmp(&b.start));
+                        };
+                        new_yaml_period.life_periods.push(new_period.clone());
+                        new_period
+                    };
+                    new_yaml_period.life_periods.sort_by(|a, b| a.start.cmp(&b.start));
+                    
+                    // Queue the update
+                    pending_update.set(Some((Some(period), None)));
+                    yaml_state.set(new_yaml_period);
                 }
-                yaml_state.set(new_yaml);
-
-                let _ = update_yaml(&yaml_state(), &app_state().selected_yaml);
-                debug!("Yaml updated successfully");
-            } else {
-                warn!("Attempted to update yaml with no item state");
             }
             app_state.write().item_state = None;
             app_state.write().temp_start_date = String::new();
-        } else {
-            warn!("Attempted to save with date error: {}", date_error());
         }
     };
+
 
     let close_modal = move |_| {
         app_state.write().item_state = None;
@@ -259,6 +229,7 @@ pub fn EditLegendItem() -> Element {
         }
     };
 
+    
     let delete_item = move |_| {
         if let Some(item) = app_state().item_state {
             let mut new_yaml = yaml_state();
@@ -269,12 +240,36 @@ pub fn EditLegendItem() -> Element {
                     .find(|p| p.id == Some(app_state().selected_life_period.unwrap()))
                 {
                     period.events.retain(|e| e.id != Some(item.id));
+                    
+                    // Clone required data for the async operation
+                    let period_id = app_state().selected_life_period.unwrap();
+                    let event_id = item.id;
+                    
+                    use_future(move || async move {
+                        if let Err(e) = get_timeline_manager()
+                            .delete_event(period_id, event_id)
+                            .await
+                        {
+                            warn!("Failed to delete event: {}", e);
+                        }
+                    });
                 }
             } else {
                 new_yaml.life_periods.retain(|p| p.id != Some(item.id));
+                
+                // Clone required data for the async operation
+                let period_id = item.id;
+                
+                use_future(move || async move {
+                    if let Err(e) = get_timeline_manager()
+                        .delete_life_period(period_id)
+                        .await
+                    {
+                        warn!("Failed to delete life period: {}", e);
+                    }
+                });
             }
             yaml_state.set(new_yaml);
-            let _ = update_yaml(&yaml_state(), &app_state().selected_yaml);
         }
         app_state.write().item_state = None;
         app_state.write().temp_start_date = String::new();

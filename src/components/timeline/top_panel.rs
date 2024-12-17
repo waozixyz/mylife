@@ -1,7 +1,5 @@
+use crate::managers::timeline_manager::get_timeline_manager;
 use crate::models::timeline::{MyLifeApp, SizeInfo, Yaml};
-use crate::storage::yaml_manager::{
-    export_yaml, get_available_yamls, get_yaml_manager, import_yaml,
-};
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
 #[cfg(not(target_arch = "wasm32"))]
 use arboard::Clipboard;
@@ -18,6 +16,53 @@ use crate::utils::compression::compress_and_encode;
 use crate::utils::screenshot::share_screenshot;
 
 #[component]
+fn YamlSelector(
+    app_state: Signal<MyLifeApp>,
+    yaml_state: Signal<Yaml>,
+    available_timelines: Signal<Vec<String>>,
+) -> Element {
+    rsx! {
+        select {
+            value: "{app_state().selected_yaml}",
+            onchange: {
+                move |evt: Event<FormData>| {
+                    let selected_yaml = evt.value().to_string();
+                    use_future(move || {
+                        let selected_yaml = selected_yaml.clone();
+                        async move {
+                            app_state.write().selected_yaml = selected_yaml.clone();
+                            if let Ok(new_yaml) = get_timeline_manager().get_timeline_by_name(&selected_yaml).await {
+                                yaml_state.set(new_yaml.clone());
+                                // Also update the timeline in the manager
+                                if let Err(e) = get_timeline_manager().update_timeline(&new_yaml.clone()).await {
+                                    error!("Failed to update timeline: {}", e);
+                                }
+                            }
+                        }
+                    });
+                }
+            },
+            if available_timelines().is_empty() {
+                option {
+                    value: "default",
+                    "default"
+                }
+            } else {
+                { available_timelines.read().iter().map(|name| {
+                    rsx! {
+                        option {
+                            value: "{name}",
+                            selected: name == &app_state().selected_yaml,
+                            "{name}"
+                        }
+                    }
+                })}
+            }
+        }
+    }
+}
+
+#[component]
 pub fn TopPanel(y: String) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
     let mut yaml_state = use_context::<Signal<Yaml>>();
@@ -26,9 +71,30 @@ pub fn TopPanel(y: String) -> Element {
     let size_info = use_context::<Signal<SizeInfo>>();
     let mut show_share_modal = use_signal(|| false);
     let mut share_url = use_signal(String::new);
+    let available_timelines = use_signal(Vec::new);
 
-    let options = get_available_yamls();
+    // Load timeline functionality
+    let load_timeline = move |_| {
+        use_future(move || async move {
+            if let Some((name, new_yaml)) = get_timeline_manager().import_timeline().await {
+                yaml_state.set(new_yaml.clone());
+                app_state.write().selected_yaml = name;
+            } else {
+                error!("Failed to import timeline");
+            }
+        });
+    };
 
+    // Export timeline functionality
+    let export_timeline = move |_| {
+        use_future(move || async move {
+            if let Err(e) = get_timeline_manager().export_timeline(&yaml_state()).await {
+                error!("Failed to export timeline: {}", e);
+            }
+        });
+    };
+
+    // Screenshot functionality remains unchanged
     let take_screenshot = move |_| {
         let is_landscape = size_info().window_width > size_info().window_height;
         match take_screenshot(is_landscape) {
@@ -40,39 +106,8 @@ pub fn TopPanel(y: String) -> Element {
         }
     };
 
-    let load_yaml = move |_| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            use_future(move || async move {
-                if let Some((name, new_yaml)) = import_yaml().await {
-                    yaml_state.set(new_yaml.clone());
-                    app_state.write().selected_yaml = name.clone();
-                    app_state.write().loaded_yamls.push((name, new_yaml));
-                } else {
-                    error!("Failed to import YAML");
-                }
-            });
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            if let Some((name, new_yaml)) = import_yaml() {
-                yaml_state.set(new_yaml.clone());
-                app_state.write().selected_yaml = name.clone();
-                app_state.write().loaded_yamls.push((name, new_yaml));
-            } else {
-                error!("Failed to import YAML");
-            }
-        }
-    };
-
-    let export_yaml_action = move |_| {
-        if let Err(e) = export_yaml(&yaml_state(), &app_state().selected_yaml) {
-            error!("Failed to save YAML: {}", e);
-        }
-    };
-
-    let share_yaml = move |_: MouseEvent| {
+    // Share functionality
+    let share_timeline = move |_: MouseEvent| {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
         let encoded_yaml = compress_and_encode(&yaml_content);
 
@@ -137,6 +172,15 @@ pub fn TopPanel(y: String) -> Element {
         }
     };
 
+    use_effect(move || {
+        to_owned![available_timelines];
+        spawn(async move {
+            let timelines = get_timeline_manager().get_available_timelines().await;
+            available_timelines.set(timelines);
+        });
+        (|| ())()
+    });
+
     let generate_qr_code = move |url: &str| -> String {
         let code = QrCode::new(url).unwrap();
         code.render::<svg::Color<'_>>()
@@ -149,7 +193,6 @@ pub fn TopPanel(y: String) -> Element {
         div {
             class: "top-panel",
             if app_state().view == "EventView" {
-
                 button {
                     onclick: move |_| {
                         app_state.write().view = "Lifetime".to_string();
@@ -160,43 +203,31 @@ pub fn TopPanel(y: String) -> Element {
             if app_state().view == "Lifetime" {
                 div {
                     class: "action-buttons",
-                    button { onclick: load_yaml, "📥 Import" }
-                    button { onclick: export_yaml_action, "📤 Export" }
-                    button { onclick: share_yaml, "🔗 Share" }
+                    button { onclick: load_timeline, "📥 Import" }
+                    button { onclick: export_timeline, "📤 Export" }
+                    button { onclick: share_timeline, "🔗 Share" }
                     button { onclick: take_screenshot, "📸 Screenshot" }
                 }
 
+
                 div {
                     class: "config-selectors",
-
-                    select {
-                        value: "{app_state().selected_yaml}",
-                        onchange: move |evt| {
-                            let selected_yaml = evt.value().to_string();
-                            app_state.write().selected_yaml = selected_yaml.clone();
-                            if let Ok(new_yaml) = get_yaml_manager().load_yaml(&selected_yaml) {
-                                yaml_state.set(new_yaml);
-                            } else {
-                                error!("Failed to load yaml: {}", selected_yaml);
-                            }
-                        },
-                        {
-                            options.iter().map(|option| {
-                                rsx! {
-                                    option {
-                                        value: "{option}",
-                                        selected: *option == app_state().selected_yaml,
-                                        "{option}"
-                                    }
-                                }
-                            })
-                        }
-                    }
+                    YamlSelector {
+                        app_state: app_state,
+                        yaml_state: yaml_state,
+                        available_timelines: available_timelines
+                    },
                     select {
                         value: "{yaml_state().life_expectancy}",
                         onchange: move |evt| {
                             if let Ok(value) = evt.value().parse() {
                                 yaml_state.write().life_expectancy = value;
+                                // Update timeline after changing life expectancy
+                                use_future(move || async move {
+                                    if let Err(e) = get_timeline_manager().update_timeline(&yaml_state()).await {
+                                        error!("Failed to update timeline: {}", e);
+                                    }
+                                });
                             } else {
                                 error!("Failed to parse life expectancy: {}", evt.value());
                             }
@@ -216,7 +247,6 @@ pub fn TopPanel(y: String) -> Element {
                 }
             }
         }
-
         // Screenshot Modal
         {if show_screenshot_modal() {
             rsx! {

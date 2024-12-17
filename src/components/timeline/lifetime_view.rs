@@ -1,9 +1,10 @@
 use crate::models::timeline::{CellData, LifePeriod, SizeInfo, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use tracing::{debug, error};
+use tracing::debug;
 use uuid::Uuid;
 
+// Grid calculation functions remain the same
 fn calculate_grid_dimensions(size_info: &SizeInfo, life_expectancy: u32) -> (usize, usize) {
     let is_landscape = size_info.window_width > size_info.window_height;
     let cols = if is_landscape { 48 } else { 24 };
@@ -18,7 +19,7 @@ fn calculate_grid_dimensions(size_info: &SizeInfo, life_expectancy: u32) -> (usi
 fn calculate_cell_size(size_info: &SizeInfo, cols: usize, rows: usize) -> (f32, f32) {
     let is_landscape = size_info.window_width > size_info.window_height;
     let scale = 32.0;
-    let gap_ratio = 0.1; // 10% of cell size for gap
+    let gap_ratio = 0.1;
 
     let cell_size = if is_landscape {
         size_info.window_height as f32 / rows as f32 / scale
@@ -33,7 +34,7 @@ fn calculate_cell_size(size_info: &SizeInfo, cols: usize, rows: usize) -> (f32, 
 fn generate_lifetime_data(
     yaml: &Yaml,
     size_info: &SizeInfo,
-) -> (Vec<CellData>, usize, usize, f32, f32, f32, f32) {
+) -> Result<(Vec<CellData>, usize, usize, f32, f32, f32, f32), String> {
     let years = yaml.life_expectancy;
     let (cols, rows) = calculate_grid_dimensions(size_info, years);
     let (cell_size, gap) = calculate_cell_size(size_info, cols, rows);
@@ -44,9 +45,9 @@ fn generate_lifetime_data(
     let dob = parse_date(
         &yaml.date_of_birth,
         "Invalid date_of_birth format in yaml. Expected YYYY-MM",
-    );
-    let current_date = Local::now().date_naive();
+    )?;
 
+    let current_date = Local::now().date_naive();
     let cell_data: Vec<CellData> = (0..years * 12)
         .map(|index| {
             let year = index / 12;
@@ -63,7 +64,7 @@ fn generate_lifetime_data(
         })
         .collect();
 
-    (
+    Ok((
         cell_data,
         cols,
         rows,
@@ -71,7 +72,7 @@ fn generate_lifetime_data(
         gap,
         total_width,
         total_height,
-    )
+    ))
 }
 
 #[component]
@@ -80,8 +81,18 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
     let mut hovered_period = use_signal(|| None::<Uuid>);
     let size_info = use_context::<Signal<SizeInfo>>();
 
-    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) =
-        use_memo(move || generate_lifetime_data(&yaml_state(), &size_info()))();
+    let lifetime_data = use_memo(move || generate_lifetime_data(&yaml_state(), &size_info()))();
+
+    if let Err(error) = &lifetime_data {
+        return rsx! {
+            div {
+                class: "error-message",
+                "Failed to load timeline: {error}"
+            }
+        };
+    }
+
+    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) = lifetime_data.unwrap();
 
     let handle_mouse_leave = move |_| {
         hovered_period.set(None);
@@ -136,8 +147,11 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn generate_svg_content(yaml: &Yaml, size_info: &SizeInfo) -> String {
-    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) =
-        generate_lifetime_data(yaml, size_info);
+    let data = generate_lifetime_data(yaml, size_info).unwrap_or_else(|_| {
+        // Return default values in case of error
+        (Vec::new(), 0, 0, 0.0, 0.0, 0.0, 0.0)
+    });
+    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) = data;
 
     let mut svg = format!(
         r#"<svg class="lifetime-view-svg" preserveAspectRatio="xMidYMid meet" viewBox="0 0 {} {}">"#,
@@ -169,50 +183,46 @@ pub fn get_svg_content() -> Option<String> {
     let size_info = size_info();
     Some(generate_svg_content(&yaml, &size_info))
 }
+
+// Rest of the helper functions remain the same
 fn get_color_and_period_for_date(
     date: NaiveDate,
     life_periods: &[LifePeriod],
     current_date: NaiveDate,
 ) -> (String, Option<LifePeriod>) {
-    // Return default if no periods
     if life_periods.is_empty() {
         return ("#fafafa".to_string(), None);
     }
 
-    // Sort periods by start date
     let mut periods = life_periods.to_vec();
     periods.sort_by(|a, b| {
-        let a_date = parse_date(&a.start, "Failed to parse period start");
-        let b_date = parse_date(&b.start, "Failed to parse period start");
+        let a_date = parse_date(&a.start, "Failed to parse period start")
+            .unwrap_or_else(|_| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
+        let b_date = parse_date(&b.start, "Failed to parse period start")
+            .unwrap_or_else(|_| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
         a_date.cmp(&b_date)
     });
 
-    // Find the matching period
     for (idx, period) in periods.iter().enumerate() {
-        let period_start = parse_date(&period.start, "Failed to parse period start");
+        let period_start = parse_date(&period.start, "Failed to parse period start")
+            .unwrap_or_else(|_| NaiveDate::from_ymd_opt(2000, 1, 1).unwrap());
 
-        // Calculate period end date
         let period_end = if idx == periods.len() - 1 {
-            // If it's the last period, use current date as end
             current_date
         } else {
-            // Otherwise, use next period's start date as end
             parse_date(&periods[idx + 1].start, "Failed to parse next period start")
+                .unwrap_or_else(|_| current_date)
         };
 
-        // Check if date falls within this period
         if date >= period_start && date < period_end {
             return (period.color.clone(), Some(period.clone()));
         }
     }
 
-    // No matching period found
     ("#fafafa".to_string(), None)
 }
 
-fn parse_date(date_str: &str, error_msg: &str) -> NaiveDate {
-    NaiveDate::parse_from_str(&format!("{}-01", date_str), "%Y-%m-%d").unwrap_or_else(|e| {
-        error!("{}: {}", error_msg, e);
-        panic!("{}", error_msg);
-    })
+fn parse_date(date_str: &str, error_msg: &str) -> Result<NaiveDate, String> {
+    NaiveDate::parse_from_str(&format!("{}-01", date_str), "%Y-%m-%d")
+        .map_err(|e| format!("{}: {}", error_msg, e))
 }

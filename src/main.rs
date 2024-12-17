@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use views::{HabitsPage, HomePage, TimelinePage, TimelinePageNoParam, TodosPage};
 mod components;
+mod managers;
 mod models;
 mod state;
 mod storage;
