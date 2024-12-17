@@ -179,40 +179,31 @@ fn get_color_and_period_for_date(
         return ("#fafafa".to_string(), None);
     }
 
-    // Sort periods by start date once, using a static or cached sort
-    static mut LAST_SORT: Option<Vec<LifePeriod>> = None;
-    let periods = unsafe {
-        if let Some(sorted) = &LAST_SORT {
-            sorted
-        } else {
-            let mut sorted = life_periods.to_vec();
-            sorted.sort_by(|a, b| a.start.cmp(&b.start));
-            LAST_SORT = Some(sorted);
-            LAST_SORT.as_ref().unwrap()
-        }
-    };
+    // Sort periods by start date
+    let mut periods = life_periods.to_vec();
+    periods.sort_by(|a, b| {
+        let a_date = parse_date(&a.start, "Failed to parse period start");
+        let b_date = parse_date(&b.start, "Failed to parse period start");
+        a_date.cmp(&b_date)
+    });
 
-    // Binary search for the period
-    match periods.binary_search_by(|period| {
+    // Find the matching period
+    for (idx, period) in periods.iter().enumerate() {
         let period_start = parse_date(&period.start, "Failed to parse period start");
-        date.cmp(&period_start)
-    }) {
-        Ok(idx) | Err(idx) if idx < periods.len() => {
-            let period = &periods[idx];
-            let period_start = parse_date(&period.start, "Failed to parse period start");
-            
-            // Check if date falls within this period
-            let period_end = if idx == periods.len() - 1 {
-                current_date
-            } else {
-                parse_date(&periods[idx + 1].start, "Failed to parse next period start")
-            };
 
-            if date >= period_start && date < period_end {
-                return (period.color.clone(), Some(period.clone()));
-            }
+        // Calculate period end date
+        let period_end = if idx == periods.len() - 1 {
+            // If it's the last period, use current date as end
+            current_date
+        } else {
+            // Otherwise, use next period's start date as end
+            parse_date(&periods[idx + 1].start, "Failed to parse next period start")
+        };
+
+        // Check if date falls within this period
+        if date >= period_start && date < period_end {
+            return (period.color.clone(), Some(period.clone()));
         }
-        _ => {}
     }
 
     // No matching period found
