@@ -1,6 +1,6 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, MyLifeApp, Yaml};
+use crate::storage::yaml_manager::update_yaml;
 use crate::utils::date_utils::is_valid_date;
-use crate::utils::yaml_manager::update_yaml;
 use chrono::{Local, NaiveDate};
 use dioxus::prelude::*;
 use tracing::{debug, warn};

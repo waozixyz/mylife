@@ -1,4 +1,3 @@
-/* main.css */
 :root {
     /* Base colors */
     --bg-color: #1a0f1f;
@@ -11,6 +10,12 @@
     --secondary-color: #4a2639;
     --accent-color: #ff6b97;
 
+    /* State colors */
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --error-color: #f44336;
+    --info-color: #2196f3;
+
     /* UI Elements */
     --card-bg: #2d1f33;
     --card-hover: #3d2a42;
@@ -18,14 +23,39 @@
 
     /* Borders and shadows */
     --border-color: #4a3655;
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 16px;
     --shadow-soft: 0 4px 6px rgba(0, 0, 0, 0.2);
     --shadow-strong: 0 8px 16px rgba(0, 0, 0, 0.3);
+    --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+
+    /* Typography */
+    --font-size-sm: 12px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --line-height-sm: 1.2;
+    --line-height-md: 1.4;
+    --line-height-lg: 1.6;
+
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+
+    /* Animation */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
 
     /* Special effects */
     --star-sparkle: #ff97b7;
     --shimmer: rgba(255, 107, 151, 0.1);
 
-    /* myQuest */
+    /* Panel and input */
     --panel-bg-color: #2d1f33;
     --input-bg-color: #241a28;
     --input-border-color: #4a3655;
@@ -37,6 +67,11 @@
     --input-text: var(--text-color);
     --input-placeholder: rgba(230, 221, 233, 0.5);
     --input-bg: #241a28;
+    --input-padding-y: var(--spacing-sm);
+    --input-padding-x: var(--spacing-md);
+    --input-border-width: 1px;
+    --input-height: 40px;
+    --input-font-size: var(--font-size-md);
 
     /* Todo specific colors */
     --todo-bg: var(--panel-bg);
@@ -49,10 +84,12 @@ body {
     background: var(--bg-gradient);
     color: var(--text-color);
     font-family: "Roboto", Arial, sans-serif;
+    font-size: var(--font-size-md);
+    line-height: var(--line-height-md);
     margin: 0;
     padding: 0;
-    transition: all 0.3s ease;
-    overflow-x: none;
+    transition: var(--transition-normal);
+    overflow-x: hidden;
     min-height: 100vh;
 }
 
@@ -60,14 +97,16 @@ input,
 select,
 textarea {
     background-color: var(--input-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    transition: border-color 0.2s ease;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    box-shadow: inset 0 1px 3px var(--shadow-color);
+    color: var(--input-text);
+    border: var(--input-border-width) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--input-padding-y) var(--input-padding-x);
+    height: var(--input-height);
+    font-size: var(--input-font-size);
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-inset);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 input:hover,
@@ -80,7 +119,10 @@ input:focus,
 select:focus,
 textarea:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--input-focus-color);
+    box-shadow:
+        var(--shadow-inset),
+        0 0 0 2px rgba(176, 57, 201, 0.2);
 }
 
 input[type="date"],
@@ -90,18 +132,185 @@ input[type="datetime-local"] {
 }
 
 select {
-    padding: 10px;
-    border-radius: 4px;
+    padding: var(--input-padding-y) calc(var(--input-padding-x) * 3)
+        var(--input-padding-y) var(--input-padding-x);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-position: right 12px center;
+    background-position: right var(--spacing-md) center;
     background-repeat: no-repeat;
     background-size: 16px;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    padding-right: 40px;
 }
 
 .flex {
     display: flex;
+}
+
+/* Placeholder styling */
+::placeholder {
+    color: var(--input-placeholder);
+    opacity: 1;
+}
+
+:-ms-input-placeholder {
+    color: var(--input-placeholder);
+    opacity: 1;
+}
+
+::-ms-input-placeholder {
+    color: var(--input-placeholder);
+    opacity: 1;
+}
+
+/* Custom file input styling */
+input[type="file"] {
+    display: none;
+}
+
+input[type="file"] + label {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    display: inline-block;
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-soft);
+}
+
+input[type="file"] + label:hover {
+    background-color: var(--button-hover-color);
+    box-shadow: var(--shadow-strong);
+}
+
+button,
+.button {
+    text-decoration: none;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    margin-right: var(--spacing-md);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: var(--shadow-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-md);
+}
+
+button:hover,
+.button:hover {
+    background-color: var(--button-hover-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-strong);
+}
+
+button:active,
+.button:active {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-soft);
+}
+
+/* Specific button styles */
+.settings-button {
+    background-color: var(--accent-color);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-lg);
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.config-selectors {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+@media screen and (max-width: 768px) {
+    :root {
+        --input-height: 36px;
+        --input-font-size: var(--font-size-sm);
+        --input-padding-y: var(--spacing-xs);
+        --input-padding-x: var(--spacing-sm);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="color"],
+    input[type="search"],
+    textarea,
+    select {
+        max-width: 250px;
+        margin-bottom: var(--spacing-md);
+    }
+
+    button,
+    .button {
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-lg);
+        margin-right: var(--spacing-sm);
+    }
+
+    .settings-button {
+        padding: var(--spacing-xs) var(--spacing-md);
+        font-size: var(--font-size-md);
+    }
+
+    .action-buttons,
+    .config-selectors {
+        gap: var(--spacing-sm);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    :root {
+        --input-height: 32px;
+        --input-padding-y: var(--spacing-xs);
+        --input-padding-x: var(--spacing-sm);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="week"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="color"],
+    input[type="search"],
+    textarea,
+    select {
+        max-width: 200px;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    button,
+    .button {
+        padding: var(--spacing-xs) var(--spacing-md);
+        font-size: var(--font-size-sm);
+        margin-right: var(--spacing-xs);
+    }
 }

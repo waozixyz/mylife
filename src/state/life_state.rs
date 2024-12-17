@@ -3,7 +3,7 @@
 use crate::models::timeline::{MyLifeApp, Yaml};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
-use crate::utils::yaml_manager::{get_yaml, get_yaml_manager};
+use crate::storage::yaml_manager::{get_yaml, get_yaml_manager};
 use dioxus::prelude::*;
 use tracing::error;
 
