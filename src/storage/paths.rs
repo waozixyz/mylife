@@ -2,7 +2,7 @@
 use directories::UserDirs;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
-use tracing::{debug, error, info};
+use tracing::error;
 
 const APP_NAME: &str = "com.example.Myquest";
 

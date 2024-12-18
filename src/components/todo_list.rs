@@ -2,7 +2,6 @@ use crate::components::todo_item::TodoItem;
 use crate::managers::todo_manager::get_todo_manager;
 use crate::models::todo::Todo;
 use dioxus::prelude::*;
-use tracing::debug;
 use uuid::Uuid;
 
 const TODO_LIST_CSS: Asset = asset!("/assets/styling/todo_list.css");

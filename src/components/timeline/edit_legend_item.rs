@@ -1,7 +1,7 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, MyLifeApp, Yaml};
 use crate::managers::timeline_manager::get_timeline_manager;
 use crate::utils::date_utils::is_valid_date;
-use chrono::{Local, NaiveDate};
+use chrono::NaiveDate;
 use dioxus::prelude::*;
 use tracing::{debug, warn};
 use uuid::Uuid;
@@ -95,7 +95,7 @@ pub fn EditLegendItem() -> Element {
         debug!("Attempting to update yaml item");
         if date_error().is_empty() {
             if let Some(item) = app_state().item_state {
-                let mut new_yaml = yaml_state();
+                let new_yaml = yaml_state();
     
                 if item.is_event {
                     let mut new_yaml_event = new_yaml.clone();

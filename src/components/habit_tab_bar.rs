@@ -2,7 +2,7 @@ use crate::managers::habit_manager::get_habit_manager;
 use crate::models::habit::{Habit, WeekStart};
 use chrono::Local;
 use dioxus::prelude::*;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 use uuid::Uuid;
 
 const TAB_BAR_CSS: Asset = asset!("/assets/styling/habits_tab_bar.css");
@@ -49,8 +49,8 @@ pub fn TabBar(props: TabBarProps) -> Element {
 
     // Create new habit
     let create_new_habit = {
-        let mut habits = habits.clone();
-        let mut editing_tab_id = editing_tab_id.clone();
+        let habits = habits.clone();
+        let editing_tab_id = editing_tab_id.clone();
 
         move |_| {
             let new_habit = Habit {
@@ -124,8 +124,6 @@ pub fn TabBar(props: TabBarProps) -> Element {
                                 r#type: "text",
                                 value: habit.title.clone(),
                                 onkeydown: {
-                                    let habit_title = habit.title.clone();
-
                                     move |evt: Event<KeyboardData>| {
                                         if evt.key() == Key::Enter {
                                             let habit_title = habit.title.clone();

@@ -97,7 +97,7 @@ fn YamlSelector(
 #[component]
 pub fn TopPanel(y: String) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
-    let mut yaml_state = use_context::<Signal<Yaml>>();
+    let yaml_state = use_context::<Signal<Yaml>>();
     let mut show_screenshot_modal = use_signal(|| false);
     let mut screenshot_data = use_signal(String::new);
     let size_info = use_context::<Signal<SizeInfo>>();

@@ -1,16 +1,16 @@
 use crate::components::habit_tab_bar::TabBar;
 use crate::components::habit_tracker::HabitTracker;
 use crate::managers::habit_manager::get_habit_manager;
-use crate::models::habit::{Habit, HabitData, WeekStart};
+use crate::models::habit::{HabitData, WeekStart};
 use chrono::Local;
 use dioxus::prelude::*;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 use uuid::Uuid;
 
 #[component]
 pub fn HabitsPage() -> Element {
     let mut selected_habit_id = use_signal(|| None::<Uuid>);
-    let mut current_habit_data = use_signal(|| None::<HabitData>);
+    let current_habit_data = use_signal(|| None::<HabitData>);
 
     info!(
         "HabitsPage rendering with selected_habit_id: {:?}",

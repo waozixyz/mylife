@@ -1,7 +1,6 @@
 use crate::models::timeline::{CellData, LifePeriod, SizeInfo, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
-use tracing::debug;
 use uuid::Uuid;
 
 // Grid calculation functions remain the same

@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 #[component]
 pub fn EventView(selected_life_period_id: Uuid) -> Element {
-    let mut events = use_signal(|| None::<Result<Vec<LifePeriodEvent>, String>>);
-    let mut timeline = use_signal(|| None::<Result<Yaml, String>>);
+    let events = use_signal(|| None::<Result<Vec<LifePeriodEvent>, String>>);
+    let timeline = use_signal(|| None::<Result<Yaml, String>>);
 
     // Load data effect
     {

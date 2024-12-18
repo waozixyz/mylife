@@ -1,8 +1,7 @@
+use crate::managers::timeline_manager::get_timeline_manager;
 use crate::models::timeline::{MyLifeApp, Yaml};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
-use crate::managers::timeline_manager::get_timeline_manager;
-use dioxus::prelude::*;
 use tracing::{debug, error};
 
 pub async fn initialize_state(y: &str) -> (Yaml, MyLifeApp) {
@@ -35,7 +34,6 @@ pub async fn initialize_state(y: &str) -> (Yaml, MyLifeApp) {
 
         #[cfg(not(target_arch = "wasm32"))]
         get_default_timeline().await
-
     } else {
         debug!("No shared YAML, loading from timeline manager");
         get_default_timeline().await
@@ -43,11 +41,11 @@ pub async fn initialize_state(y: &str) -> (Yaml, MyLifeApp) {
 
     // Initialize the app state
     let mut app_state = initialize_app_state();
-    
+
     // If we're using a shared timeline, update the selection
     if !y.is_empty() {
         app_state.selected_yaml = "Shared Timeline".to_string();
-        
+
         // Save the shared timeline
         if let Err(e) = get_timeline_manager().update_timeline(&yaml_state).await {
             error!("Failed to save shared timeline: {}", e);
@@ -70,14 +68,14 @@ async fn get_default_timeline() -> Yaml {
             error!("Failed to load timeline from manager: {}", e);
             // Create a default timeline
             let default_yaml = Yaml::default();
-            
+
             // Try to save it
             if let Err(save_err) = get_timeline_manager().update_timeline(&default_yaml).await {
                 error!("Failed to save default timeline: {}", save_err);
             } else {
                 debug!("Saved default timeline successfully");
             }
-            
+
             default_yaml
         }
     }

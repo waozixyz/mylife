@@ -1,6 +1,6 @@
 // managers/habit_manager.rs
-use crate::models::habit::{Habit, HabitData};
-use crate::storage::{get_path_manager, JsonStorage, StorageResult};
+use crate::models::habit::HabitData;
+use crate::storage::{get_path_manager, JsonStorage};
 use chrono::NaiveDate;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};

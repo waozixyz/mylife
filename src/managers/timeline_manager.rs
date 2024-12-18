@@ -1,9 +1,7 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, Yaml};
 use crate::storage::{get_path_manager, StorageConfig, StorageError, YamlStorage};
-use chrono::{Local, NaiveDate};
 use once_cell::sync::Lazy;
 use rfd::FileDialog;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::RwLock;

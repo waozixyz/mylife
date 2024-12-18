@@ -1,5 +1,4 @@
 // utils/imag_utils.rs
-
 use crate::models::timeline::LegendItem;
 #[cfg(not(target_arch = "wasm32"))]
 use tracing::error;
@@ -12,15 +11,11 @@ use image::codecs::png::PngEncoder;
 use image::codecs::webp::WebPEncoder;
 use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
 
-use image::ImageEncoder;
-
 use rand::seq::SliceRandom;
 
 use rusttype::{Font, Scale};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
-
-
 
 use resvg::render;
 use resvg::usvg::{Options, Tree};
@@ -242,7 +237,6 @@ pub fn load_background_image(is_landscape: bool) -> Result<DynamicImage, String>
         .ok_or("Failed to choose a random image")?;
 
     image::open(chosen_image).map_err(|e| format!("Failed to open background image: {:?}", e))
-
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -250,18 +244,20 @@ fn encode_image(image: &DynamicImage) -> Result<Vec<u8>, String> {
     let rgba_image = image.to_rgba8();
     let (width, height) = rgba_image.dimensions();
     let mut png_data = Vec::new();
-    
+
     // Create a new PngEncoder
     let encoder = PngEncoder::new(&mut png_data);
-    
+
     // Use the write_image method from the ImageEncoder trait
-    encoder.write_image(
-        rgba_image.as_raw(),
-        width,
-        height,
-        image::ColorType::Rgba8.into()
-    ).map_err(|e| format!("Failed to encode PNG: {:?}", e))?;
-    
+    encoder
+        .write_image(
+            rgba_image.as_raw(),
+            width,
+            height,
+            image::ColorType::Rgba8.into(),
+        )
+        .map_err(|e| format!("Failed to encode PNG: {:?}", e))?;
+
     Ok(png_data)
 }
 

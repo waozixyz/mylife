@@ -1,6 +1,5 @@
 // storage/formats.rs
 use serde::{de::DeserializeOwned, Serialize};
-use std::marker::PhantomData;
 
 pub trait DataFormat {
     fn serialize<T: Serialize>(data: &T) -> Result<String, String>;
