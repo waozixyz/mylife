@@ -1,8 +1,12 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, Yaml};
-use crate::storage::{get_path_manager, StorageConfig, YamlStorage};
+use crate::storage::{get_path_manager, StorageConfig, StorageError, YamlStorage};
 use chrono::{Local, NaiveDate};
 use once_cell::sync::Lazy;
 use rfd::FileDialog;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::SystemTime;
+use tokio::sync::RwLock;
 use tracing::{debug, error};
 use uuid::Uuid;
 
@@ -34,8 +38,17 @@ life_periods:
 routines: []
 "#;
 
+impl From<StorageError> for String {
+    fn from(error: StorageError) -> Self {
+        error.to_string()
+    }
+}
+
 pub struct TimelineManager {
-    storage: YamlStorage<Yaml>,
+    current_name: Arc<RwLock<String>>,
+    storage: Arc<RwLock<YamlStorage<Yaml>>>,
+
+    last_modified: Arc<RwLock<SystemTime>>,
 }
 
 impl TimelineManager {
@@ -48,26 +61,29 @@ impl TimelineManager {
             extension: String::from("yaml"),
             ..Default::default()
         };
-        debug!("Storage config: {:?}", config);
 
-        let path = get_path_manager().timeline_file("default");
-        debug!("Timeline file path: {:?}", path);
+        let current_name = "default".to_string();
+        let path = get_path_manager().timeline_file(&current_name);
 
-        let storage =
-            YamlStorage::with_config_and_default(path.clone(), config, Some(default_yaml))
-                .map_err(|e| {
-                    error!("Failed to create storage at {:?}: {}", path, e);
-                    e.to_string()
-                })?;
+        // Get the initial last modified time
+        let last_modified = path
+            .metadata()
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .unwrap_or_else(SystemTime::now);
 
-        debug!("Storage created successfully");
-        Ok(Self { storage })
+        let storage = YamlStorage::with_config_and_default(path, config, Some(default_yaml))?;
+
+        Ok(Self {
+            current_name: Arc::new(RwLock::new(current_name)),
+            storage: Arc::new(RwLock::new(storage)),
+            last_modified: Arc::new(RwLock::new(last_modified)),
+        })
     }
     pub async fn get_available_timelines(&self) -> Vec<String> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Ok(entries) = std::fs::read_dir(get_path_manager().timelines_dir()) {
-                // Changed from timeline_dir to timelines_dir
                 entries
                     .filter_map(|entry| {
                         let entry = entry.ok()?;
@@ -90,38 +106,138 @@ impl TimelineManager {
         }
     }
 
-    // Add this new function
     pub async fn get_timeline_by_name(&self, name: &str) -> Result<Yaml, String> {
         let path = get_path_manager().timeline_file(name);
+        debug!("Loading timeline '{}' from: {:?}", name, path);
+
+        if !path.exists() {
+            error!("Timeline file does not exist at path: {:?}", path);
+            return Err(format!("Timeline file '{}' does not exist", name));
+        }
+
+        match std::fs::read_to_string(&path) {
+            Ok(content) => {
+                debug!(
+                    "Successfully read file content for '{}', content length: {}",
+                    name,
+                    content.len()
+                );
+                match serde_yaml::from_str(&content) {
+                    Ok(yaml) => {
+                        debug!("Successfully parsed YAML for timeline '{}'", name);
+                        Ok(yaml)
+                    }
+                    Err(e) => {
+                        error!("Failed to parse YAML for timeline '{}': {}", name, e);
+                        Err(format!("Failed to parse timeline '{}': {}", name, e))
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to read timeline file '{}': {}", name, e);
+                Err(format!("Failed to read timeline '{}': {}", name, e))
+            }
+        }
+    }
+
+    pub async fn select_timeline(&self, name: &str) -> Result<Yaml, String> {
+        debug!("Switching storage to timeline: {}", name);
         let config = StorageConfig {
             extension: String::from("yaml"),
             ..Default::default()
         };
 
-        let storage =
-            YamlStorage::with_config_and_default(path.clone(), config, None).map_err(|e| {
-                error!("Failed to create storage for {}: {}", name, e);
-                e.to_string()
-            })?;
+        let path = get_path_manager().timeline_file(name);
+        debug!("New storage path: {:?}", path);
 
+        // Get or create the yaml content
+        let yaml = match self.get_timeline_by_name(name).await {
+            Ok(yaml) => yaml,
+            Err(_) => {
+                let mut default: Yaml = serde_yaml::from_str(DEFAULT_TIMELINE)
+                    .map_err(|e| format!("Failed to parse default timeline: {}", e))?;
+                default.name = name.to_string();
+                default
+            }
+        };
+
+        // Update last modified time
+        if let Ok(metadata) = path.metadata() {
+            if let Ok(modified) = metadata.modified() {
+                let mut last_modified = self.last_modified.write().await;
+                *last_modified = modified;
+            }
+        }
+
+        // Create new storage
+        let new_storage = YamlStorage::with_config_and_default(path, config, Some(yaml.clone()))?;
+
+        // Update the manager state
+        {
+            let mut current_name = self.current_name.write().await;
+            *current_name = name.to_string();
+        }
+        {
+            let mut storage = self.storage.write().await;
+            *storage = new_storage;
+        }
+
+        Ok(yaml)
+    }
+
+    pub async fn check_for_file_changes(&self) -> Result<Option<Yaml>, String> {
+        let current_name = self.current_name.read().await;
+        let path = get_path_manager().timeline_file(&current_name);
+
+        let file_modified = path.metadata().ok().and_then(|m| m.modified().ok());
+
+        if let Some(file_time) = file_modified {
+            let last_check = *self.last_modified.read().await;
+
+            if file_time > last_check {
+                debug!("File change detected for timeline: {}", current_name);
+
+                // Load the new content
+                let new_yaml = self.get_timeline_by_name(&current_name).await?;
+
+                // Update the storage and last modified time
+                {
+                    let storage = self.storage.read().await;
+                    storage.write(|store| *store = new_yaml.clone()).await?;
+                }
+                {
+                    let mut last_modified = self.last_modified.write().await;
+                    *last_modified = file_time;
+                }
+
+                return Ok(Some(new_yaml));
+            }
+        }
+
+        Ok(None)
+    }
+    pub async fn get_timeline(&self) -> Result<Yaml, String> {
+        let storage = self.storage.read().await;
         storage.get_data().await.map_err(|e| e.to_string())
     }
 
-    pub async fn get_timeline(&self) -> Result<Yaml, String> {
-        self.storage.get_data().await.map_err(|e| e.to_string())
-    }
-
     pub async fn update_timeline(&self, yaml: &Yaml) -> Result<(), String> {
-        debug!("Updating timeline");
-        self.storage
+        let storage = self.storage.read().await;
+        debug!(
+            "Updating timeline {} at {:?}",
+            self.current_name.read().await,
+            storage.file_path()
+        );
+        storage
             .write(|store| *store = yaml.clone())
             .await
             .map_err(|e| e.to_string())
     }
 
     pub async fn add_life_period(&self, period: LifePeriod) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Adding life period: {:?}", period);
-        self.storage
+        storage
             .write(|store| {
                 store.life_periods.push(period);
                 store.life_periods.sort_by(|a, b| a.start.cmp(&b.start));
@@ -131,8 +247,9 @@ impl TimelineManager {
     }
 
     pub async fn update_life_period(&self, period: LifePeriod) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Updating life period: {:?}", period);
-        self.storage
+        storage
             .write(|store| {
                 if let Some(existing) = store.life_periods.iter_mut().find(|p| p.id == period.id) {
                     *existing = period;
@@ -144,8 +261,9 @@ impl TimelineManager {
     }
 
     pub async fn delete_life_period(&self, id: Uuid) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Deleting life period: {}", id);
-        self.storage
+        storage
             .write(|store| {
                 store.life_periods.retain(|p| p.id != Some(id));
             })
@@ -154,8 +272,9 @@ impl TimelineManager {
     }
 
     pub async fn add_event(&self, period_id: Uuid, event: LifePeriodEvent) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Adding event to period {}: {:?}", period_id, event);
-        self.storage
+        storage
             .write(|store| {
                 if let Some(period) = store
                     .life_periods
@@ -175,8 +294,9 @@ impl TimelineManager {
         period_id: Uuid,
         event: LifePeriodEvent,
     ) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Updating event in period {}: {:?}", period_id, event);
-        self.storage
+        storage
             .write(|store| {
                 if let Some(period) = store
                     .life_periods
@@ -194,8 +314,9 @@ impl TimelineManager {
     }
 
     pub async fn delete_event(&self, period_id: Uuid, event_id: Uuid) -> Result<(), String> {
+        let storage = self.storage.read().await;
         debug!("Deleting event {} from period {}", event_id, period_id);
-        self.storage
+        storage
             .write(|store| {
                 if let Some(period) = store
                     .life_periods
@@ -209,9 +330,9 @@ impl TimelineManager {
             .map_err(|e| e.to_string())
     }
 
-    // Helper methods for event view
     pub async fn get_period_events(&self, period_id: Uuid) -> Result<Vec<LifePeriodEvent>, String> {
-        self.storage
+        let storage = self.storage.read().await;
+        storage
             .read(|store| {
                 store
                     .life_periods
@@ -225,31 +346,30 @@ impl TimelineManager {
     }
 
     pub async fn force_save(&self) -> Result<(), String> {
-        self.storage.force_save().await.map_err(|e| e.to_string())
+        let storage = self.storage.read().await;
+        storage.force_save().await.map_err(|e| e.to_string())
     }
 
     pub async fn reload(&self) -> Result<(), String> {
-        self.storage.reload().await.map_err(|e| e.to_string())
+        let storage = self.storage.read().await;
+        storage.reload().await.map_err(|e| e.to_string())
     }
 
     pub async fn import_timeline(&self) -> Option<(String, Yaml)> {
         #[cfg(target_arch = "wasm32")]
         {
-            // Web import logic
-            // You'll need to implement this based on your requirements
             None
         }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            // Desktop import logic using file dialog
             if let Some(file_path) = FileDialog::new()
                 .add_filter("YAML", &["yaml", "yml"])
                 .pick_file()
             {
                 let content = std::fs::read_to_string(&file_path).ok()?;
                 let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
-                let name = file_path.file_name()?.to_str()?.to_string();
+                let name = file_path.file_stem()?.to_str()?.to_string();
                 Some((name, yaml))
             } else {
                 None
@@ -260,14 +380,11 @@ impl TimelineManager {
     pub async fn export_timeline(&self, yaml: &Yaml) -> Result<(), String> {
         #[cfg(target_arch = "wasm32")]
         {
-            // Web export logic
-            // Implement based on your requirements
             Ok(())
         }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            // Desktop export logic
             if let Some(file_path) = FileDialog::new()
                 .set_file_name("timeline.yaml")
                 .add_filter("YAML", &["yaml", "yml"])
@@ -276,7 +393,7 @@ impl TimelineManager {
                 let content = serde_yaml::to_string(yaml).map_err(|e| e.to_string())?;
                 std::fs::write(file_path, content).map_err(|e| e.to_string())
             } else {
-                Ok(()) // User cancelled
+                Ok(())
             }
         }
     }

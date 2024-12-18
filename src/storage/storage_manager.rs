@@ -40,6 +40,10 @@ where
         Self::with_config_and_default(file_path, StorageConfig::default(), None)
     }
 
+    pub fn file_path(&self) -> &PathBuf {
+        &self.file_path
+    }
+
     pub fn with_config(file_path: PathBuf, config: StorageConfig) -> StorageResult<Self> {
         Self::with_config_and_default(file_path, config, None)
     }
@@ -80,17 +84,17 @@ where
                     error!("Failed to serialize default data: {}", e);
                     StorageError::Serialization(e.to_string())
                 })?;
-                
+
                 std::fs::write(&file_path, &content).map_err(|e| {
                     error!("Failed to write default data to file: {}", e);
                     StorageError::Io(e)
                 })?;
-                
+
                 debug!("Successfully wrote default data to file: {:?}", file_path);
             }
             data
         };
-        
+
         Ok(Self {
             file_path,
             data: Arc::new(RwLock::new(data)),

@@ -6,7 +6,7 @@ use arboard::Clipboard;
 use dioxus::prelude::*;
 use qrcode::render::svg;
 use qrcode::QrCode;
-use tracing::error;
+use tracing::{debug, error};
 
 #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
 use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
@@ -14,54 +14,86 @@ use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
 use crate::utils::compression::compress_and_encode;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::screenshot::share_screenshot;
-
 #[component]
 fn YamlSelector(
     app_state: Signal<MyLifeApp>,
     yaml_state: Signal<Yaml>,
     available_timelines: Signal<Vec<String>>,
 ) -> Element {
+    // Add a loading state to prevent multiple selections while loading
+    let mut is_switching = use_signal(|| false);
+    // Add state to track the actual current timeline
+    let mut current_timeline = use_signal(|| app_state().selected_yaml.clone());
+
     rsx! {
-        select {
-            value: "{app_state().selected_yaml}",
-            onchange: {
-                move |evt: Event<FormData>| {
+        div {
+            class: "yaml-selector-container",
+            select {
+                disabled: is_switching(),
+                value: "{current_timeline()}",
+                onchange: move |evt: Event<FormData>| {
                     let selected_yaml = evt.value().to_string();
-                    use_future(move || {
-                        let selected_yaml = selected_yaml.clone();
-                        async move {
-                            app_state.write().selected_yaml = selected_yaml.clone();
-                            if let Ok(new_yaml) = get_timeline_manager().get_timeline_by_name(&selected_yaml).await {
-                                yaml_state.set(new_yaml.clone());
-                                // Also update the timeline in the manager
-                                if let Err(e) = get_timeline_manager().update_timeline(&new_yaml.clone()).await {
-                                    error!("Failed to update timeline: {}", e);
-                                }
+                    let previous_yaml = current_timeline();
+
+                    if selected_yaml == previous_yaml {
+                        return;
+                    }
+
+                    is_switching.set(true);
+
+                    spawn(async move {
+                        let timeline_manager = get_timeline_manager();
+                        debug!("Attempting to switch from '{}' to '{}'", previous_yaml, selected_yaml);
+
+                        match timeline_manager.select_timeline(&selected_yaml).await {
+                            Ok(new_yaml) => {
+                                debug!("Successfully switched to '{}'", selected_yaml);
+                                // Update both states only after successful switch
+                                app_state.write().selected_yaml = selected_yaml.clone();
+                                yaml_state.set(new_yaml);
+                                current_timeline.set(selected_yaml);
+                            }
+                            Err(e) => {
+                                error!("Failed to switch to timeline '{}': {}", selected_yaml, e);
+                                // Keep the previous selection on failure
+                                current_timeline.set(previous_yaml);
                             }
                         }
+
+                        is_switching.set(false);
                     });
+                },
+                if available_timelines().is_empty() {
+                    option {
+                        value: "default",
+                        "default"
+                    }
+
+                } else {
+
+                    { available_timelines.read().iter().map(|name| {
+                        rsx! {
+                            option {
+                                value: "{name}",
+                                selected: name == &current_timeline(),
+                                "{name}"
+                            }
+                        }
+                    })}
+
                 }
-            },
-            if available_timelines().is_empty() {
-                option {
-                    value: "default",
-                    "default"
+            }
+            // Optional: Add loading indicator
+            {if is_switching() {
+                rsx! {
+                    span { class: "loading-indicator", "⟳" }
                 }
             } else {
-                { available_timelines.read().iter().map(|name| {
-                    rsx! {
-                        option {
-                            value: "{name}",
-                            selected: name == &app_state().selected_yaml,
-                            "{name}"
-                        }
-                    }
-                })}
-            }
+                rsx! {}
+            }}
         }
     }
 }
-
 #[component]
 pub fn TopPanel(y: String) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
@@ -74,16 +106,53 @@ pub fn TopPanel(y: String) -> Element {
     let available_timelines = use_signal(Vec::new);
 
     // Load timeline functionality
+
     let load_timeline = move |_| {
+        let mut yaml_state = yaml_state.clone();
+        let mut app_state = app_state.clone();
+
         use_future(move || async move {
             if let Some((name, new_yaml)) = get_timeline_manager().import_timeline().await {
+                // Update both states atomically
                 yaml_state.set(new_yaml.clone());
-                app_state.write().selected_yaml = name;
+                app_state.write().selected_yaml = name.clone();
+
+                // Make sure to select the imported timeline
+                if let Err(e) = get_timeline_manager().select_timeline(&name).await {
+                    error!("Failed to switch to imported timeline: {}", e);
+                }
             } else {
                 error!("Failed to import timeline");
             }
         });
     };
+
+    // Update the life expectancy handler
+    let life_expectancy_handler = move |evt: Event<FormData>| {
+        let mut yaml_state = yaml_state.clone();
+
+        if let Ok(value) = evt.value().parse() {
+            yaml_state.write().life_expectancy = value;
+
+            // Update timeline after changing life expectancy
+            use_future(move || async move {
+                if let Err(e) = get_timeline_manager().update_timeline(&yaml_state()).await {
+                    error!("Failed to update timeline: {}", e);
+                }
+            });
+        } else {
+            error!("Failed to parse life expectancy: {}", evt.value());
+        }
+    };
+
+    use_effect(move || {
+        to_owned![available_timelines];
+        spawn(async move {
+            let timelines = get_timeline_manager().get_available_timelines().await;
+            available_timelines.set(timelines);
+        });
+        (|| ())()
+    });
 
     // Export timeline functionality
     let export_timeline = move |_| {
@@ -219,19 +288,7 @@ pub fn TopPanel(y: String) -> Element {
                     },
                     select {
                         value: "{yaml_state().life_expectancy}",
-                        onchange: move |evt| {
-                            if let Ok(value) = evt.value().parse() {
-                                yaml_state.write().life_expectancy = value;
-                                // Update timeline after changing life expectancy
-                                use_future(move || async move {
-                                    if let Err(e) = get_timeline_manager().update_timeline(&yaml_state()).await {
-                                        error!("Failed to update timeline: {}", e);
-                                    }
-                                });
-                            } else {
-                                error!("Failed to parse life expectancy: {}", evt.value());
-                            }
-                        },
+                        onchange: life_expectancy_handler,
                         {
                             (40..=120).map(|year| {
                                 rsx! {
@@ -245,6 +302,7 @@ pub fn TopPanel(y: String) -> Element {
                         }
                     }
                 }
+
             }
         }
         // Screenshot Modal
