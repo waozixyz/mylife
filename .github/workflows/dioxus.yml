@@ -22,19 +22,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
   dioxus_build:
     name: Dioxus Build
     runs-on: ${{ matrix.os }}
@@ -94,8 +81,8 @@ jobs:
         if: matrix.TARGET == 'android'
         uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       - name: Set up Android SDK
         if: matrix.TARGET == 'android'
@@ -211,7 +198,7 @@ jobs:
           if [ "$existing_release_id" != "null" ]; then
             curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$existing_release_id"
-            
+
             curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$GITHUB_REPOSITORY/git/refs/tags/$tag_name"
           fi

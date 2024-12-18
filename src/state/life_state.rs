@@ -21,7 +21,7 @@ fn ensure_ids(yaml: &mut Yaml) {
 }
 pub async fn initialize_state(y: &str) -> (Yaml, MyLifeApp) {
     // Get the initial YAML state with IDs
-    let mut yaml_state = if !y.is_empty() {
+    let yaml_state = if !y.is_empty() {
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(decompressed_str) = decode_and_decompress(y) {
