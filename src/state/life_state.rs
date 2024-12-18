@@ -3,57 +3,91 @@ use crate::models::timeline::{MyLifeApp, Yaml};
 #[cfg(target_arch = "wasm32")]
 use crate::utils::compression::decode_and_decompress;
 use tracing::{debug, error};
+use uuid::Uuid;
+fn ensure_ids(yaml: &mut Yaml) {
+    // Assign IDs to periods that don't have them
+    for period in &mut yaml.life_periods {
+        if period.id.is_none() {
+            period.id = Some(Uuid::new_v4());
+        }
 
+        // Assign IDs to events that don't have them
+        for event in &mut period.events {
+            if event.id.is_none() {
+                event.id = Some(Uuid::new_v4());
+            }
+        }
+    }
+}
 pub async fn initialize_state(y: &str) -> (Yaml, MyLifeApp) {
-    // First try to get the initial YAML state
-    let yaml_state = if !y.is_empty() {
+    // Get the initial YAML state with IDs
+    let mut yaml_state = if !y.is_empty() {
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(decompressed_str) = decode_and_decompress(y) {
                 match serde_yaml::from_str::<Yaml>(&decompressed_str) {
-                    Ok(new_yaml) => {
+                    Ok(mut new_yaml) => {
                         debug!("Successfully parsed shared YAML");
+                        ensure_ids(&mut new_yaml);
+                        // Save to timeline manager to ensure IDs are preserved
+                        if let Err(e) = get_timeline_manager().update_timeline(&new_yaml).await {
+                            error!("Failed to save timeline with IDs: {}", e);
+                        }
                         new_yaml
                     }
                     Err(e) => {
                         error!("Failed to parse YAML: {}", e);
-                        let context = decompressed_str
-                            .lines()
-                            .take(5)
-                            .collect::<Vec<_>>()
-                            .join("\n");
-                        error!("YAML parsing error context:\n{}", context);
-                        get_default_timeline().await
+                        let mut default = get_default_timeline().await;
+                        ensure_ids(&mut default);
+                        if let Err(e) = get_timeline_manager().update_timeline(&default).await {
+                            error!("Failed to save default timeline with IDs: {}", e);
+                        }
+                        default
                     }
                 }
             } else {
                 error!("Failed to decompress YAML");
-                get_default_timeline().await
+                let mut default = get_default_timeline().await;
+                ensure_ids(&mut default);
+                if let Err(e) = get_timeline_manager().update_timeline(&default).await {
+                    error!("Failed to save default timeline with IDs: {}", e);
+                }
+                default
             }
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        get_default_timeline().await
+        {
+            let mut default = get_default_timeline().await;
+            ensure_ids(&mut default);
+            if let Err(e) = get_timeline_manager().update_timeline(&default).await {
+                error!("Failed to save default timeline with IDs: {}", e);
+            }
+            default
+        }
     } else {
         debug!("No shared YAML, loading from timeline manager");
-        get_default_timeline().await
+        let mut default = get_default_timeline().await;
+        ensure_ids(&mut default);
+        // Always save back to ensure IDs are preserved
+        if let Err(e) = get_timeline_manager().update_timeline(&default).await {
+            error!("Failed to save default timeline with IDs: {}", e);
+        }
+        default
     };
 
     // Initialize the app state
     let mut app_state = initialize_app_state();
+    app_state.loaded_yamls = vec![("default".to_string(), yaml_state.clone())];
 
-    // If we're using a shared timeline, update the selection
     if !y.is_empty() {
         app_state.selected_yaml = "Shared Timeline".to_string();
-
-        // Save the shared timeline
-        if let Err(e) = get_timeline_manager().update_timeline(&yaml_state).await {
-            error!("Failed to save shared timeline: {}", e);
-        }
     }
 
-    // Update the loaded yamls with the current state
-    app_state.loaded_yamls = vec![("default".to_string(), yaml_state.clone())];
+    // Store the initial state in the timeline manager to ensure IDs are preserved
+    if let Err(e) = get_timeline_manager().update_timeline(&yaml_state).await {
+        error!("Failed to save initial timeline: {}", e);
+    }
 
     (yaml_state, app_state)
 }

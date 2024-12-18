@@ -49,6 +49,19 @@ pub struct TimelineManager {
     last_modified: Arc<RwLock<SystemTime>>,
 }
 
+fn assign_ids(yaml: &mut Yaml) {
+    for period in &mut yaml.life_periods {
+        if period.id.is_none() {
+            period.id = Some(Uuid::new_v4());
+        }
+        for event in &mut period.events {
+            if event.id.is_none() {
+                event.id = Some(Uuid::new_v4());
+            }
+        }
+    }
+}
+
 impl TimelineManager {
     pub fn new() -> Result<Self, String> {
         debug!("Initializing TimelineManager with default timeline");
@@ -78,6 +91,7 @@ impl TimelineManager {
             last_modified: Arc::new(RwLock::new(last_modified)),
         })
     }
+
     pub async fn get_available_timelines(&self) -> Vec<String> {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -103,7 +117,6 @@ impl TimelineManager {
             vec!["default".to_string()]
         }
     }
-
     pub async fn get_timeline_by_name(&self, name: &str) -> Result<Yaml, String> {
         let path = get_path_manager().timeline_file(name);
         debug!("Loading timeline '{}' from: {:?}", name, path);
@@ -120,9 +133,16 @@ impl TimelineManager {
                     name,
                     content.len()
                 );
-                match serde_yaml::from_str(&content) {
-                    Ok(yaml) => {
+                match serde_yaml::from_str::<Yaml>(&content) {
+                    Ok(mut yaml) => {
                         debug!("Successfully parsed YAML for timeline '{}'", name);
+                        // Assign IDs to periods that don't have them
+                        for period in &mut yaml.life_periods {
+                            if period.id.is_none() {
+                                period.id = Some(Uuid::new_v4());
+                                debug!("Assigned new ID {:?} to period {}", period.id, period.name);
+                            }
+                        }
                         Ok(yaml)
                     }
                     Err(e) => {
@@ -227,12 +247,19 @@ impl TimelineManager {
             storage.file_path()
         );
         storage
-            .write(|store| *store = yaml.clone())
+            .write(|store| {
+                let mut new_yaml = yaml.clone();
+                assign_ids(&mut new_yaml);
+                *store = new_yaml;
+            })
             .await
             .map_err(|e| e.to_string())
     }
 
-    pub async fn add_life_period(&self, period: LifePeriod) -> Result<(), String> {
+    pub async fn add_life_period(&self, mut period: LifePeriod) -> Result<(), String> {
+        if period.id.is_none() {
+            period.id = Some(Uuid::new_v4());
+        }
         let storage = self.storage.read().await;
         debug!("Adding life period: {:?}", period);
         storage
@@ -269,7 +296,14 @@ impl TimelineManager {
             .map_err(|e| e.to_string())
     }
 
-    pub async fn add_event(&self, period_id: Uuid, event: LifePeriodEvent) -> Result<(), String> {
+    pub async fn add_event(
+        &self,
+        period_id: Uuid,
+        mut event: LifePeriodEvent,
+    ) -> Result<(), String> {
+        if event.id.is_none() {
+            event.id = Some(Uuid::new_v4());
+        }
         let storage = self.storage.read().await;
         debug!("Adding event to period {}: {:?}", period_id, event);
         storage

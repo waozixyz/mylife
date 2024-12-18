@@ -1,6 +1,6 @@
-use crate::models::timeline::MyLifeApp;
 use crate::components::timeline::events_view::EventView;
 use crate::components::timeline::lifetime_view::LifetimeView;
+use crate::models::timeline::MyLifeApp;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -9,8 +9,10 @@ pub fn CentralPanel() -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
 
     let on_period_click = move |period_id: Uuid| {
-        app_state.write().view = "EventView".to_string();
-        app_state.write().selected_life_period = Some(period_id);
+        app_state.with_mut(|state| {
+            state.view = "EventView".to_string();
+            state.selected_life_period = Some(period_id);
+        });
     };
 
     rsx! {
@@ -25,6 +27,7 @@ pub fn CentralPanel() -> Element {
                                 on_period_click: on_period_click
                             }
                         },
+
                         "EventView" => {
                             if let Some(period_id) = app_state().selected_life_period {
                                 rsx! {

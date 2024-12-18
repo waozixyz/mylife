@@ -1,6 +1,7 @@
 use crate::models::timeline::{CellData, LifePeriod, SizeInfo, Yaml};
 use chrono::{Duration, Local, NaiveDate};
 use dioxus::prelude::*;
+use tracing::debug;
 use uuid::Uuid;
 
 // Grid calculation functions remain the same
@@ -91,7 +92,8 @@ pub fn LifetimeView(on_period_click: EventHandler<Uuid>) -> Element {
         };
     }
 
-    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) = lifetime_data.unwrap();
+    let (cell_data, cols, _rows, cell_size, gap, total_width, total_height) =
+        lifetime_data.unwrap();
 
     let handle_mouse_leave = move |_| {
         hovered_period.set(None);
@@ -183,7 +185,6 @@ pub fn get_svg_content() -> Option<String> {
     Some(generate_svg_content(&yaml, &size_info))
 }
 
-// Rest of the helper functions remain the same
 fn get_color_and_period_for_date(
     date: NaiveDate,
     life_periods: &[LifePeriod],
@@ -214,13 +215,16 @@ fn get_color_and_period_for_date(
         };
 
         if date >= period_start && date < period_end {
+            debug!(
+                "Found matching period: name={}, id={:?}",
+                period.name, period.id
+            );
             return (period.color.clone(), Some(period.clone()));
         }
     }
 
     ("#fafafa".to_string(), None)
 }
-
 fn parse_date(date_str: &str, error_msg: &str) -> Result<NaiveDate, String> {
     NaiveDate::parse_from_str(&format!("{}-01", date_str), "%Y-%m-%d")
         .map_err(|e| format!("{}: {}", error_msg, e))

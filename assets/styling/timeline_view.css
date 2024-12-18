@@ -89,3 +89,30 @@
     font-style: italic;
     color: var(--text-color);
 }
+
+.event-view-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.back-button {
+    padding: 0.5rem 1rem;
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.back-button:hover {
+    background-color: #e0e0e0;
+}
+
+.error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+}
