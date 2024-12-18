@@ -3,9 +3,9 @@ name: Dioxus Builds
 on:
   push:
     branches:
-      - main
+      - master
     tags:
-      - "v*.*.*" # Trigger for version tags, adjust if necessary
+      - "v*.*.*"
   pull_request:
   workflow_dispatch:
 
@@ -44,6 +44,9 @@ jobs:
         include:
           - os: ubuntu-latest
             TARGET: desktop
+          - os: ubuntu-latest
+            TARGET: android
+
     steps:
       - uses: actions/checkout@v4
 
@@ -54,6 +57,7 @@ jobs:
           key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') }}
           restore-keys: |
             ${{ runner.os }}-apt-
+
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -85,6 +89,25 @@ jobs:
             libjpeg-dev \
             libpng-dev \
             libwebp-dev
+
+      - name: Set up Java for Android
+        if: matrix.TARGET == 'android'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        if: matrix.TARGET == 'android'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        if: matrix.TARGET == 'android'
+        run: |
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0" "ndk;25.1.8937393"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> $GITHUB_ENV
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -133,6 +156,10 @@ jobs:
         run: |
           if [ "${{ matrix.TARGET }}" = "web" ]; then
             tar -czvf myquest-web.tar.gz dist
+          elif [ "${{ matrix.TARGET }}" = "android" ]; then
+            mkdir -p android-artifacts
+            cp target/release/apk/*.apk android-artifacts/
+            tar -czvf myquest-android.tar.gz android-artifacts
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             mv target/release/myquest.exe myquest-windows.exe
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
@@ -140,7 +167,6 @@ jobs:
           else
             mv target/release/myquest myquest-linux
           fi
-
       - name: Create AppImage (Linux)
         if: matrix.os == 'ubuntu-latest' && matrix.TARGET == 'desktop'
         run: |
@@ -148,20 +174,12 @@ jobs:
           wget -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -O linuxdeploy-plugin-gtk.sh https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
-          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/512x512/apps
           cp myquest-linux AppDir/usr/bin/myquest
-          cp assets/icon-256.png AppDir/usr/share/icons/hicolor/256x256/apps/myquest.png
-          cat > AppDir/usr/share/applications/myquest.desktop << EOF
-          [Desktop Entry]
-          Name=myQuest
-          Exec=myquest
-          Icon=myquest
-          Type=Application
-          Categories=Utility;
-          EOF
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/myquest.desktop --icon-file=AppDir/usr/share/icons/hicolor/256x256/apps/myquest.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
+          cp assets/icon-512.png AppDir/usr/share/icons/hicolor/512x512/apps/myquest.png
+          cp metadata/linux/myquest.desktop AppDir/usr/share/applications/
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file=AppDir/usr/share/applications/myquest.desktop --icon-file=AppDir/usr/share/icons/hicolor/512x512/apps/myquest.png --plugin gtk --library /usr/lib/x86_64-linux-gnu/libxdo.so.3 --output appimage
           mv myQuest*.AppImage myquest-linux.AppImage
-          git
       - uses: actions/upload-artifact@v3
         with:
           name: myquest-${{ matrix.TARGET }}-${{ matrix.os }}
@@ -177,44 +195,49 @@ jobs:
           echo "VERSION=$version" >> $GITHUB_ENV
 
       - name: Update or create pre-release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag_name="v${{ env.VERSION }}-pre"
           release_name="Pre-release ${{ env.VERSION }}"
 
-          # Check if the release already exists
-          release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          # Delete existing release and tag if they exist
+          existing_release_id=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$tag_name" \
             | jq -r '.id')
 
-          if [ "$release_id" = "null" ]; then
-            # Create new pre-release
-            response=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -d "{\"tag_name\":\"$tag_name\",\"name\":\"$release_name\",\"prerelease\":true}" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases")
-            release_id=$(echo $response | jq -r '.id')
-          else
-            # Update existing pre-release
-            curl -X PATCH -H "Authorization: token $GITHUB_TOKEN" \
-              -d "{\"name\":\"$release_name\",\"prerelease\":true}" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id"
+          if [ "$existing_release_id" != "null" ]; then
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$existing_release_id"
+            
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/refs/tags/$tag_name"
           fi
+
+          # Create new pre-release
+          response=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+            -d "{\"tag_name\":\"$tag_name\",\"name\":\"$release_name\",\"prerelease\":true}" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases")
+          release_id=$(echo $response | jq -r '.id')
 
           echo "RELEASE_ID=$release_id" >> $GITHUB_ENV
           echo "RELEASE_TAG=$tag_name" >> $GITHUB_ENV
 
-      - name: Upload Linux builds to pre-release
-        if: matrix.os == 'ubuntu-latest' && github.ref == 'refs/heads/main'
+      - name: Upload builds to pre-release
+        if: github.ref == 'refs/heads/master'
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for file in myquest-linux myquest-linux.AppImage; do
-            curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$file" \
-              "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/${{ env.RELEASE_ID }}/assets?name=$file"
+          for file in myquest-* *.tar.gz *.AppImage; do
+            if [ -f "$file" ]; then
+              curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Content-Type: application/octet-stream" \
+                --data-binary @"$file" \
+                "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/${{ env.RELEASE_ID }}/assets?name=$file" || true
+            fi
           done
 
       - uses: svenstaro/upload-release-action@v2
@@ -223,7 +246,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: myquest-*
           file_glob: true
-          tag: ${{ github.ref_name }} # Extract only the tag name
+          tag: ${{ github.ref_name }}
           overwrite: true
-          release_name: Release ${{ github.ref_name }} # Use just the tag name in the release title
-          body: "This is a new release for ${{ github.ref_name }}" # Use just the tag name in the release description
+          release_name: Release ${{ github.ref_name }}
+          body: "This is a new release for ${{ github.ref_name }}"

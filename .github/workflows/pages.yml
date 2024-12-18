@@ -1,9 +1,8 @@
 name: Deploy to Netlify
-
 on:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: write
@@ -11,31 +10,31 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
-      - name: Cache Nix store
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli
 
-      - name: Build with Nix
-        run: |
-          nix develop .#custom --command bash -c '
-            dx build --release --platform web
-          '
-
-      - name: Cache Dioxus build artifacts
+      - name: Cache dependencies
         uses: actions/cache@v3
         with:
           path: |
+            ~/.cargo/registry
+            ~/.cargo/git
             target
             dist
           key: ${{ runner.os }}-dioxus-web-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
           restore-keys: |
             ${{ runner.os }}-dioxus-web-
+
+      - name: Build for web
+        run: dx build --release --platform web
 
       - name: Install Netlify CLI
         run: npm install -g netlify-cli
