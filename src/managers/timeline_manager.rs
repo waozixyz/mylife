@@ -1,6 +1,7 @@
 use crate::models::timeline::{LifePeriod, LifePeriodEvent, Yaml};
 use crate::storage::{get_path_manager, StorageConfig, StorageError, YamlStorage};
 use once_cell::sync::Lazy;
+#[cfg(not(target_os = "android"))]
 use rfd::FileDialog;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -386,48 +387,45 @@ impl TimelineManager {
         let storage = self.storage.read().await;
         storage.reload().await.map_err(|e| e.to_string())
     }
-
+    #[cfg(not(target_os = "android"))]
     pub async fn import_timeline(&self) -> Option<(String, Yaml)> {
-        #[cfg(target_arch = "wasm32")]
+        if let Some(file_path) = FileDialog::new()
+            .add_filter("YAML", &["yaml", "yml"])
+            .pick_file()
         {
+            let content = std::fs::read_to_string(&file_path).ok()?;
+            let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
+            let name = file_path.file_stem()?.to_str()?.to_string();
+            Some((name, yaml))
+        } else {
             None
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            if let Some(file_path) = FileDialog::new()
-                .add_filter("YAML", &["yaml", "yml"])
-                .pick_file()
-            {
-                let content = std::fs::read_to_string(&file_path).ok()?;
-                let yaml: Yaml = serde_yaml::from_str(&content).ok()?;
-                let name = file_path.file_stem()?.to_str()?.to_string();
-                Some((name, yaml))
-            } else {
-                None
-            }
         }
     }
 
+    #[cfg(target_os = "android")]
+    pub async fn import_timeline(&self) -> Option<(String, Yaml)> {
+        // Android-specific implementation
+        None
+    }
+
+    #[cfg(not(target_os = "android"))]
     pub async fn export_timeline(&self, yaml: &Yaml) -> Result<(), String> {
-        #[cfg(target_arch = "wasm32")]
+        if let Some(file_path) = FileDialog::new()
+            .set_file_name("timeline.yaml")
+            .add_filter("YAML", &["yaml", "yml"])
+            .save_file()
         {
+            let content = serde_yaml::to_string(yaml).map_err(|e| e.to_string())?;
+            std::fs::write(file_path, content).map_err(|e| e.to_string())
+        } else {
             Ok(())
         }
+    }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            if let Some(file_path) = FileDialog::new()
-                .set_file_name("timeline.yaml")
-                .add_filter("YAML", &["yaml", "yml"])
-                .save_file()
-            {
-                let content = serde_yaml::to_string(yaml).map_err(|e| e.to_string())?;
-                std::fs::write(file_path, content).map_err(|e| e.to_string())
-            } else {
-                Ok(())
-            }
-        }
+    #[cfg(target_os = "android")]
+    pub async fn export_timeline(&self, _yaml: &Yaml) -> Result<(), String> {
+        // Android-specific implementation
+        Ok(())
     }
 }
 

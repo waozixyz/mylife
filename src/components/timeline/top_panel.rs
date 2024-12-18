@@ -1,7 +1,7 @@
 use crate::managers::timeline_manager::get_timeline_manager;
 use crate::models::timeline::{MyLifeApp, SizeInfo, Yaml};
 use crate::utils::screenshot::{save_screenshot, take_screenshot};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 use arboard::Clipboard;
 use dioxus::prelude::*;
 use qrcode::render::svg;
@@ -14,15 +14,14 @@ use wl_clipboard_rs::copy::{MimeType, Options as WlOptions, Source};
 use crate::utils::compression::compress_and_encode;
 #[cfg(target_arch = "wasm32")]
 use crate::utils::screenshot::share_screenshot;
+
 #[component]
 fn YamlSelector(
     app_state: Signal<MyLifeApp>,
     yaml_state: Signal<Yaml>,
     available_timelines: Signal<Vec<String>>,
 ) -> Element {
-    // Add a loading state to prevent multiple selections while loading
     let mut is_switching = use_signal(|| false);
-    // Add state to track the actual current timeline
     let mut current_timeline = use_signal(|| app_state().selected_yaml.clone());
 
     rsx! {
@@ -48,14 +47,12 @@ fn YamlSelector(
                         match timeline_manager.select_timeline(&selected_yaml).await {
                             Ok(new_yaml) => {
                                 debug!("Successfully switched to '{}'", selected_yaml);
-                                // Update both states only after successful switch
                                 app_state.write().selected_yaml = selected_yaml.clone();
                                 yaml_state.set(new_yaml);
                                 current_timeline.set(selected_yaml);
                             }
                             Err(e) => {
                                 error!("Failed to switch to timeline '{}': {}", selected_yaml, e);
-                                // Keep the previous selection on failure
                                 current_timeline.set(previous_yaml);
                             }
                         }
@@ -68,9 +65,7 @@ fn YamlSelector(
                         value: "default",
                         "default"
                     }
-
                 } else {
-
                     { available_timelines.read().iter().map(|name| {
                         rsx! {
                             option {
@@ -80,10 +75,8 @@ fn YamlSelector(
                             }
                         }
                     })}
-
                 }
             }
-            // Optional: Add loading indicator
             {if is_switching() {
                 rsx! {
                     span { class: "loading-indicator", "⟳" }
@@ -94,6 +87,7 @@ fn YamlSelector(
         }
     }
 }
+
 #[component]
 pub fn TopPanel(y: String) -> Element {
     let mut app_state = use_context::<Signal<MyLifeApp>>();
@@ -105,19 +99,15 @@ pub fn TopPanel(y: String) -> Element {
     let mut share_url = use_signal(String::new);
     let available_timelines = use_signal(Vec::new);
 
-    // Load timeline functionality
-
     let load_timeline = move |_| {
         let mut yaml_state = yaml_state.clone();
         let mut app_state = app_state.clone();
 
         use_future(move || async move {
             if let Some((name, new_yaml)) = get_timeline_manager().import_timeline().await {
-                // Update both states atomically
                 yaml_state.set(new_yaml.clone());
                 app_state.write().selected_yaml = name.clone();
 
-                // Make sure to select the imported timeline
                 if let Err(e) = get_timeline_manager().select_timeline(&name).await {
                     error!("Failed to switch to imported timeline: {}", e);
                 }
@@ -127,14 +117,12 @@ pub fn TopPanel(y: String) -> Element {
         });
     };
 
-    // Update the life expectancy handler
     let life_expectancy_handler = move |evt: Event<FormData>| {
         let mut yaml_state = yaml_state.clone();
 
         if let Ok(value) = evt.value().parse() {
             yaml_state.write().life_expectancy = value;
 
-            // Update timeline after changing life expectancy
             use_future(move || async move {
                 if let Err(e) = get_timeline_manager().update_timeline(&yaml_state()).await {
                     error!("Failed to update timeline: {}", e);
@@ -154,7 +142,6 @@ pub fn TopPanel(y: String) -> Element {
         (|| ())()
     });
 
-    // Export timeline functionality
     let export_timeline = move |_| {
         use_future(move || async move {
             if let Err(e) = get_timeline_manager().export_timeline(&yaml_state()).await {
@@ -163,7 +150,6 @@ pub fn TopPanel(y: String) -> Element {
         });
     };
 
-    // Screenshot functionality remains unchanged
     let take_screenshot = move |_| {
         let is_landscape = size_info().window_width > size_info().window_height;
         match take_screenshot(is_landscape) {
@@ -175,7 +161,6 @@ pub fn TopPanel(y: String) -> Element {
         }
     };
 
-    // Share functionality
     let share_timeline = move |_: MouseEvent| {
         let yaml_content = serde_yaml::to_string(&yaml_state()).unwrap_or_default();
         let encoded_yaml = compress_and_encode(&yaml_content);
@@ -189,6 +174,7 @@ pub fn TopPanel(y: String) -> Element {
 
     let copy_to_clipboard = move |_: MouseEvent| {
         let url = share_url();
+
         #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen_futures::JsFuture;
@@ -211,7 +197,11 @@ pub fn TopPanel(y: String) -> Element {
             });
         }
 
-        #[cfg(all(target_os = "linux", not(target_arch = "wasm32")))]
+        #[cfg(all(
+            target_os = "linux",
+            not(target_arch = "wasm32"),
+            not(target_os = "android")
+        ))]
         {
             let opts = WlOptions::new();
             if let Err(e) = opts.copy(
@@ -222,7 +212,6 @@ pub fn TopPanel(y: String) -> Element {
                     "Failed to copy URL to clipboard using wl-clipboard-rs: {}",
                     e
                 );
-                // Fallback to arboard
                 if let Ok(mut clipboard) = Clipboard::new() {
                     if let Err(e) = clipboard.set_text(&url) {
                         error!("Failed to copy URL to clipboard using arboard: {}", e);
@@ -231,7 +220,11 @@ pub fn TopPanel(y: String) -> Element {
             }
         }
 
-        #[cfg(all(not(target_os = "linux"), not(target_arch = "wasm32")))]
+        #[cfg(all(
+            not(target_os = "linux"),
+            not(target_arch = "wasm32"),
+            not(target_os = "android")
+        ))]
         {
             if let Ok(mut clipboard) = Clipboard::new() {
                 if let Err(e) = clipboard.set_text(&url) {
@@ -239,16 +232,12 @@ pub fn TopPanel(y: String) -> Element {
                 }
             }
         }
-    };
 
-    use_effect(move || {
-        to_owned![available_timelines];
-        spawn(async move {
-            let timelines = get_timeline_manager().get_available_timelines().await;
-            available_timelines.set(timelines);
-        });
-        (|| ())()
-    });
+        #[cfg(target_os = "android")]
+        {
+            error!("Clipboard functionality not supported on Android");
+        }
+    };
 
     let generate_qr_code = move |url: &str| -> String {
         let code = QrCode::new(url).unwrap();
@@ -278,7 +267,6 @@ pub fn TopPanel(y: String) -> Element {
                     button { onclick: take_screenshot, "📸 Screenshot" }
                 }
 
-
                 div {
                     class: "config-selectors",
                     YamlSelector {
@@ -302,10 +290,9 @@ pub fn TopPanel(y: String) -> Element {
                         }
                     }
                 }
-
             }
         }
-        // Screenshot Modal
+
         {if show_screenshot_modal() {
             rsx! {
                 div {
@@ -349,7 +336,7 @@ pub fn TopPanel(y: String) -> Element {
             rsx! { div {} }
         }}
 
-         {if show_share_modal() {
+        {if show_share_modal() {
             rsx! {
                 div {
                     class: "modal-overlay",

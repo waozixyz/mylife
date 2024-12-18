@@ -18,8 +18,10 @@ use web_sys::{window, Blob, BlobPropertyBag, File, FilePropertyBag, HtmlAnchorEl
 use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
 use image::ImageReader;
-#[cfg(not(target_arch = "wasm32"))]
+
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 use rfd::FileDialog;
+
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Cursor, Write};
 
@@ -88,7 +90,7 @@ pub fn save_screenshot(data: &Signal<String>) {
     document.body().unwrap().remove_child(&a).unwrap();
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 pub fn save_screenshot(data: &Signal<String>) {
     let binding = data();
     let image_data = binding
@@ -110,7 +112,6 @@ pub fn save_screenshot(data: &Signal<String>) {
         if path.extension().and_then(|ext| ext.to_str()) == Some("webp") {
             file.write_all(&decoded).unwrap();
         } else {
-            // Convert WebP to JPEG if user chose JPEG
             let image = ImageReader::new(Cursor::new(decoded))
                 .with_guessed_format()
                 .unwrap()
@@ -126,6 +127,12 @@ pub fn save_screenshot(data: &Signal<String>) {
     } else {
         error!("Screenshot save cancelled or failed");
     }
+}
+
+#[cfg(target_os = "android")]
+pub fn save_screenshot(data: &Signal<String>) {
+    // TODO: Implement Android-specific screenshot saving
+    error!("Screenshot saving not yet implemented for Android");
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -180,4 +187,15 @@ pub fn share_screenshot(data: &Signal<String>) {
             error!("Web Share API is not supported");
         }
     });
+}
+
+#[cfg(all(not(target_arch = "wasm32"), target_os = "android"))]
+pub fn share_screenshot(_data: &Signal<String>) {
+    // TODO: Implement Android-specific sharing
+    error!("Screenshot sharing not yet implemented for Android");
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+pub fn share_screenshot(_data: &Signal<String>) {
+    error!("Screenshot sharing not supported on this platform");
 }

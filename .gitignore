@@ -70,12 +70,3 @@ data
 **/*.rs.bk
 
 *.db*
-
-
-# Allow AndroidManifest.xml (debug and release)
-!/target/dx/myquest/debug/android/app/app/src/main/AndroidManifest.xml
-!/target/dx/myquest/release/android/app/app/src/main/AndroidManifest.xml
-
-# Allow res folder (debug and release)
-!/target/dx/myquest/debug/android/app/app/src/main/res/
-!/target/dx/myquest/debug/android/app/app/src/main/res/**/*
