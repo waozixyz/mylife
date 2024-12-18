@@ -78,5 +78,5 @@ pub fn WindowSizeManager() -> Element {
 
     provide_context(size_info);
 
-    return rsx! {}
+    return rsx! {};
 }

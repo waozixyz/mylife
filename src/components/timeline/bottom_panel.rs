@@ -1,6 +1,6 @@
-use crate::models::timeline::{LegendItem, MyLifeApp, Yaml};
 use crate::components::timeline::edit_legend_item::EditLegendItem;
 use crate::components::timeline::legend::Legend;
+use crate::models::timeline::{LegendItem, MyLifeApp, Yaml};
 use chrono::{Datelike, Local};
 use dioxus::prelude::*;
 use uuid::Uuid;
