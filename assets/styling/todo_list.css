@@ -18,14 +18,13 @@
     background-color: var(--card-bg);
     color: var(--text-color);
     border: none;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
     border-radius: 8px;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
 }
 
 .todo-tabs button .symbol {
