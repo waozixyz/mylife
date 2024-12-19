@@ -90,3 +90,24 @@ inherits = "dev"
 
 [profile.android-dev]
 inherits = "dev"
+
+[package.metadata.android]
+package_name = "xyz.waozi.myquest"
+
+[package.metadata.bundle]
+name = "myQuest"
+identifier = "xyz.waozi.myquest"
+version = "1.0.0"
+copyright = "Copyright (c) 2024 waozixyz"
+category = "Productivity"
+short_description = "Personal life management and habit tracking application"
+long_description = """
+myQuest is a comprehensive personal life management application focused on visualization and habit tracking. Features include:
+
+- Habit Tracker: Track daily habits with calendar view and visual progress tracking
+- Weekly Todo List: Organize tasks by day with week-at-a-glance view
+- Life Timeline: Visualize life journey and experiences on an interactive timeline
+- Routine Manager (Coming Soon): Plan and optimize daily schedules with detailed time allocation
+
+Built with Rust and Dioxus, myQuest helps you build consistency, manage tasks, and gain perspective on your life journey.
+"""

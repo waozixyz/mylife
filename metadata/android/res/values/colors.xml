@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#008577</color>
-    <color name="colorPrimaryDark">#00574B</color>
-    <color name="colorAccent">#D81B60</color>
+    <!-- Primary colors -->
+    <color name="colorPrimary">#942f4a</color>
+    <color name="colorPrimaryDark">#2d1a2c</color>
+    <color name="colorAccent">#ff6b97</color>
+    
+    <!-- Additional theme colors -->
+    <color name="backgroundColor">#1a0f1f</color>
+    <color name="secondaryColor">#4a2639</color>
+    <color name="textColor">#e6dde9</color>
+    
+    <!-- State colors -->
+    <color name="successColor">#4caf50</color>
+    <color name="warningColor">#ff9800</color>
+    <color name="errorColor">#f44336</color>
+    <color name="infoColor">#2196f3</color>
+    
+    <!-- UI element colors -->
+    <color name="cardBackground">#2d1f33</color>
+    <color name="borderColor">#4a3655</color>
+    <color name="inputBackgroundColor">#241a28</color>
 </resources>
